@@ -1,0 +1,17 @@
+[project]
+name = "rpa-corretora-seguros"
+version = "0.1.0"
+description = "Base de implementacao para automacao operacional de corretora de seguros"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "openpyxl>=3.1.5",
+  "pypdf>=6.9.2",
+]
+
+[project.scripts]
+rpa-corretora = "rpa_corretora.main:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"

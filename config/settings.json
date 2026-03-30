@@ -1,0 +1,39 @@
+{
+  "timezone": "America/Fortaleza",
+  "files": {
+    "seguros_pbseg_xlsx": "arquivos/SEGUROS PBSEG.xlsx",
+    "acompanhamento_2026_xlsx": "arquivos/ACOMPANHAMENTO 2026.xlsx",
+    "fluxo_caixa_xlsx": "arquivos/FLUXO DE CAIXA.xlsx",
+    "senhas_pdf": "arquivos/SENHAS.pdf"
+  },
+  "renewal": {
+    "internal_days": 30,
+    "new_days": 15,
+    "reminder_days": [7, 1],
+    "holidays": []
+  },
+  "insurers": {
+    "Yelum": "https://novomeuespacocorretor.yelumseguros.com.br/dashboard",
+    "Porto Seguro": "https://corretor.portoseguro.com.br",
+    "Mapfre": "https://negocios.mapfre.com.br/tela-principal",
+    "Bradesco": "https://wwwn.bradescoseguros.com.br",
+    "Allianz": "https://www.allianznet.com.br",
+    "Suhai": "https://suhaiseguradoracotacao.com.br/login",
+    "Tokio Marine": "https://www.tokiomarine.com.br/corretores",
+    "HDI": "https://www.hdi.com.br/hdidigital",
+    "Azul": "https://www.azulseguros.com.br/area-restrita",
+    "Justos": "https://corretores.justos.com.br/entrar"
+  },
+  "insurer_domains": [
+    "yelum",
+    "portoseguro",
+    "mapfre",
+    "bradesco",
+    "allianz",
+    "suhai",
+    "tokiomarine",
+    "hdi",
+    "azulseguros",
+    "justos"
+  ]
+}
