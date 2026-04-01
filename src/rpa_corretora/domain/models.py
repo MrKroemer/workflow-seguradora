@@ -24,7 +24,7 @@ class CalendarCommitment:
 class TodoTask:
     id: str
     title: str
-    due_date: date
+    due_date: date | None = None
     completed: bool = False
 
 
@@ -51,6 +51,9 @@ class PolicyRecord:
     endosso_open: bool = False
     premio_total: Decimal = Decimal("0")
     comissao: Decimal = Decimal("0")
+    vehicle_item: str = ""
+    vehicle_model: str = ""
+    vehicle_plate: str = ""
 
 
 @dataclass(slots=True)
@@ -59,6 +62,7 @@ class FollowupRecord:
     month: str
     fase: str
     status: str
+    renewal_kind: Literal["RENOVACAO_INTERNA", "NOVO"] = "RENOVACAO_INTERNA"
 
 
 @dataclass(slots=True)
@@ -109,6 +113,8 @@ class DashboardSnapshot:
     open_incidents: dict[str, int]
     cashflow: dict[str, str]
     critical_alerts: int
+    renewals_by_month: dict[str, dict[str, int]] = field(default_factory=dict)
+    cashflow_by_category: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

@@ -49,6 +49,8 @@ COMISSAO_LABELS = (
     "comissao corretor",
     "valor comissao",
     "vl comissao",
+    "comissoes emitidas",
+    "comissoes",
 )
 
 
@@ -94,6 +96,9 @@ class _PortalGatewayLike(Protocol):
     def fetch_policy_data(self, policy_ids: list[str]) -> list[PortalPolicyData]:
         ...
 
+    def check_claim_status(self, *, commitment_id: str, description: str) -> str | None:
+        ...
+
 
 class FallbackInsurerPortalGateway:
     def __init__(self, primary: _PortalGatewayLike, fallback: _PortalGatewayLike) -> None:
@@ -112,6 +117,12 @@ class FallbackInsurerPortalGateway:
 
         fallback_data = self.fallback.fetch_policy_data(missing)
         return [*primary_data, *fallback_data]
+
+    def check_claim_status(self, *, commitment_id: str, description: str) -> str | None:
+        primary_status = self.primary.check_claim_status(commitment_id=commitment_id, description=description)
+        if primary_status:
+            return primary_status
+        return self.fallback.check_claim_status(commitment_id=commitment_id, description=description)
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,6 +180,60 @@ class PortoSeguroPortalGateway:
             print(f"[Porto Portal] Integracao indisponivel: {exc}")
             return []
 
+    def check_claim_status(self, *, commitment_id: str, description: str) -> str | None:
+        query = description.strip() or commitment_id.strip()
+        if query == "":
+            return None
+        if not porto_web_automation_available():
+            return None
+
+        try:
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                browser = self._launch_browser(playwright)
+                try:
+                    context = browser.new_context(locale="pt-BR")
+                    try:
+                        page = context.new_page()
+                        page.set_default_timeout(self.timeout_seconds * 1000)
+                        self._login(page)
+                        page.goto(self.base_url, wait_until="domcontentloaded")
+                        self._dismiss_porto_overlays(page)
+                        self._open_porto_menu(page, "Sinistro")
+                        self._fill_and_submit_porto_search(
+                            page,
+                            query,
+                            [
+                                "input[placeholder*='sinistro' i]",
+                                "input[placeholder*='cpf ou cnpj' i]",
+                                "input[placeholder*='apolice' i]",
+                                "input[placeholder*='apólice' i]",
+                                "input[type='search']",
+                            ],
+                        )
+                        page.wait_for_timeout(1400)
+                        page_text = page.locator("body").inner_text(timeout=self.timeout_seconds * 1000)
+                        folded = _ascii_fold(page_text).lower()
+                        if "sinistro finalizado" in folded or "sinistro encerrado" in folded:
+                            return "FINALIZADO"
+                        if "em andamento" in folded or "em analise" in folded:
+                            return "EM_ANDAMENTO"
+                        if "pendente" in folded:
+                            return "PENDENTE"
+                        return None
+                    finally:
+                        context.close()
+                finally:
+                    browser.close()
+        except PlaywrightTimeoutError:
+            print("[Porto Portal] Timeout durante consulta de sinistro.")
+            return None
+        except Exception as exc:
+            print(f"[Porto Portal] Falha ao consultar sinistro: {exc}")
+            return None
+
     def _launch_browser(self, playwright: Playwright):
         try:
             return playwright.chromium.launch(channel="msedge", headless=self.headless)
@@ -220,32 +285,158 @@ class PortoSeguroPortalGateway:
         )
         page.wait_for_timeout(2500)
 
-    def _fetch_policy(self, page: Page, policy_id: str) -> PortalPolicyData | None:
-        page.goto(self.base_url, wait_until="domcontentloaded")
-        page.wait_for_timeout(800)
-
-        has_search = self._fill_first(
+    def _open_porto_menu(self, page: Page, menu_name: str) -> bool:
+        opened = self._click_first(
             page,
             [
-                "input[placeholder*='apolice' i]",
-                "input[placeholder*='apólice' i]",
-                "input[name*='apolice' i]",
-                "input[id*='apolice' i]",
-                "input[type='search']",
+                f"nav a:has-text('{menu_name}')",
+                f"a:has-text('{menu_name}')",
+                f"button:has-text('{menu_name}')",
+                f"text={menu_name}",
             ],
-            policy_id,
+            timeout_ms=2300,
         )
-        if has_search:
+        if opened:
+            page.wait_for_timeout(800)
+        return opened
+
+    def _dismiss_porto_overlays(self, page: Page) -> None:
+        # Modal de onboarding ("Entendi") e banner de cookies podem bloquear cliques.
+        self._click_first(
+            page,
+            [
+                "button:has-text('Entendi')",
+                "text=Entendi",
+            ],
+            timeout_ms=1200,
+        )
+        self._click_first(
+            page,
+            [
+                "button:has-text('Aceitar todos os cookies')",
+                "button:has-text('Dispensar')",
+            ],
+            timeout_ms=1200,
+        )
+        page.wait_for_timeout(150)
+
+    def _press_enter_first(self, page: Page, selectors: list[str]) -> bool:
+        for selector in selectors:
+            locator = page.locator(selector)
+            if locator.count() == 0:
+                continue
+            try:
+                locator.first.press("Enter")
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _fill_and_submit_porto_search(self, page: Page, policy_id: str, selectors: list[str]) -> bool:
+        has_search = self._fill_first(page, selectors, policy_id)
+        if not has_search:
+            return False
+
+        submitted = self._press_enter_first(page, selectors)
+        if not submitted:
             self._click_first(
                 page,
                 [
-                    "button:has-text('Buscar')",
                     "button:has-text('Pesquisar')",
-                    "button:has-text('Consultar')",
+                    "button:has-text('Buscar')",
+                    "button:has-text('Filtrar')",
                     "input[type='submit']",
                 ],
+                timeout_ms=2000,
             )
-            page.wait_for_timeout(1800)
+        page.wait_for_timeout(1800)
+        return True
+
+    def _search_policy_from_meus_clientes(self, page: Page, policy_id: str) -> bool:
+        # Tela mostra alternancia por Periodo/Identificador; tentamos focar em Identificador.
+        self._click_first(
+            page,
+            [
+                "button:has-text('Identificador')",
+                "text=Identificador",
+            ],
+            timeout_ms=1600,
+        )
+        page.wait_for_timeout(250)
+        return self._fill_and_submit_porto_search(
+            page,
+            policy_id,
+            [
+                "input[placeholder*='buscar por' i]",
+                "input[placeholder*='cpf ou cnpj' i]",
+                "input[placeholder*='apolice' i]",
+                "input[placeholder*='apólice' i]",
+                "input[placeholder*='contrato' i]",
+                "input[name*='apolice' i]",
+                "input[id*='apolice' i]",
+                "input[name*='contrato' i]",
+                "input[id*='contrato' i]",
+                "input[type='search']",
+            ],
+        )
+
+    def _search_policy_from_global_bar(self, page: Page, policy_id: str) -> bool:
+        return self._fill_and_submit_porto_search(
+            page,
+            policy_id,
+            [
+                "input[placeholder*='buscar por nome, cpf ou cnpj' i]",
+                "input[aria-label*='buscar por nome, cpf ou cnpj' i]",
+                "input[placeholder*='buscar por nome' i]",
+                "input[type='search']",
+            ],
+        )
+
+    def _fetch_policy(self, page: Page, policy_id: str) -> PortalPolicyData | None:
+        page.goto(self.base_url, wait_until="domcontentloaded")
+        page.wait_for_timeout(900)
+        self._dismiss_porto_overlays(page)
+
+        # Fluxo orientado pelo mapeamento visual do portal Porto:
+        # Meus Clientes -> barra global -> Minha Carteira -> Cobranca -> Sinistro.
+        performed_search = False
+
+        if self._open_porto_menu(page, "Meus Clientes"):
+            performed_search = self._search_policy_from_meus_clientes(page, policy_id)
+
+        if not performed_search:
+            performed_search = self._search_policy_from_global_bar(page, policy_id)
+
+        if not performed_search and self._open_porto_menu(page, "Minha Carteira"):
+            performed_search = self._search_policy_from_global_bar(page, policy_id)
+
+        if not performed_search and self._open_porto_menu(page, "Cobranca"):
+            performed_search = self._fill_and_submit_porto_search(
+                page,
+                policy_id,
+                [
+                    "input[placeholder*='buscar por cpf ou cnpj' i]",
+                    "input[placeholder*='cpf ou cnpj' i]",
+                    "input[type='search']",
+                ],
+            )
+
+        if not performed_search and self._open_porto_menu(page, "Sinistro"):
+            performed_search = self._search_policy_from_global_bar(page, policy_id)
+
+        if not performed_search:
+            # Fallback final generico para preservar continuidade.
+            self._fill_and_submit_porto_search(
+                page,
+                policy_id,
+                [
+                    "input[placeholder*='apolice' i]",
+                    "input[placeholder*='apólice' i]",
+                    "input[name*='apolice' i]",
+                    "input[id*='apolice' i]",
+                    "input[type='search']",
+                ],
+            )
 
         page_text = page.locator("body").inner_text(timeout=self.timeout_seconds * 1000)
         return parse_porto_policy_data_from_text(policy_id=policy_id, text=page_text)
@@ -273,4 +464,3 @@ class PortoSeguroPortalGateway:
             except Exception:
                 continue
         return False
-

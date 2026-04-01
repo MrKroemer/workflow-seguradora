@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from difflib import SequenceMatcher
+import os
+import unicodedata
 
 from rpa_corretora.config import AppSettings
-from rpa_corretora.domain.models import Alert, EmailMessage, RunResult
+from rpa_corretora.domain.models import Alert, CalendarCommitment, EmailMessage, FollowupRecord, PolicyRecord, RunResult
 from rpa_corretora.domain.rules import (
     build_agenda_pending_alert,
     build_commission_pending_alert,
@@ -14,6 +17,7 @@ from rpa_corretora.domain.rules import (
     build_renewal_report_alert,
     build_segfy_portal_alerts,
     build_todo_pending_alert,
+    extract_expense_from_email,
     extract_nubank_cashflow,
     is_insurer_email,
 )
@@ -28,7 +32,18 @@ from rpa_corretora.integrations.interfaces import (
     WhatsAppGateway,
 )
 from rpa_corretora.processing.dashboard import DashboardBuilder
+from rpa_corretora.processing.execution_report import ExecutionTraceCollector
 from rpa_corretora.templates.messages import cobranca_parcela_message
+
+
+@dataclass(slots=True)
+class NotificationDispatchSummary:
+    whatsapp_sent: int = 0
+    segfy_payments: int = 0
+    portal_claim_checks: int = 0
+    insured_emails_sent: int = 0
+    skipped_without_phone: int = 0
+    skipped_without_email_target: int = 0
 
 
 @dataclass(slots=True)
@@ -44,17 +59,114 @@ class DailyProcessor:
     email_sender: EmailSenderGateway
     dashboard_builder: DashboardBuilder
 
-    def run(self, today: date, dry_run: bool = True) -> RunResult:
-        commitments = self.calendar.fetch_daily_commitments(today)
-        todo_tasks = self.todo.fetch_open_tasks()
-        messages = self.gmail.fetch_unread_messages()
+    @staticmethod
+    def _normalize_name(value: str) -> str:
+        normalized = unicodedata.normalize("NFKD", value)
+        return normalized.encode("ascii", "ignore").decode("ascii").upper().strip()
 
-        policies = self.sheets.load_policies()
-        followups = self.sheets.load_followups(today.year)
-        expenses = self.sheets.load_expenses(today.year, today.month)
+    def _match_policy_by_name(self, insured_name: str, policies: list[PolicyRecord]) -> PolicyRecord | None:
+        target = self._normalize_name(insured_name)
+        if not target:
+            return None
+
+        for policy in policies:
+            if self._normalize_name(policy.insured_name) == target:
+                return policy
+
+        best_policy: PolicyRecord | None = None
+        best_score = 0.0
+        for policy in policies:
+            score = SequenceMatcher(None, target, self._normalize_name(policy.insured_name)).ratio()
+            if score > best_score:
+                best_score = score
+                best_policy = policy
+        if best_policy is not None and best_score >= 0.90:
+            return best_policy
+        return None
+
+    def _sync_policies_from_followups(self, policies: list[PolicyRecord], followups: list[FollowupRecord]) -> None:
+        for followup in followups:
+            policy = self._match_policy_by_name(followup.insured_name, policies)
+            if policy is None:
+                continue
+            if followup.renewal_kind == "NOVO":
+                policy.renewal_kind = "NOVO"
+            if followup.fase.strip() or followup.status.strip():
+                policy.renewal_started = True
+
+    def run(
+        self,
+        today: date,
+        dry_run: bool = True,
+        trace: ExecutionTraceCollector | None = None,
+    ) -> RunResult:
+        if trace is not None:
+            trace.start_stage("google_calendar")
+        try:
+            commitments = self.calendar.fetch_daily_commitments(today)
+            unresolved_commitments = sum(1 for item in commitments if not item.resolved)
+            if trace is not None:
+                trace.complete_stage(
+                    "google_calendar",
+                    f"{len(commitments)} compromissos lidos ({unresolved_commitments} pendentes).",
+                )
+                trace.add_non_executed_item(
+                    item_id="Google Calendar - criacao de eventos",
+                    reason="Fluxo atual nao possui rotina de criacao automatica de eventos.",
+                    recommended_action="Manter criacao manual dos eventos ate mapear regras de escrita.",
+                )
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage(
+                    "google_calendar",
+                    exc,
+                    context={"acao": "fetch_daily_commitments", "data": today.isoformat()},
+                )
+            raise
+
+        if trace is not None:
+            trace.start_stage("microsoft_todo")
+        try:
+            todo_tasks = self.todo.fetch_open_tasks()
+            if trace is not None:
+                trace.complete_stage("microsoft_todo", f"{len(todo_tasks)} tarefas abertas lidas.")
+                trace.add_non_executed_item(
+                    item_id="Microsoft To Do - criacao/atualizacao",
+                    reason="Fluxo atual realiza somente leitura de tarefas.",
+                    recommended_action="Mapear regras para abertura e atualizacao automatica de tarefas.",
+                )
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage("microsoft_todo", exc, context={"acao": "fetch_open_tasks"})
+            raise
+
+        if trace is not None:
+            trace.start_stage("gmail")
+        try:
+            messages = self.gmail.fetch_unread_messages()
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage("gmail", exc, context={"acao": "fetch_unread_messages"})
+            raise
+
+        if trace is not None:
+            trace.start_stage("spreadsheets")
+        try:
+            policies = self.sheets.load_policies()
+            followups = self.sheets.load_followups(today.year)
+            self._sync_policies_from_followups(policies, followups)
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage(
+                    "spreadsheets",
+                    exc,
+                    context={"acao": "load_policies_or_followups", "ano": str(today.year)},
+                )
+            raise
 
         insurer_emails: list[EmailMessage] = []
         cashflow_entries = []
+        expense_entries = []
         alerts: list[Alert] = []
 
         for message in messages:
@@ -65,12 +177,74 @@ class DailyProcessor:
             if nubank_entry is not None:
                 cashflow_entries.append(nubank_entry)
 
+            expense_entry = extract_expense_from_email(message, today)
+            if expense_entry is not None:
+                expense_entries.append(expense_entry)
+
             renewal_report_alert = build_renewal_report_alert(message, today)
             if renewal_report_alert is not None:
                 alerts.append(renewal_report_alert)
 
-        if cashflow_entries and not dry_run:
-            self.sheets.append_cashflow_entries(cashflow_entries)
+        if trace is not None:
+            trace.complete_stage(
+                "gmail",
+                (
+                    f"{len(messages)} e-mails lidos; {len(insurer_emails)} classificados como seguradora; "
+                    f"{len(cashflow_entries)} entradas e {len(expense_entries)} despesas extraidas."
+                ),
+            )
+
+        try:
+            if cashflow_entries and not dry_run:
+                self.sheets.append_cashflow_entries(cashflow_entries)
+            if expense_entries and not dry_run:
+                self.sheets.append_expense_entries(expense_entries)
+
+            if dry_run and cashflow_entries and trace is not None:
+                trace.add_non_executed_item(
+                    item_id="Planilhas - aba RENDIMENTO",
+                    reason="Dry-run ativo, escrita em planilha foi bloqueada.",
+                    recommended_action="Reexecutar o ciclo sem --dry-run para gravar os lancamentos.",
+                )
+            if dry_run and expense_entries and trace is not None:
+                trace.add_non_executed_item(
+                    item_id="Planilhas - aba Gastos Mensais",
+                    reason="Dry-run ativo, escrita em planilha foi bloqueada.",
+                    recommended_action="Reexecutar o ciclo sem --dry-run para gravar as despesas.",
+                )
+
+            expenses = self.sheets.load_expenses(today.year, today.month)
+            if expense_entries:
+                expenses.extend(expense_entries)
+
+            summary_issues = self.sheets.validate_expense_summary(today.year, today.month)
+            for issue in summary_issues:
+                alerts.append(
+                    Alert(
+                        code="RESUMO_GASTOS_DIVERGENTE",
+                        severity="ALTA",
+                        message=issue,
+                        context={"month": f"{today.year}-{today.month:02d}"},
+                    )
+                )
+
+            if trace is not None:
+                writes_count = 0 if dry_run else len(cashflow_entries) + len(expense_entries)
+                trace.complete_stage(
+                    "spreadsheets",
+                    (
+                        f"{len(policies)} apolices e {len(followups)} acompanhamentos lidos; "
+                        f"{writes_count} linhas gravadas; {len(summary_issues)} divergencias no resumo de gastos."
+                    ),
+                )
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage(
+                    "spreadsheets",
+                    exc,
+                    context={"acao": "read_write_validate", "mes": f"{today.year}-{today.month:02d}"},
+                )
+            raise
 
         for policy in policies:
             commission_alert = build_commission_pending_alert(policy)
@@ -92,18 +266,112 @@ class DailyProcessor:
             if todo_alert is not None:
                 alerts.append(todo_alert)
 
-        segfy_data = self.segfy.fetch_policy_data()
-        portal_data = self.portals.fetch_policy_data([item.policy_id for item in segfy_data])
-        alerts.extend(build_segfy_portal_alerts(segfy_data, portal_data))
+        if trace is not None:
+            trace.start_stage("segfy")
+        try:
+            segfy_data = self.segfy.fetch_policy_data()
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage("segfy", exc, context={"acao": "fetch_policy_data"})
+            raise
 
-        if not dry_run:
-            self._dispatch_notifications(commitments)
+        if trace is not None:
+            trace.start_stage("insurer_portals")
+        try:
+            portal_data = self.portals.fetch_policy_data([item.policy_id for item in segfy_data])
+            alerts.extend(build_segfy_portal_alerts(segfy_data, portal_data))
+        except Exception as exc:
+            if trace is not None:
+                trace.fail_stage(
+                    "insurer_portals",
+                    exc,
+                    context={"acao": "fetch_policy_data", "total_apolices": str(len(segfy_data))},
+                )
+            raise
+
+        notification_summary = NotificationDispatchSummary()
+        if dry_run:
+            if trace is not None:
+                trace.ignore_stage(
+                    "whatsapp",
+                    reason="Dry-run ativo, notificacoes externas foram puladas.",
+                    recommended_action="Executar sem --dry-run para enviar notificacoes.",
+                    result="Notificacoes nao enviadas por modo dry-run.",
+                )
+        else:
+            if trace is not None:
+                trace.start_stage("whatsapp")
+            try:
+                notification_summary = self._dispatch_notifications(commitments, policies)
+                if trace is not None:
+                    trace.complete_stage(
+                        "whatsapp",
+                        (
+                            f"{notification_summary.whatsapp_sent} mensagens enviadas; "
+                            f"{notification_summary.skipped_without_phone} sem telefone; "
+                            f"{notification_summary.insured_emails_sent} e-mails de segurado enviados."
+                        ),
+                    )
+            except Exception as exc:
+                if trace is not None:
+                    trace.fail_stage("whatsapp", exc, context={"acao": "dispatch_notifications"})
+                raise
+
+        blue_pending = [item for item in commitments if not item.resolved and item.color == "AZUL"]
+        if dry_run and trace is not None:
+            for commitment in blue_pending:
+                trace.add_non_executed_item(
+                    item_id=f"Segfy pagamento {commitment.id}",
+                    reason="Dry-run ativo, baixa de parcela nao executada.",
+                    recommended_action="Executar sem --dry-run para registrar baixa no Segfy.",
+                )
+
+        gray_pending = [item for item in commitments if not item.resolved and item.color == "CINZA"]
+        if dry_run and trace is not None:
+            for commitment in gray_pending:
+                trace.add_non_executed_item(
+                    item_id=f"Portal sinistro {commitment.id}",
+                    reason="Dry-run ativo, consulta de sinistro nao executada.",
+                    recommended_action="Executar sem --dry-run para consultar status no portal.",
+                )
+
+        green_pending = [item for item in commitments if not item.resolved and item.color == "VERDE"]
+        if dry_run and trace is not None:
+            for commitment in green_pending:
+                trace.add_non_executed_item(
+                    item_id=f"Gmail resposta {commitment.id}",
+                    reason="Dry-run ativo, envio de e-mail operacional nao executado.",
+                    recommended_action="Executar sem --dry-run para enviar notificacao por e-mail.",
+                )
+
+        if trace is not None:
+            trace.complete_stage(
+                "segfy",
+                (
+                    f"{len(segfy_data)} registros consultados; "
+                    f"{notification_summary.segfy_payments} baixas registradas."
+                ),
+            )
+            trace.complete_stage(
+                "insurer_portals",
+                (
+                    f"{len(portal_data)} registros de apolices retornados; "
+                    f"{notification_summary.portal_claim_checks} consultas de sinistro por agenda."
+                ),
+            )
+            if notification_summary.skipped_without_email_target > 0:
+                trace.add_non_executed_item(
+                    item_id="Gmail resposta de segurados",
+                    reason="Endereco INSURED_NOTIFY_EMAIL_TO nao configurado.",
+                    recommended_action="Definir INSURED_NOTIFY_EMAIL_TO para habilitar envio automatico.",
+                )
 
         dashboard = self.dashboard_builder.build(
             policies=policies,
             alerts=alerts,
             cashflow_entries=cashflow_entries,
             expenses=expenses,
+            followups=followups,
         )
 
         return RunResult(
@@ -114,13 +382,61 @@ class DailyProcessor:
             insurer_emails=insurer_emails,
         )
 
-    def _dispatch_notifications(self, commitments) -> None:
+    def _dispatch_notifications(
+        self,
+        commitments: list[CalendarCommitment],
+        policies: list[PolicyRecord],
+    ) -> NotificationDispatchSummary:
+        insured_notification_email = os.getenv("INSURED_NOTIFY_EMAIL_TO", "").strip()
+        summary = NotificationDispatchSummary()
+
         for commitment in commitments:
-            if commitment.color != "VERMELHO" or commitment.resolved:
+            if commitment.resolved:
                 continue
-            if not commitment.whatsapp_number:
+            client_name = commitment.client_name or "Cliente"
+
+            if commitment.color == "VERMELHO":
+                if commitment.whatsapp_number:
+                    message = cobranca_parcela_message(client_name)
+                    self.whatsapp.send_message(commitment.whatsapp_number, message)
+                    summary.whatsapp_sent += 1
+                else:
+                    summary.skipped_without_phone += 1
                 continue
 
-            client_name = commitment.client_name or "Cliente"
-            message = cobranca_parcela_message(client_name)
-            self.whatsapp.send_message(commitment.whatsapp_number, message)
+            if commitment.color == "AZUL":
+                self.segfy.register_payment(commitment_id=commitment.id, description=commitment.title)
+                summary.segfy_payments += 1
+                continue
+
+            if commitment.color == "CINZA":
+                self.portals.check_claim_status(commitment_id=commitment.id, description=commitment.title)
+                summary.portal_claim_checks += 1
+                continue
+
+            if commitment.color == "VERDE":
+                if not insured_notification_email:
+                    summary.skipped_without_email_target += 1
+                    continue
+                policy = self._match_policy_by_name(client_name, policies)
+                if policy is None:
+                    body = (
+                        f"Segurado(a): {client_name}\n"
+                        "Modelo: nao identificado\n"
+                        "Placa: nao identificada\n"
+                    )
+                else:
+                    model = policy.vehicle_model or policy.vehicle_item or "nao identificado"
+                    plate = policy.vehicle_plate or "nao identificada"
+                    body = (
+                        f"Segurado(a): {policy.insured_name}\n"
+                        f"Modelo: {model}\n"
+                        f"Placa: {plate}\n"
+                    )
+                self.email_sender.send_email(
+                    recipient=insured_notification_email,
+                    subject=f"Notificacao de segurado - {client_name}",
+                    content=body,
+                )
+                summary.insured_emails_sent += 1
+        return summary

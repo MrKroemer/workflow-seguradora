@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-04-01T12:37:50",
+  "platform": "linux | python=3.11.9",
+  "is_windows": false,
+  "integrations": {
+    "calendar_mode": "NOOP",
+    "gmail_mode": "NOOP",
+    "todo_mode": "NOOP",
+    "segfy_mode": "QUEUE_ONLY",
+    "portal_mode": "STUB",
+    "whatsapp_mode": "OUTBOX_FILE",
+    "email_mode": "OUTBOX_FILE"
+  },
+  "components": [
+    {
+      "key": "python_runtime",
+      "label": "Python Runtime",
+      "status": "OK",
+      "required": true,
+      "details": "/home/sculpt0r/bin/python3"
+    },
+    {
+      "key": "powershell",
+      "label": "PowerShell",
+      "status": "N_A",
+      "required": false,
+      "details": "Ambiente atual nao e Windows"
+    },
+    {
+      "key": "windows_task_scheduler",
+      "label": "Windows Task Scheduler",
+      "status": "N_A",
+      "required": false,
+      "details": "Ambiente atual nao e Windows"
+    },
+    {
+      "key": "msedge",
+      "label": "Microsoft Edge",
+      "status": "N_A",
+      "required": false,
+      "details": "Automacao web de portais/To Do requer Windows"
+    },
+    {
+      "key": "playwright_module",
+      "label": "Playwright Python",
+      "status": "N_A",
+      "required": false,
+      "details": "Automacao web de portais/To Do requer Windows"
+    },
+    {
+      "key": "playwright_chromium",
+      "label": "Playwright Chromium Bundle",
+      "status": "N_A",
+      "required": false,
+      "details": "Automacao web de portais/To Do requer Windows"
+    },
+    {
+      "key": "operational_files",
+      "label": "Arquivos Operacionais",
+      "status": "OK",
+      "required": true,
+      "details": "3/3 encontrados"
+    }
+  ],
+  "files": [
+    {
+      "path": "arquivos/SEGUROS PBSEG.xlsx",
+      "exists": true
+    },
+    {
+      "path": "arquivos/ACOMPANHAMENTO 2026.xlsx",
+      "exists": true
+    },
+    {
+      "path": "arquivos/FLUXO DE CAIXA.xlsx",
+      "exists": true
+    }
+  ],
+  "ready": false
+}

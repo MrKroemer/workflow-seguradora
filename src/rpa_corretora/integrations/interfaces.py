@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Protocol
 
 from rpa_corretora.domain.models import (
@@ -44,14 +45,26 @@ class SpreadsheetGateway(Protocol):
     def append_cashflow_entries(self, entries: list[CashflowEntry]) -> None:
         ...
 
+    def append_expense_entries(self, entries: list[ExpenseEntry]) -> None:
+        ...
+
+    def validate_expense_summary(self, year: int, month: int) -> list[str]:
+        ...
+
 
 class SegfyGateway(Protocol):
     def fetch_policy_data(self) -> list[SegfyPolicyData]:
         ...
 
+    def register_payment(self, *, commitment_id: str, description: str) -> bool:
+        ...
+
 
 class InsurerPortalGateway(Protocol):
     def fetch_policy_data(self, policy_ids: list[str]) -> list[PortalPolicyData]:
+        ...
+
+    def check_claim_status(self, *, commitment_id: str, description: str) -> str | None:
         ...
 
 
@@ -61,5 +74,11 @@ class WhatsAppGateway(Protocol):
 
 
 class EmailSenderGateway(Protocol):
-    def send_email(self, recipient: str, subject: str, content: str) -> None:
+    def send_email(
+        self,
+        recipient: str,
+        subject: str,
+        content: str,
+        attachments: list[str | Path] | None = None,
+    ) -> None:
         ...

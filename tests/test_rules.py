@@ -1,11 +1,12 @@
 from datetime import date, timedelta
 
 from rpa_corretora.config import RenewalSettings
-from rpa_corretora.domain.models import FollowupRecord, PolicyRecord
+from rpa_corretora.domain.models import FollowupRecord, PolicyRecord, TodoTask
 from rpa_corretora.domain.rules import (
     build_commission_pending_alert,
     build_followup_alerts,
     build_renewal_alerts,
+    build_todo_pending_alert,
     business_day_with_anticipation,
 )
 
@@ -132,3 +133,18 @@ def test_followup_unmatched_includes_suggestion_when_close() -> None:
 
     assert mismatch.context.get("insured_name") == "Carla Mendes"
     assert mismatch.context.get("suggested_policy_id") == "PB-SUG"
+
+
+def test_todo_pending_without_due_date_is_high_severity() -> None:
+    task = TodoTask(
+        id="todo-sem-prazo",
+        title="Revisar pendencias operacionais",
+        due_date=None,
+        completed=False,
+    )
+
+    alert = build_todo_pending_alert(task, today=date(2026, 3, 30))
+
+    assert alert is not None
+    assert alert.code == "PENDENCIA_TODO_SEM_PRAZO"
+    assert alert.severity == "ALTA"

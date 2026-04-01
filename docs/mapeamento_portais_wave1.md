@@ -38,3 +38,121 @@ Este documento registra o mapeamento dos 3 primeiros portais definidos a partir 
   - Porto Seguro
   - Mapfre
 - O retorno segue com fallback por apolice para `stub`, preservando continuidade operacional.
+
+## Yelum (menu mapeado)
+
+Com base no mapeamento visual validado:
+
+- Menu superior identificado:
+  - `+Negocios`
+  - `Consultas`
+  - `Assistencia`
+  - `Sinistros`
+  - `Financeiro`
+  - `Produtos`
+  - `Cresca Corretor`
+  - `Atendimento`
+- Submenu `Consultas` identificado:
+  - `Propostas`
+  - `Apolice`
+  - `Renovacao`
+  - `Cancelamentos`
+  - `Cotacao - NewSel`
+  - `Easyway`
+- Submenu `Sinistros` identificado:
+  - `Avisar sinistro`
+  - `Acompanhar sinistro`
+  - `Encontrar oficinas`
+
+Uso no bot:
+
+- Navegacao preferencial para consulta de apolice: `Consultas -> Apolice`.
+- Fallback adicional para atalho lateral `Consultar Apolice`.
+
+## Porto Seguro (menu mapeado)
+
+Com base no mapeamento visual validado:
+
+- Menu superior identificado:
+  - `Vistoria Previa`
+  - `Comissoes`
+  - `Cobranca`
+  - `Sinistro`
+  - `Meus Clientes`
+  - `Minha Carteira`
+  - `Link do Corretor`
+  - `Campanhas`
+
+Telas com filtros visiveis:
+
+- `Meus Clientes`:
+  - tabela com coluna `N da Apolice / Contrato`
+  - busca por `Periodo` ou `Identificador`
+  - filtros de `Status`, `Produto` e periodo rapido
+- `Minha Carteira`:
+  - cards de producao/comissao e bloco de parcelas com link para cobranca
+- `Cobranca`:
+  - `Gestao de parcelas` com busca `CPF ou CNPJ`
+  - indicadores de vencimento e status de parcela
+- `Sinistro`:
+  - acompanhamento por produto com acao `Abrir`
+- `Comissoes`:
+  - tela de consulta com seletores de empresa, susep e periodo
+- `Link do Corretor`:
+  - lista de links e modal inicial `Entendi`
+
+Uso no bot:
+
+- Navegacao preferencial para busca de apolice:
+  - `Meus Clientes` -> `Identificador` -> preencher busca -> enviar (`Enter`/`Pesquisar`)
+- Fallback de navegacao:
+  - barra global do topo (`Buscar por nome, CPF ou CNPJ`)
+  - `Minha Carteira` -> barra global
+  - `Cobranca` -> busca por `CPF ou CNPJ`
+  - `Sinistro` -> barra global
+- Tratamento de UI:
+  - fechamento defensivo do modal inicial (`Entendi`) e banner de cookies.
+
+## Mapfre (menu mapeado)
+
+Com base no mapeamento visual validado:
+
+- Menu superior identificado:
+  - `Inicio`
+  - `Carteira`
+  - `Desempenho`
+  - `Renovacoes`
+  - `Vistoria Previa Auto`
+  - `Parcelas`
+  - `Propostas`
+  - `Comissao`
+  - `Para voce`
+  - `Sinistros`
+
+Telas com filtros visiveis:
+
+- `Carteira de clientes`:
+  - campos `Nome do Cliente`, `Numero do CPF/CNPJ`, `Numero da Apolice`, `Numero de Proposta`, `Periodo`
+  - acao principal: `Pesquisar`
+- `Gestao de Renovacoes`:
+  - campos `Nome do Cliente`, `Numero do CPF/CNPJ`, `Numero da Apolice`, `Placa`, `Chassi`
+  - acao principal: `Pesquisar`
+- `Consulta e Gestao de Sinistros`:
+  - campos `Numero do Sinistro`, `Nome do Cliente`, `Numero do CPF/CNPJ`, `Numero da Apolice`, `Placa`, `Chassi`
+  - acao principal: `Pesquisar`
+- `Propostas`:
+  - campos `Numero Proposta`, `Protocolo`, `Periodo`, `Numero Chassi`, `Placa`, `Segurado`, `Numero CPF/CNPJ`
+  - acao principal: `Pesquisar`
+- `Comissao / Extrato de Comissoes`:
+  - filtro por `Relatorio` e `Empresa`
+  - acao principal: `Pesquisar`
+- `Desempenho`:
+  - cards com `Premios` e `Comissoes emitidas` (usado como fonte auxiliar de sinais financeiros)
+
+Uso no bot:
+
+- Navegacao preferencial para consulta por apolice:
+  - `Carteira` -> preencher `Numero da Apolice` -> `Pesquisar`
+- Fallback de navegacao:
+  - `Renovacoes` -> preencher `Numero da Apolice` -> `Pesquisar`
+  - `Sinistros` -> preencher `Numero da Apolice` -> `Pesquisar`

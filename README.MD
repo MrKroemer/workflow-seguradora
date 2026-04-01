@@ -10,11 +10,18 @@ Automacao operacional para corretora de seguros com processamento diario de agen
   - `ACOMPANHAMENTO 2026.xlsx`
   - `FLUXO DE CAIXA.xlsx`
 - OCR opcional de `SENHAS.pdf` para catalogar servicos de credenciais.
-- Integracao Microsoft To Do via Microsoft Graph pronta (com fallback web para Windows e fallback `stub`).
+- Integracao Microsoft To Do via Microsoft Graph pronta (com fallback web para Windows).
+- Integracoes operacionais ja plugadas no fluxo principal:
+  - Google Calendar (API);
+  - Gmail (IMAP);
+  - Segfy (API/config + fallback exportacao e fila local);
+  - WhatsApp (API HTTP + outbox local);
+  - SMTP (envio real + outbox local).
 - Camada de precisao de regras:
   - matching de segurados por nome com estrategia exata + fuzzy controlada;
   - renovacoes `D-10` e abaixo com severidade `CRITICA`.
 - Dashboard com indicadores operacionais e financeiros.
+- Relatorio de execucao obrigatorio ao fim do ciclo (`JSON + PDF`), inclusive em falha critica.
 
 ## Estrutura principal
 
@@ -27,6 +34,8 @@ Automacao operacional para corretora de seguros com processamento diario de agen
 - `src/rpa_corretora/integrations/credentials_pdf.py`: OCR do PDF de senhas.
 - `docs/adendo_escopo_final_v1.md`: adendo oficial do escopo final (sem regressao).
 - `docs/mapeamento_portais_wave1.md`: mapeamento dos 3 primeiros portais (Yelum, Porto, Mapfre).
+- `docs/mapeamento_portais_wave2.md`: mapeamento dos portais 4 a 6 (Bradesco, Allianz, Suhai).
+- `docs/mapeamento_portais_wave3.md`: mapeamento inicial dos portais 7 a 9 (Tokio, HDI, Azul), com os tres portais detalhados.
 
 ## Requisitos
 
@@ -53,9 +62,43 @@ Observacoes:
   - `MICROSOFT_TODO_CLIENT_ID`
   - `MICROSOFT_TODO_REFRESH_TOKEN` (recomendado)
 - Sem esses valores, no Windows o sistema tenta `WEB_AUTOMATION` com login/senha.
-- Se Graph e automacao web nao estiverem disponiveis, o sistema entra em `STUB`.
+- Se Graph e automacao web nao estiverem disponiveis, o sistema entra em `NOOP` (sem dados ficticios).
 
-### 1.1) Fallback Windows sem Client ID
+### 1.1) Integracoes operacionais (agenda, e-mail, Segfy, WhatsApp)
+
+Variaveis no `.env`:
+
+- Agenda Google:
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `GOOGLE_REFRESH_TOKEN`
+  - `GOOGLE_CALENDAR_ID` (opcional, padrao `primary`)
+- Gmail:
+  - `GMAIL_IMAP_USER`
+  - `GMAIL_IMAP_PASSWORD`
+  - `GMAIL_IMAP_HOST` (opcional)
+  - `GMAIL_IMAP_MAILBOX` (opcional)
+- Segfy:
+  - `SEGFY_API_BASE_URL` + (`SEGFY_API_TOKEN` ou `SEGFY_USER` + `SEGFY_PASSWORD`)
+  - ou `SEGFY_EXPORT_XLSX`
+- WhatsApp:
+  - `WHATSAPP_PROVIDER_URL`
+  - `WHATSAPP_PROVIDER_TOKEN`
+- SMTP:
+  - `SMTP_HOST`
+  - `SMTP_PORT`
+  - `SMTP_USER`
+  - `SMTP_PASSWORD`
+  - `SMTP_FROM_EMAIL`
+  - `INSURED_NOTIFY_EMAIL_TO`
+- Relatorio de execucao:
+  - `EXECUTION_REPORT_EMAIL_TO`
+  - `EXECUTION_REPORT_OUTPUT_DIR` (opcional)
+
+Com SMTP ativo e `EXECUTION_REPORT_EMAIL_TO` definido,
+o sistema envia o relatorio com anexos JSON e PDF.
+
+### 1.2) Fallback Windows sem Client ID
 
 Para usar To Do sem `MICROSOFT_TODO_CLIENT_ID` no Windows:
 
@@ -68,7 +111,7 @@ Variavel opcional:
 
 - `MICROSOFT_TODO_WEB_HEADLESS=1` (padrao). Use `0` para abrir navegador e depurar.
 
-### 1.2) Piloto de Portais (Wave 1)
+### 1.3) Piloto de Portais (Wave 1)
 
 Variaveis no `.env`:
 
@@ -82,6 +125,37 @@ Variaveis no `.env`:
 - `MAPFRE_PORTAL_PASSWORD`
 - `MAPFRE_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
 - `PORTAL_USE_PDF_CREDENTIALS=1` para buscar credenciais Wave 1 no `SENHAS.pdf` quando env estiver vazio.
+
+### 1.4) Piloto de Portais (Wave 2)
+
+Variaveis no `.env`:
+
+- `BRADESCO_PORTAL_USER`
+- `BRADESCO_PORTAL_PASSWORD`
+- `BRADESCO_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
+- `ALLIANZ_PORTAL_USER`
+- `ALLIANZ_PORTAL_PASSWORD`
+- `ALLIANZ_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
+- `SUHAI_PORTAL_USER`
+- `SUHAI_PORTAL_PASSWORD`
+- `SUHAI_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
+
+### 1.5) Piloto de Portais (Wave 3 - inicio)
+
+Integracao web inicial da Tokio Marine, HDI e Azul foi adicionada no pipeline `WEB_MULTI+STUB`,
+com tratamento de modais/termo/cookies e fallback nao regressivo para `stub`.
+
+Variaveis no `.env`:
+
+- `TOKIO_PORTAL_USER`
+- `TOKIO_PORTAL_PASSWORD`
+- `TOKIO_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
+- `HDI_PORTAL_USER`
+- `HDI_PORTAL_PASSWORD`
+- `HDI_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
+- `AZUL_PORTAL_USER`
+- `AZUL_PORTAL_PASSWORD`
+- `AZUL_PORTAL_WEB_HEADLESS=1` (padrao). Use `0` para depurar.
 
 ### 2) Arquivos operacionais
 
@@ -108,10 +182,22 @@ Gerar dashboard visual HTML em caminho customizado:
 PYTHONPATH=src python3 -m rpa_corretora.main --dry-run --dashboard-html-output outputs/dashboard_execucao.html
 ```
 
+Auditoria de ambiente Windows (detecao do SO + apps/dependencias + arquivos):
+
+```bash
+PYTHONPATH=src python3 -m rpa_corretora.main --windows-audit-only
+```
+
 Desativar geracao de HTML:
 
 ```bash
 PYTHONPATH=src python3 -m rpa_corretora.main --dry-run --no-dashboard-html
+```
+
+Salvar relatorios em pasta customizada:
+
+```bash
+PYTHONPATH=src python3 -m rpa_corretora.main --execution-report-dir outputs/relatorios
 ```
 
 ### Windows (PowerShell/CMD)
@@ -160,8 +246,15 @@ Ao rodar, o sistema imprime:
 - total de alertas
 - e-mails de seguradoras triados
 - lancamentos de caixa detectados
-- modo de integracao do To Do (`GRAPH`, `WEB_AUTOMATION` ou `STUB`)
-- modo de integracao dos portais (`WEB_WAVE1+STUB` ou `STUB`)
+- modo de integracao da agenda (`GOOGLE_API` ou `NOOP`)
+- modo de integracao do Gmail (`GMAIL_IMAP` ou `NOOP`)
+- modo de integracao do Segfy (`API_OR_QUEUE`, `EXPORT_XLSX_OR_QUEUE` ou `QUEUE_ONLY`)
+- modo de integracao do WhatsApp (`HTTP_API` ou `OUTBOX_FILE`)
+- modo de integracao de e-mail (`SMTP` ou `OUTBOX_FILE`)
+- modo de integracao do To Do (`GRAPH`, `WEB_AUTOMATION` ou `NOOP`)
+- modo de integracao dos portais (`WEB_MULTI+STUB` ou `STUB`)
+- auditoria de runtime Windows em JSON (`outputs/windows_runtime_report.json`)
+- relatorio de execucao em JSON/PDF (`relatorio_execucao_YYYYMMDD_HHMMSS.{json,pdf}`)
 - snapshot do dashboard
 
 Exemplo de linha esperada para To Do real:
@@ -188,4 +281,4 @@ PYTHONPATH=src python3 -m pytest
    - `GRAPH`: preencher `MICROSOFT_TODO_CLIENT_ID` e `MICROSOFT_TODO_REFRESH_TOKEN`.
    - `WEB_AUTOMATION` (Windows): instalar Playwright e manter `MICROSOFT_TODO_USER` + `MICROSOFT_TODO_PASSWORD`.
 2. Rodar `--dry-run` e confirmar `Microsoft To Do modo: GRAPH` ou `WEB_AUTOMATION`.
-3. Avancar para integracao real de Gmail, Segfy e portais no mesmo padrao.
+3. Avancar no mapeamento detalhado dos portais restantes (unica frente ainda parcial).

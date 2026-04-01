@@ -1,0 +1,208 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 1955 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(RELATORIO DE EXECUCAO - RPA CORRETORA) Tj
+T*
+(========================================================================) Tj
+T*
+(Run ID: RUN-20260401-002) Tj
+T*
+(Versao do bot: 0.1.0) Tj
+T*
+(Inicio do ciclo: 2026-04-01 11:46:40) Tj
+T*
+(Fim do ciclo: 2026-04-01 11:46:41) Tj
+T*
+() Tj
+T*
+(RESUMO EXECUTIVO) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Total previsto: 8) Tj
+T*
+(Total com sucesso: 7) Tj
+T*
+(Falha ou nao executadas: 1) Tj
+T*
+(Status geral: SUCESSO PARCIAL) Tj
+T*
+() Tj
+T*
+(DETALHAMENTO POR ETAPA) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Etapa: Google Calendar) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:40) Tj
+T*
+(Fim: 2026-04-01 11:46:40) Tj
+T*
+(Resultado: 0 compromissos lidos \(0 pendentes\).) Tj
+T*
+() Tj
+T*
+(Etapa: Microsoft To Do) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:40) Tj
+T*
+(Fim: 2026-04-01 11:46:40) Tj
+T*
+(Resultado: 0 tarefas abertas lidas.) Tj
+T*
+() Tj
+T*
+(Etapa: Gmail) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:40) Tj
+T*
+(Fim: 2026-04-01 11:46:41) Tj
+T*
+(Resultado: 0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas.) Tj
+T*
+() Tj
+T*
+(Etapa: Segfy CRM) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:41) Tj
+T*
+(Fim: 2026-04-01 11:46:41) Tj
+T*
+(Resultado: 0 registros consultados; 0 baixas registradas.) Tj
+T*
+() Tj
+T*
+(Etapa: Portais das seguradoras) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:41) Tj
+T*
+(Fim: 2026-04-01 11:46:41) Tj
+T*
+(Resultado: 0 registros de apolices retornados; 0 consultas de sinistro por agenda.) Tj
+T*
+() Tj
+T*
+(Etapa: Planilhas operacionais) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:40) Tj
+T*
+(Fim: 2026-04-01 11:46:41) Tj
+T*
+(Resultado: 442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 1383 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(Etapa: Notificacoes via WhatsApp) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:41) Tj
+T*
+(Fim: 2026-04-01 11:46:41) Tj
+T*
+(Resultado: 0 mensagens enviadas; 0 sem telefone; 0 e-mails de segurado enviados.) Tj
+T*
+() Tj
+T*
+(Etapa: Dashboard consolidado) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-01 11:46:41) Tj
+T*
+(Fim: 2026-04-01 11:46:41) Tj
+T*
+(Resultado: Publicacao de dashboard desativada neste ciclo.) Tj
+T*
+() Tj
+T*
+(ITENS NAO EXECUTADOS) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(1. Item: Google Calendar - criacao de eventos) Tj
+T*
+(   Motivo: Fluxo atual nao possui rotina de criacao automatica de eventos.) Tj
+T*
+(   Acao recomendada: Manter criacao manual dos eventos ate mapear regras de escrita.) Tj
+T*
+(2. Item: Microsoft To Do - criacao/atualizacao) Tj
+T*
+(   Motivo: Fluxo atual realiza somente leitura de tarefas.) Tj
+T*
+(   Acao recomendada: Mapear regras para abertura e atualizacao automatica de tarefas.) Tj
+T*
+(3. Item: Dashboard consolidado) Tj
+T*
+(   Motivo: Geracao de dashboard desativada por parametro de execucao.) Tj
+T*
+(   Acao recomendada: Executar sem --no-dashboard-html para publicar o painel.) Tj
+T*
+() Tj
+T*
+(LOG DE ERROS) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Nenhuma excecao capturada no ciclo.) Tj
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000323 00000 n 
+0000002330 00000 n 
+0000002456 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+3891
+%%EOF

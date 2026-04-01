@@ -33,7 +33,21 @@ class StubCalendarGateway:
                 title="Baixa de parcela - Carlos Lima",
                 color="AZUL",
                 due_date=day,
-                resolved=True,
+                resolved=False,
+            ),
+            CalendarCommitment(
+                id="agenda-3",
+                title="Acompanhamento de sinistro - Bruna Rocha",
+                color="CINZA",
+                due_date=day,
+                resolved=False,
+            ),
+            CalendarCommitment(
+                id="agenda-4",
+                title="Tratativa diversa - Ana Silva",
+                color="VERDE",
+                due_date=day,
+                resolved=False,
             ),
         ]
 
@@ -83,6 +97,7 @@ class StubGmailGateway:
 class StubSpreadsheetGateway:
     def __init__(self) -> None:
         self._cashflow_entries: list[CashflowEntry] = []
+        self._expense_entries: list[ExpenseEntry] = []
 
     def load_policies(self) -> list[PolicyRecord]:
         today = date.today()
@@ -172,8 +187,18 @@ class StubSpreadsheetGateway:
     def append_cashflow_entries(self, entries: list[CashflowEntry]) -> None:
         self._cashflow_entries.extend(entries)
 
+    def append_expense_entries(self, entries: list[ExpenseEntry]) -> None:
+        self._expense_entries.extend(entries)
+
+    def validate_expense_summary(self, year: int, month: int) -> list[str]:
+        _ = (year, month)
+        return []
+
 
 class StubSegfyGateway:
+    def __init__(self) -> None:
+        self.registered_payments: list[dict[str, str]] = []
+
     def fetch_policy_data(self) -> list[SegfyPolicyData]:
         return [
             SegfyPolicyData(
@@ -187,6 +212,11 @@ class StubSegfyGateway:
                 comissao=Decimal("270.00"),
             ),
         ]
+
+    def register_payment(self, *, commitment_id: str, description: str) -> bool:
+        self.registered_payments.append({"commitment_id": commitment_id, "description": description})
+        print(f"[Segfy] Baixa registrada (stub): {commitment_id} -> {description}")
+        return True
 
 
 class StubInsurerPortalGateway:
@@ -207,6 +237,10 @@ class StubInsurerPortalGateway:
         }
         return [data[p_id] for p_id in policy_ids if p_id in data]
 
+    def check_claim_status(self, *, commitment_id: str, description: str) -> str | None:
+        print(f"[Portal] Consulta de sinistro (stub): {commitment_id} -> {description}")
+        return "EM_ANALISE"
+
 
 class ConsoleWhatsAppGateway:
     def send_message(self, phone: str, content: str) -> None:
@@ -214,5 +248,12 @@ class ConsoleWhatsAppGateway:
 
 
 class ConsoleEmailSenderGateway:
-    def send_email(self, recipient: str, subject: str, content: str) -> None:
-        print(f"[Email] -> {recipient} | {subject} | {content[:80]}...")
+    def send_email(
+        self,
+        recipient: str,
+        subject: str,
+        content: str,
+        attachments: list[str] | None = None,
+    ) -> None:
+        total_attachments = len(attachments or [])
+        print(f"[Email] -> {recipient} | {subject} | {content[:80]}... | anexos={total_attachments}")

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+import re
 import unicodedata
 
 from openpyxl import load_workbook
@@ -15,6 +17,32 @@ MONTH_SHEETS = {"JANEIRO", "FEVEREIRO", "MARCO", "ABRIL", "MAIO", "JUNHO", "JULH
 POLICY_HEADER_MIN = {"VIG", "SEGURADO(A)", "SEGURADORA"}
 FOLLOWUP_HEADER_MIN = {"FASE", "STATUS", "NOVOS"}
 RENDIMENTO_HEADER_MIN = {"DATA", "VALOR", "SEGURADORA", "ESPECIFICACAO"}
+PLATE_PATTERNS = (
+    re.compile(r"\b([A-Z]{3}[0-9][A-Z][0-9]{2})\b"),  # Mercosul
+    re.compile(r"\b([A-Z]{3}[0-9]{4})\b"),  # Formato antigo
+)
+
+
+def _slug(value: str) -> str:
+    cleaned = _normalize(value)
+    cleaned = re.sub(r"[^A-Z0-9]+", "-", cleaned).strip("-")
+    return cleaned or "SEM-ID"
+
+
+def _extract_vehicle_info(item: str) -> tuple[str, str]:
+    upper_item = _normalize(item)
+    plate = ""
+    for pattern in PLATE_PATTERNS:
+        match = pattern.search(upper_item)
+        if match is not None:
+            plate = match.group(1)
+            break
+
+    model = item.strip()
+    if plate:
+        model = re.sub(re.escape(plate), "", upper_item, flags=re.IGNORECASE).replace("-", " ").strip()
+        model = model or item.strip()
+    return model, plate
 
 
 def _normalize(value: object) -> str:
@@ -131,9 +159,45 @@ class WorkbookSpreadsheetGateway:
         self.acompanhamento_path = Path(acompanhamento_path)
         self.fluxo_caixa_path = Path(fluxo_caixa_path)
 
+    def _resolve_policy_id(
+        self,
+        *,
+        ws: Worksheet,
+        row_index: int,
+        header_map: dict[str, int],
+        insured_name: str,
+        insurer: str,
+        vig: date,
+        duplicate_counter: dict[str, int],
+    ) -> str:
+        policy_number_columns = (
+            "APOLICE",
+            "APOLICE N",
+            "N APOLICE",
+            "NUMERO APOLICE",
+            "N DA APOLICE",
+            "APOLICE CONTRATO",
+            "N DA APOLICE CONTRATO",
+        )
+        for header_name in policy_number_columns:
+            col = header_map.get(header_name)
+            if col is None:
+                continue
+            raw_policy = _clean_text(ws.cell(row_index, col).value)
+            if raw_policy:
+                return raw_policy
+
+        base = f"{_slug(insured_name)[:20]}-{vig.strftime('%Y%m%d')}-{_slug(insurer)[:12]}"
+        duplicate_counter[base] += 1
+        suffix = duplicate_counter[base]
+        if suffix > 1:
+            return f"{base}-{suffix}"
+        return base
+
     def load_policies(self) -> list[PolicyRecord]:
         workbook = load_workbook(self.seguros_pbseg_path, data_only=True)
         policies: list[PolicyRecord] = []
+        duplicate_counter: dict[str, int] = defaultdict(int)
 
         for sheet_name in workbook.sheetnames:
             ws = workbook[sheet_name]
@@ -150,6 +214,7 @@ class WorkbookSpreadsheetGateway:
             status_pgto_col = header_map.get("STATUS PGTO")
             pt_col = header_map.get("PT")
             comissao_col = header_map.get("COMISSAO")
+            item_col = header_map.get("ITEM")
 
             if segurado_col is None or seguradora_col is None or vig_col is None:
                 continue
@@ -170,20 +235,38 @@ class WorkbookSpreadsheetGateway:
 
                 premio_total = _to_decimal(ws.cell(row_index, pt_col).value) if pt_col else Decimal("0")
                 comissao = _to_decimal(ws.cell(row_index, comissao_col).value) if comissao_col else Decimal("0")
+                item = _clean_text(ws.cell(row_index, item_col).value) if item_col else ""
+                vehicle_model, vehicle_plate = _extract_vehicle_info(item)
+
+                checked_value = ws.cell(row_index, 1).value
+                renewal_started = bool(checked_value) if isinstance(checked_value, bool) else bool(_clean_text(checked_value))
+
+                policy_id = self._resolve_policy_id(
+                    ws=ws,
+                    row_index=row_index,
+                    header_map=header_map,
+                    insured_name=segurado,
+                    insurer=seguradora or "NAO INFORMADA",
+                    vig=vig,
+                    duplicate_counter=duplicate_counter,
+                )
 
                 policies.append(
                     PolicyRecord(
-                        policy_id=f"{sheet_name}-{row_index}",
+                        policy_id=policy_id,
                         insured_name=segurado,
                         insurer=seguradora or "NAO INFORMADA",
                         vig=vig,
                         renewal_kind="RENOVACAO_INTERNA",
-                        renewal_started=False,
+                        renewal_started=renewal_started,
                         status_pgto=status_pgto,
                         sinistro_open=sinistro_open,
                         endosso_open=endosso_open,
                         premio_total=premio_total,
                         comissao=comissao,
+                        vehicle_item=item,
+                        vehicle_model=vehicle_model,
+                        vehicle_plate=vehicle_plate,
                     )
                 )
 
@@ -235,6 +318,7 @@ class WorkbookSpreadsheetGateway:
                             month=normalized_sheet,
                             fase=_clean_text(ws.cell(row_index, internal_fase_col).value),
                             status=_clean_text(ws.cell(row_index, internal_status_col).value),
+                            renewal_kind="RENOVACAO_INTERNA",
                         )
                     )
 
@@ -245,6 +329,7 @@ class WorkbookSpreadsheetGateway:
                             month=normalized_sheet,
                             fase=_clean_text(ws.cell(row_index, novos_fase_col).value),
                             status=_clean_text(ws.cell(row_index, novos_status_col).value),
+                            renewal_kind="NOVO",
                         )
                     )
 
@@ -263,7 +348,6 @@ class WorkbookSpreadsheetGateway:
         return records
 
     def load_expenses(self, year: int, month: int) -> list[ExpenseEntry]:
-        _ = (year, month)
         workbook = load_workbook(self.fluxo_caixa_path, data_only=True)
         ws = workbook["Gastos Mensais"]
 
@@ -286,6 +370,8 @@ class WorkbookSpreadsheetGateway:
 
             entry_date = _to_date(raw_date)
             if entry_date is None:
+                continue
+            if entry_date.year != year or entry_date.month != month:
                 continue
 
             value = _to_decimal(raw_value)
@@ -335,3 +421,86 @@ class WorkbookSpreadsheetGateway:
             write_row += 1
 
         workbook.save(self.fluxo_caixa_path)
+
+    def append_expense_entries(self, entries: list[ExpenseEntry]) -> None:
+        if not entries:
+            return
+
+        workbook = load_workbook(self.fluxo_caixa_path)
+        ws = workbook["Gastos Mensais"]
+
+        header = _find_header_row(ws, {"DATA", "DESCRICAO", "CATEGORIA", "VALOR (R$)"})
+        if header is None:
+            raise ValueError("Nao foi possivel localizar cabecalho DATA/DESCRICAO/CATEGORIA/VALOR (R$) na aba Gastos Mensais")
+
+        header_row, header_map = header
+        data_col = header_map["DATA"]
+        descricao_col = header_map["DESCRICAO"]
+        categoria_col = header_map["CATEGORIA"]
+        valor_col = header_map["VALOR (R$)"]
+
+        write_row = header_row + 1
+        while True:
+            row_has_data = any(
+                ws.cell(write_row, col).value not in (None, "")
+                for col in (data_col, descricao_col, categoria_col, valor_col)
+            )
+            if not row_has_data:
+                break
+            write_row += 1
+
+        for entry in entries:
+            ws.cell(write_row, data_col).value = entry.date
+            ws.cell(write_row, descricao_col).value = entry.description
+            ws.cell(write_row, categoria_col).value = entry.category
+            ws.cell(write_row, valor_col).value = float(entry.value)
+            write_row += 1
+
+        workbook.save(self.fluxo_caixa_path)
+
+    def validate_expense_summary(self, year: int, month: int) -> list[str]:
+        expenses = self.load_expenses(year, month)
+        computed_by_category: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+        for expense in expenses:
+            key = _normalize(expense.category)
+            if key == "":
+                key = "SEM CATEGORIA"
+            computed_by_category[key] += expense.value
+
+        workbook = load_workbook(self.fluxo_caixa_path, data_only=True)
+        ws = workbook["Resumo De Gastos"]
+
+        header = _find_header_row(ws, {"CATEGORIA"})
+        if header is None:
+            return ["Resumo de gastos: cabecalho de categoria nao encontrado."]
+        header_row, header_map = header
+        category_col = header_map["CATEGORIA"]
+        total_col = header_map.get("TOTAL (SUMIF - EN)")
+        if total_col is None:
+            total_col = header_map.get("TOTAL (SOMASE - PT-BR)")
+        if total_col is None:
+            return ["Resumo de gastos: coluna de total nao encontrada."]
+
+        issues: list[str] = []
+        for row_index in range(header_row + 1, ws.max_row + 1):
+            category_raw = _clean_text(ws.cell(row_index, category_col).value)
+            if not category_raw:
+                continue
+            normalized_category = _normalize(category_raw)
+            expected = computed_by_category.get(normalized_category, Decimal("0"))
+            raw_total = ws.cell(row_index, total_col).value
+            observed = _to_decimal(raw_total)
+
+            # Quando o Excel nao recalculou formulas (openpyxl), o valor pode vir vazio.
+            if raw_total in (None, ""):
+                continue
+
+            if abs(observed - expected) > Decimal("0.01"):
+                issues.append(
+                    (
+                        f"Resumo divergente em '{category_raw}': "
+                        f"esperado={expected:.2f} observado={observed:.2f}"
+                    )
+                )
+
+        return issues

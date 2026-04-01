@@ -12,6 +12,7 @@ from rpa_corretora.domain.models import (
     CalendarCommitment,
     CashflowEntry,
     EmailMessage,
+    ExpenseEntry,
     FollowupRecord,
     PolicyRecord,
     PortalPolicyData,
@@ -254,7 +255,18 @@ def build_agenda_pending_alert(commitment: CalendarCommitment, today: date) -> A
 
 
 def build_todo_pending_alert(task: TodoTask, today: date) -> Alert | None:
-    if task.completed or task.due_date > today:
+    if task.completed:
+        return None
+
+    if task.due_date is None:
+        return Alert(
+            code="PENDENCIA_TODO_SEM_PRAZO",
+            severity="ALTA",
+            message=f"Tarefa pendente no Microsoft To Do sem prazo definido: {task.title}.",
+            context={"task_id": task.id},
+        )
+
+    if task.due_date > today:
         return None
 
     return Alert(
@@ -309,6 +321,56 @@ def extract_nubank_cashflow(message: EmailMessage, today: date) -> CashflowEntry
         insurer=insurer,
         specification=specification,
         source="EMAIL_NUBANK",
+    )
+
+
+def _extract_expense_category(content: str) -> str:
+    category_match = re.search(r"categoria\s*:\s*([A-Za-zÀ-ÿ ]+)", content, re.IGNORECASE)
+    if category_match is not None:
+        category = _normalize(category_match.group(1))
+        return category or "CORRETORA"
+
+    hints = {
+        "MERCADO": ("mercado", "supermercado", "atacadao", "carrefour"),
+        "TRANSPORTE": ("uber", "99", "combustivel", "gasolina", "diesel", "posto"),
+        "LAZER": ("cinema", "show", "streaming", "netflix", "spotify"),
+        "MORADIA": ("aluguel", "energia", "agua", "internet", "condominio"),
+        "ANIMAIS": ("pet", "veterin", "racao"),
+        "SAUDE E BELEZA": ("farmacia", "hospital", "clinica", "salon", "barbearia"),
+    }
+    lowered = content.lower()
+    for category, tokens in hints.items():
+        if any(token in lowered for token in tokens):
+            return category
+    return "CORRETORA"
+
+
+def extract_expense_from_email(message: EmailMessage, today: date) -> ExpenseEntry | None:
+    if "nubank" not in message.sender.lower():
+        return None
+
+    content = f"{message.subject}\n{message.body}"
+    lowered = content.lower()
+    if not any(token in lowered for token in ("gasto", "debito", "débito", "compra", "pagamento")):
+        return None
+
+    amount_match = AMOUNT_PATTERN.search(content)
+    if amount_match is None:
+        return None
+    value = parse_brazilian_amount(amount_match.group(1))
+    if value is None:
+        return None
+
+    date_match = DATE_PATTERN.search(content)
+    entry_date = today
+    if date_match is not None:
+        entry_date = date.fromisoformat("-".join(reversed(date_match.group(1).split("/"))))
+
+    return ExpenseEntry(
+        date=entry_date,
+        value=value,
+        description=message.subject.strip() or "Despesa identificada por e-mail",
+        category=_extract_expense_category(content),
     )
 
 

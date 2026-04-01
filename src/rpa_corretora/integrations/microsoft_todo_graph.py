@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
@@ -54,7 +54,7 @@ class MicrosoftTodoGraphGateway:
             print(f"[Microsoft To Do] Integracao indisponivel: {exc}")
             return []
 
-    def _extract_due_date(self, raw_task: dict[str, object]) -> date:
+    def _extract_due_date(self, raw_task: dict[str, object]) -> date | None:
         due_block = raw_task.get("dueDateTime")
         if isinstance(due_block, dict):
             raw_dt = due_block.get("dateTime")
@@ -65,8 +65,7 @@ class MicrosoftTodoGraphGateway:
                 except ValueError:
                     pass
 
-        # Tarefas sem prazo nao devem virar pendencia imediata.
-        return date.today() + timedelta(days=3650)
+        return None
 
     def _acquire_access_token(self) -> str | None:
         if self.settings.client_id and self.settings.refresh_token:

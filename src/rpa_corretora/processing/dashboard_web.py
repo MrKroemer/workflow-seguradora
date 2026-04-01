@@ -75,6 +75,63 @@ def _insurers_table_rows(active_by_insurer: dict[str, int]) -> str:
     return "\n".join(rows)
 
 
+def _renewals_month_rows(renewals_by_month: dict[str, dict[str, int]]) -> str:
+    if not renewals_by_month:
+        return "<tr><td colspan='4'>Sem dados de renovacao por mes.</td></tr>"
+
+    rows = []
+    for month in sorted(renewals_by_month.keys()):
+        bucket = renewals_by_month[month]
+        concluded = int(bucket.get("concluded", 0))
+        open_count = int(bucket.get("open", 0))
+        total = concluded + open_count
+        rows.append(
+            """
+            <tr>
+              <td>{month}</td>
+              <td>{concluded}</td>
+              <td>{open_count}</td>
+              <td>{total}</td>
+            </tr>
+            """.format(
+                month=_normalize_label(month),
+                concluded=_fmt_int(concluded),
+                open_count=_fmt_int(open_count),
+                total=_fmt_int(total),
+            )
+        )
+    return "\n".join(rows)
+
+
+def _cashflow_category_rows(cashflow_by_category: dict[str, dict[str, str]]) -> str:
+    if not cashflow_by_category:
+        return "<tr><td colspan='4'>Sem dados financeiros por categoria.</td></tr>"
+
+    rows = []
+    ordered_items = sorted(
+        cashflow_by_category.items(),
+        key=lambda item: (Decimal(item[1].get("net", "0")), item[0]),
+        reverse=True,
+    )
+    for category, values in ordered_items:
+        rows.append(
+            """
+            <tr>
+              <td>{category}</td>
+              <td>{cash_in}</td>
+              <td>{cash_out}</td>
+              <td>{net}</td>
+            </tr>
+            """.format(
+                category=_normalize_label(category),
+                cash_in=_fmt_money_brl(values.get("cash_in", "0")),
+                cash_out=_fmt_money_brl(values.get("cash_out", "0")),
+                net=_fmt_money_brl(values.get("net", "0")),
+            )
+        )
+    return "\n".join(rows)
+
+
 def _status_badge(todo_mode: str, using_real_sheets: bool) -> str:
     sheets_text = "Planilhas reais" if using_real_sheets else "Planilhas stub"
     todo_text = f"To Do: {html.escape(todo_mode)}"
@@ -96,6 +153,8 @@ def render_dashboard_html(snapshot: DashboardSnapshot, meta: DashboardMeta) -> s
     cash_in = snapshot.cashflow.get("cash_in", "0")
     cash_out = snapshot.cashflow.get("cash_out", "0")
     cash_net = snapshot.cashflow.get("net", "0")
+    renewals_by_month_rows = _renewals_month_rows(snapshot.renewals_by_month)
+    cashflow_category_rows = _cashflow_category_rows(snapshot.cashflow_by_category)
 
     generated_text = meta.generated_at.strftime("%d/%m/%Y %H:%M:%S")
     run_date_text = meta.run_date.strftime("%d/%m/%Y")
@@ -464,6 +523,42 @@ def render_dashboard_html(snapshot: DashboardSnapshot, meta: DashboardMeta) -> s
             </div>
           </div>
         </div>
+      </article>
+    </section>
+
+    <section class='panel-grid'>
+      <article class='card'>
+        <h2 class='panel-title'>Renovacoes Concluidas vs Em Aberto (Por Mes)</h2>
+        <table class='table' role='table' aria-label='Renovacoes por mes'>
+          <thead>
+            <tr>
+              <th>Mes</th>
+              <th>Concluidas</th>
+              <th>Em Aberto</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {renewals_by_month_rows}
+          </tbody>
+        </table>
+      </article>
+
+      <article class='card'>
+        <h2 class='panel-title'>Fluxo de Caixa por Categoria</h2>
+        <table class='table' role='table' aria-label='Fluxo por categoria'>
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th>Entradas</th>
+              <th>Saidas</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cashflow_category_rows}
+          </tbody>
+        </table>
       </article>
     </section>
 

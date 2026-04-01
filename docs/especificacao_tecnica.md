@@ -106,9 +106,12 @@ Indicadores consolidados:
   - `MICROSOFT_TODO_PASSWORD`
 - Quando `MICROSOFT_TODO_CLIENT_ID` nao estiver disponivel, o sistema pode usar fallback
   `WEB_AUTOMATION` no Windows (Playwright), preservando `STUB` como contingencia final.
-- Piloto de portais (Wave 1) implementado via automacao web (Playwright) para
-  Yelum, Porto Seguro e Mapfre, com fallback por apolice para `stub`
-  quando nao houver retorno no portal.
+- Pilotos de portais implementados via automacao web (Playwright):
+  - Wave 1: Yelum, Porto Seguro e Mapfre.
+  - Wave 2: Bradesco, Allianz e Suhai.
+  - Wave 3 (inicio): Tokio Marine, HDI e Azul.
+- A cadeia de busca de dados por apolice e nao regressiva e usa fallback para `stub`
+  quando nao houver retorno nos portais web.
 
 ## 9. Adendo de Escopo Final
 

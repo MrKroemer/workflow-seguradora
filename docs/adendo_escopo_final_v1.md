@@ -107,12 +107,15 @@ Status no projeto: aplicado em `config/settings.json` e nas regras de renovacao.
   - processamento real das planilhas operacionais.
   - dashboard consolidado e dashboard HTML.
   - Microsoft To Do em Graph ou fallback web no Windows.
-  - piloto de portal Porto com fallback controlado para stub.
+  - pilotos de portais Wave 1 e Wave 2 com fallback controlado para stub:
+    - Wave 1: Yelum, Porto, Mapfre
+    - Wave 2: Bradesco, Allianz, Suhai
+    - Wave 3 (inicio): Tokio Marine, HDI e Azul
 - `Parcial / Em evolucao`:
   - Google Agenda real (hoje em stub).
   - Gmail real (hoje em stub para leitura operacional).
   - Segfy real (hoje em stub para cruzamento).
-  - portais restantes alem da Porto (em roadmap por fases).
+  - portais restantes alem dos waves ja mapeados (em roadmap por fases).
 
 ## 4. Garantia de Nao Regressao
 

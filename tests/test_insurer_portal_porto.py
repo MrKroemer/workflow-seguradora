@@ -31,6 +31,24 @@ def test_parse_porto_policy_data_from_text_returns_none_when_missing_values() ->
     assert parsed is None
 
 
+def test_parse_porto_policy_data_from_text_extracts_dashboard_wording() -> None:
+    text = """
+    Minha carteira
+    Premio liquido emitido - Total (Mar/26)
+    R$ 18.421
+    Comissoes emitidas
+    R$ 2.964,52
+    """
+
+    parsed = parse_porto_policy_data_from_text(policy_id="PORTO-1", text=text)
+
+    assert parsed is not None
+    assert parsed.policy_id == "PORTO-1"
+    assert parsed.insurer == "Porto Seguro"
+    assert parsed.premio_total == Decimal("18421")
+    assert parsed.comissao == Decimal("2964.52")
+
+
 def test_fallback_gateway_uses_secondary_for_missing_policy_ids() -> None:
     class PrimaryGateway:
         def fetch_policy_data(self, policy_ids: list[str]) -> list[PortalPolicyData]:

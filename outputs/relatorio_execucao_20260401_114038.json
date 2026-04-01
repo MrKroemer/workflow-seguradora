@@ -1,0 +1,140 @@
+{
+  "cabecalho": {
+    "inicio_ciclo": "2026-04-01T11:40:38.517351",
+    "fim_ciclo": "2026-04-01T11:40:40.249172",
+    "identificador_execucao": "RUN-20260401-001",
+    "versao_bot": "0.1.0"
+  },
+  "resumo_executivo": {
+    "tarefas_previstas": 8,
+    "tarefas_sucesso": 6,
+    "tarefas_falha_ou_nao_executadas": 2,
+    "status_geral": "SUCESSO PARCIAL"
+  },
+  "detalhamento_por_etapa": [
+    {
+      "nome_etapa": "Google Calendar",
+      "status": "EXECUTADO",
+      "resultado": "0 compromissos lidos (0 pendentes).",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:38.519433",
+      "fim": "2026-04-01T11:40:38.519441"
+    },
+    {
+      "nome_etapa": "Microsoft To Do",
+      "status": "EXECUTADO",
+      "resultado": "0 tarefas abertas lidas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:38.519451",
+      "fim": "2026-04-01T11:40:38.519454"
+    },
+    {
+      "nome_etapa": "Gmail",
+      "status": "EXECUTADO",
+      "resultado": "0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:38.519458",
+      "fim": "2026-04-01T11:40:39.624676"
+    },
+    {
+      "nome_etapa": "Segfy CRM",
+      "status": "EXECUTADO",
+      "resultado": "0 registros consultados; 0 baixas registradas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:40.248249",
+      "fim": "2026-04-01T11:40:40.248324"
+    },
+    {
+      "nome_etapa": "Portais das seguradoras",
+      "status": "EXECUTADO",
+      "resultado": "0 registros de apolices retornados; 0 consultas de sinistro por agenda.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:40.248269",
+      "fim": "2026-04-01T11:40:40.248328"
+    },
+    {
+      "nome_etapa": "Planilhas operacionais",
+      "status": "EXECUTADO",
+      "resultado": "442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:38.519460",
+      "fim": "2026-04-01T11:40:39.854345"
+    },
+    {
+      "nome_etapa": "Notificacoes via WhatsApp",
+      "status": "IGNORADO",
+      "resultado": "Notificacoes nao enviadas por modo dry-run.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:40.248303",
+      "fim": "2026-04-01T11:40:40.248303"
+    },
+    {
+      "nome_etapa": "Dashboard consolidado",
+      "status": "IGNORADO",
+      "resultado": "Publicacao de dashboard desativada neste ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:40:40.249148",
+      "fim": "2026-04-01T11:40:40.249148"
+    }
+  ],
+  "itens_nao_executados": [
+    {
+      "item_id": "Google Calendar - criacao de eventos",
+      "motivo": "Fluxo atual nao possui rotina de criacao automatica de eventos.",
+      "acao_recomendada": "Manter criacao manual dos eventos ate mapear regras de escrita."
+    },
+    {
+      "item_id": "Microsoft To Do - criacao/atualizacao",
+      "motivo": "Fluxo atual realiza somente leitura de tarefas.",
+      "acao_recomendada": "Mapear regras para abertura e atualizacao automatica de tarefas."
+    },
+    {
+      "item_id": "Notificacoes via WhatsApp",
+      "motivo": "Dry-run ativo, notificacoes externas foram puladas.",
+      "acao_recomendada": "Executar sem --dry-run para enviar notificacoes."
+    },
+    {
+      "item_id": "Dashboard consolidado",
+      "motivo": "Geracao de dashboard desativada por parametro de execucao.",
+      "acao_recomendada": "Executar sem --no-dashboard-html para publicar o painel."
+    },
+    {
+      "item_id": "Envio de relatorio por e-mail",
+      "motivo": "EXECUTION_REPORT_EMAIL_TO nao configurado.",
+      "acao_recomendada": "Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor."
+    }
+  ],
+  "log_de_erros": []
+}

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from rpa_corretora.integrations import microsoft_todo_web
 
@@ -31,7 +31,7 @@ def test_parse_tasks_from_blocks_filters_noise_and_duplicates() -> None:
 
     assert len(tasks) == 1
     assert tasks[0].title == "Conferir pendencias do To Do"
-    assert tasks[0].due_date == today + timedelta(days=3650)
+    assert tasks[0].due_date is None
 
 
 def test_parse_tasks_from_blocks_filters_accented_noise() -> None:

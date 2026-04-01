@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 import importlib.util
 import re
 import sys
@@ -60,7 +60,7 @@ def _first_semantic_line(text: str) -> str | None:
     return None
 
 
-def _extract_due_date(text: str, today: date) -> date:
+def _extract_due_date(text: str, today: date) -> date | None:
     match_iso = DATE_PATTERN_ISO.search(text)
     if match_iso is not None:
         year = int(match_iso.group(1))
@@ -81,8 +81,7 @@ def _extract_due_date(text: str, today: date) -> date:
         except ValueError:
             pass
 
-    # Sem data explicita -> evita alerta imediato.
-    return today + timedelta(days=3650)
+    return None
 
 
 def _normalize_text(value: str) -> str:
