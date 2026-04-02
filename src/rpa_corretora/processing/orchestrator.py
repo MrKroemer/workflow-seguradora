@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from difflib import SequenceMatcher
+import re
 import os
 import unicodedata
 
 from rpa_corretora.config import AppSettings
-from rpa_corretora.domain.models import Alert, CalendarCommitment, EmailMessage, FollowupRecord, PolicyRecord, RunResult
+from rpa_corretora.domain.models import Alert, CalendarCommitment, EmailMessage, FollowupRecord, PolicyRecord, RunResult, TodoTask
 from rpa_corretora.domain.rules import (
     build_agenda_pending_alert,
     build_commission_pending_alert,
@@ -47,6 +48,14 @@ class NotificationDispatchSummary:
 
 
 @dataclass(slots=True)
+class TodoSyncSummary:
+    created: int = 0
+    updated: int = 0
+    completed: int = 0
+    failed: int = 0
+
+
+@dataclass(slots=True)
 class DailyProcessor:
     settings: AppSettings
     calendar: CalendarGateway
@@ -58,6 +67,7 @@ class DailyProcessor:
     whatsapp: WhatsAppGateway
     email_sender: EmailSenderGateway
     dashboard_builder: DashboardBuilder
+    _todo_marker_pattern = re.compile(r"RPA-AGENDA:([A-Za-z0-9_-]+)")
 
     @staticmethod
     def _normalize_name(value: str) -> str:
@@ -94,6 +104,99 @@ class DailyProcessor:
             if followup.fase.strip() or followup.status.strip():
                 policy.renewal_started = True
 
+    def _build_todo_title_from_commitment(self, commitment: CalendarCommitment) -> str:
+        return f"RPA-AGENDA:{commitment.id} | {commitment.color} | {commitment.title}"
+
+    def _build_todo_notes_from_commitment(self, commitment: CalendarCommitment) -> str:
+        pieces = [
+            f"Origem: Google Agenda",
+            f"Compromisso: {commitment.id}",
+            f"Cor: {commitment.color}",
+            f"Data: {commitment.due_date.isoformat()}",
+        ]
+        if commitment.client_name:
+            pieces.append(f"Cliente: {commitment.client_name}")
+        return "\n".join(pieces)
+
+    def _extract_agenda_marker(self, title: str) -> str | None:
+        match = self._todo_marker_pattern.search(title)
+        if match is None:
+            return None
+        value = match.group(1).strip()
+        return value or None
+
+    def _sync_todo_from_calendar(
+        self,
+        *,
+        commitments: list[CalendarCommitment],
+        todo_tasks: list[TodoTask],
+    ) -> TodoSyncSummary:
+        summary = TodoSyncSummary()
+        by_agenda_id: dict[str, TodoTask] = {}
+        for task in todo_tasks:
+            title = getattr(task, "title", "")
+            marker = self._extract_agenda_marker(str(title))
+            if marker is not None:
+                by_agenda_id[marker] = task
+
+        for commitment in commitments:
+            existing = by_agenda_id.get(commitment.id)
+            if commitment.resolved:
+                if existing is None:
+                    continue
+                task_id = str(getattr(existing, "id", "")).strip()
+                if task_id and self.todo.complete_task(task_id=task_id):
+                    summary.completed += 1
+                else:
+                    summary.failed += 1
+                continue
+
+            expected_title = self._build_todo_title_from_commitment(commitment)
+            expected_notes = self._build_todo_notes_from_commitment(commitment)
+            expected_due = commitment.due_date
+
+            if existing is None:
+                created_id = self.todo.create_task(
+                    title=expected_title,
+                    due_date=expected_due,
+                    notes=expected_notes,
+                )
+                if created_id:
+                    summary.created += 1
+                else:
+                    summary.failed += 1
+                continue
+
+            task_id = str(getattr(existing, "id", "")).strip()
+            if not task_id:
+                summary.failed += 1
+                continue
+
+            current_title = str(getattr(existing, "title", "")).strip()
+            current_due = getattr(existing, "due_date", None)
+            if current_title != expected_title or current_due != expected_due:
+                updated = self.todo.update_task(
+                    task_id=task_id,
+                    title=expected_title,
+                    due_date=expected_due,
+                    notes=expected_notes,
+                )
+                if updated:
+                    summary.updated += 1
+                else:
+                    summary.failed += 1
+        return summary
+
+    def _todo_is_writable(self) -> bool:
+        todo_settings = self.settings.microsoft_todo
+        if todo_settings is None:
+            return False
+        has_web_login = bool((todo_settings.username or "").strip() and (todo_settings.password or "").strip())
+        has_graph = bool((todo_settings.client_id or "").strip()) and bool(
+            (todo_settings.refresh_token or "").strip() or has_web_login
+        )
+        return has_graph or has_web_login
+
     def run(
         self,
         today: date,
@@ -128,13 +231,6 @@ class DailyProcessor:
             trace.start_stage("microsoft_todo")
         try:
             todo_tasks = self.todo.fetch_open_tasks()
-            if trace is not None:
-                trace.complete_stage("microsoft_todo", f"{len(todo_tasks)} tarefas abertas lidas.")
-                trace.add_non_executed_item(
-                    item_id="Microsoft To Do - criacao/atualizacao",
-                    reason="Fluxo atual realiza somente leitura de tarefas.",
-                    recommended_action="Mapear regras para abertura e atualizacao automatica de tarefas.",
-                )
         except Exception as exc:
             if trace is not None:
                 trace.fail_stage("microsoft_todo", exc, context={"acao": "fetch_open_tasks"})
@@ -266,9 +362,52 @@ class DailyProcessor:
             if todo_alert is not None:
                 alerts.append(todo_alert)
 
+        if dry_run:
+            if trace is not None:
+                trace.add_non_executed_item(
+                    item_id="Microsoft To Do - sincronizacao agenda",
+                    reason="Dry-run ativo, criacao/atualizacao/conclusao de tarefas nao executada.",
+                    recommended_action="Executar sem --dry-run para sincronizar o Microsoft To Do.",
+                )
+                trace.complete_stage("microsoft_todo", f"{len(todo_tasks)} tarefas abertas lidas (sincronizacao pendente).")
+        elif not self._todo_is_writable():
+            if trace is not None:
+                trace.add_non_executed_item(
+                    item_id="Microsoft To Do - sincronizacao agenda",
+                    reason="Integracao de escrita no Microsoft To Do nao esta configurada.",
+                    recommended_action="Definir credenciais Graph ou usuario/senha para automacao web.",
+                )
+                trace.complete_stage(
+                    "microsoft_todo",
+                    f"{len(todo_tasks)} tarefas abertas lidas (modo somente leitura).",
+                )
+        else:
+            todo_sync = self._sync_todo_from_calendar(commitments=commitments, todo_tasks=todo_tasks)
+            if trace is not None:
+                trace.complete_stage(
+                    "microsoft_todo",
+                    (
+                        f"{len(todo_tasks)} tarefas abertas lidas; "
+                        f"{todo_sync.created} criadas; {todo_sync.updated} atualizadas; "
+                        f"{todo_sync.completed} concluidas; {todo_sync.failed} falhas."
+                    ),
+                )
+
         if trace is not None:
             trace.start_stage("segfy")
+        imported_documents = 0
         try:
+            if not dry_run:
+                import_func = getattr(self.segfy, "import_documents", None)
+                if callable(import_func):
+                    imported_documents = int(import_func() or 0)
+            else:
+                if trace is not None:
+                    trace.add_non_executed_item(
+                        item_id="Segfy - importacao de documentos",
+                        reason="Dry-run ativo, importacao documental foi bloqueada.",
+                        recommended_action="Executar sem --dry-run para importar arquivos no Segfy.",
+                    )
             segfy_data = self.segfy.fetch_policy_data()
         except Exception as exc:
             if trace is not None:
@@ -349,7 +488,8 @@ class DailyProcessor:
                 "segfy",
                 (
                     f"{len(segfy_data)} registros consultados; "
-                    f"{notification_summary.segfy_payments} baixas registradas."
+                    f"{notification_summary.segfy_payments} baixas registradas; "
+                    f"{imported_documents} documentos importados."
                 ),
             )
             trace.complete_stage(

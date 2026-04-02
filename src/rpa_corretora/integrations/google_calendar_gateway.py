@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 from rpa_corretora.domain.models import CalendarCommitment
 
 
-_COLOR_MAP = {
+_DEFAULT_COLOR_MAP = {
     "4": "VERMELHO",
     "8": "CINZA",
     "9": "AZUL",
@@ -59,19 +59,24 @@ def _extract_whatsapp_number(text: str) -> str | None:
     return f"+55{ddd}{first}{last}"
 
 
-def _extract_commitment_color(event: dict[str, object]) -> str | None:
+def _extract_commitment_color(
+    event: dict[str, object],
+    color_map: dict[str, str],
+) -> str | None:
     color_id = str(event.get("colorId", "")).strip()
-    if color_id in _COLOR_MAP:
-        return _COLOR_MAP[color_id]
+    if color_id in color_map:
+        return color_map[color_id]
 
     summary = str(event.get("summary", "")).upper()
-    if "[VERMELHO]" in summary:
+    description = str(event.get("description", "")).upper()
+    text = f"{summary}\n{description}"
+    if "[VERMELHO]" in text:
         return "VERMELHO"
-    if "[AZUL]" in summary:
+    if "[AZUL]" in text:
         return "AZUL"
-    if "[CINZA]" in summary:
+    if "[CINZA]" in text:
         return "CINZA"
-    if "[VERDE]" in summary:
+    if "[VERDE]" in text:
         return "VERDE"
     return None
 
@@ -85,12 +90,14 @@ class GoogleCalendarGateway:
         refresh_token: str,
         calendar_id: str = "primary",
         timeout_seconds: int = 20,
+        color_map: dict[str, str] | None = None,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
         self.refresh_token = refresh_token
         self.calendar_id = calendar_id
         self.timeout_seconds = timeout_seconds
+        self.color_map = dict(color_map or _DEFAULT_COLOR_MAP)
 
     def fetch_daily_commitments(self, day: date) -> list[CalendarCommitment]:
         access_token = self._acquire_access_token()
@@ -121,7 +128,7 @@ class GoogleCalendarGateway:
         for raw_item in items:
             if not isinstance(raw_item, dict):
                 continue
-            color = _extract_commitment_color(raw_item)
+            color = _extract_commitment_color(raw_item, self.color_map)
             if color is None:
                 continue
 

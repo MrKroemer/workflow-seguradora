@@ -75,3 +75,50 @@ def test_fetch_open_tasks_returns_empty_when_no_credentials() -> None:
     tasks = gateway.fetch_open_tasks()
 
     assert tasks == []
+
+
+def test_create_task_uses_target_list(monkeypatch) -> None:
+    gateway = MicrosoftTodoGraphGateway(
+        MicrosoftTodoSettings(client_id="client", refresh_token="refresh", list_name="Principal"),
+    )
+    monkeypatch.setattr(gateway, "_acquire_access_token", lambda: "token")
+    monkeypatch.setattr(gateway, "_list_metadata", lambda _: [("list-1", "Principal"), ("list-2", "Outras")])
+
+    captured: dict[str, object] = {}
+
+    def fake_graph_post(path: str, access_token: str, payload: dict[str, object]):
+        captured["path"] = path
+        captured["token"] = access_token
+        captured["payload"] = payload
+        return {"id": "task-55"}
+
+    monkeypatch.setattr(gateway, "_graph_post", fake_graph_post)
+
+    task_id = gateway.create_task(title="Nova tarefa", due_date=date(2026, 4, 1), notes="Detalhes")
+
+    assert task_id == "task-55"
+    assert captured["token"] == "token"
+    assert captured["path"] == "/me/todo/lists/list-1/tasks"
+    assert "dueDateTime" in captured["payload"]
+
+
+def test_complete_task_updates_status_completed(monkeypatch) -> None:
+    gateway = MicrosoftTodoGraphGateway(
+        MicrosoftTodoSettings(client_id="client", refresh_token="refresh"),
+    )
+    monkeypatch.setattr(gateway, "_acquire_access_token", lambda: "token")
+    monkeypatch.setattr(gateway, "_resolve_list_id_for_task", lambda task_id, _: "list-1" if task_id == "task-1" else None)
+
+    captured: dict[str, object] = {}
+
+    def fake_graph_patch(path: str, access_token: str, payload: dict[str, object]):
+        captured["path"] = path
+        captured["token"] = access_token
+        captured["payload"] = payload
+        return {}
+
+    monkeypatch.setattr(gateway, "_graph_patch", fake_graph_patch)
+
+    assert gateway.complete_task(task_id="task-1") is True
+    assert captured["path"] == "/me/todo/lists/list-1/tasks/task-1"
+    assert captured["payload"] == {"status": "completed"}

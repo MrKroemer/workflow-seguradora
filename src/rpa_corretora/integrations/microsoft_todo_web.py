@@ -132,12 +132,14 @@ def _parse_tasks_from_blocks(raw_blocks: list[str], today: date) -> list[TodoTas
 
         due = _extract_due_date(block, today)
         seen_titles.add(title)
+        normalized_id = _ascii_fold(title).lower().strip() or f"task-{index}"
         tasks.append(
             TodoTask(
-                id=f"web-{index}",
+                id=f"web:{normalized_id}",
                 title=title,
                 due_date=due,
                 completed=False,
+                list_name="Principal",
             )
         )
 
@@ -154,6 +156,7 @@ class MicrosoftTodoWebGateway:
         self.settings = settings
         self.timeout_seconds = timeout_seconds
         self.headless = headless
+        self._task_title_by_id: dict[str, str] = {}
 
     def fetch_open_tasks(self) -> list[TodoTask]:
         username = (self.settings.username or "").strip()
@@ -179,7 +182,9 @@ class MicrosoftTodoWebGateway:
                         page.wait_for_timeout(3000)
 
                         blocks = _collect_candidate_blocks(page)
-                        return _parse_tasks_from_blocks(blocks, today=date.today())
+                        tasks = _parse_tasks_from_blocks(blocks, today=date.today())
+                        self._task_title_by_id = {item.id: item.title for item in tasks}
+                        return tasks
                     finally:
                         context.close()
                 finally:
@@ -190,6 +195,165 @@ class MicrosoftTodoWebGateway:
         except Exception as exc:
             print(f"[Microsoft To Do] Web automation indisponivel: {exc}")
             return []
+
+    def create_task(
+        self,
+        *,
+        title: str,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> str | None:
+        username = (self.settings.username or "").strip()
+        password = (self.settings.password or "").strip()
+        if not username or not password:
+            return None
+        if not todo_web_automation_available():
+            return None
+
+        try:
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                browser = self._launch_browser(playwright)
+                try:
+                    context = browser.new_context(locale="pt-BR")
+                    try:
+                        page = context.new_page()
+                        page.set_default_timeout(self.timeout_seconds * 1000)
+                        self._login(page, username, password)
+                        page.goto("https://to-do.live.com/tasks/", wait_until="domcontentloaded")
+                        page.wait_for_timeout(1800)
+
+                        if not self._create_task_in_page(page, title):
+                            return None
+                        task_id = f"web:{_ascii_fold(title).lower().strip()}"
+                        self._task_title_by_id[task_id] = title
+                        if due_date is not None or (notes is not None and notes.strip()):
+                            self._update_task_in_page(
+                                page,
+                                current_title=title,
+                                new_title=title,
+                                due_date=due_date,
+                                notes=notes,
+                            )
+                        return task_id
+                    finally:
+                        context.close()
+                finally:
+                    browser.close()
+        except PlaywrightTimeoutError:
+            print("[Microsoft To Do] Timeout ao criar tarefa (web).")
+            return None
+        except Exception as exc:
+            print(f"[Microsoft To Do] Falha ao criar tarefa (web): {exc}")
+            return None
+
+    def update_task(
+        self,
+        *,
+        task_id: str,
+        title: str | None = None,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> bool:
+        username = (self.settings.username or "").strip()
+        password = (self.settings.password or "").strip()
+        if not username or not password:
+            return False
+        if not todo_web_automation_available():
+            return False
+
+        current_title = self._task_title_by_id.get(task_id)
+        if current_title is None:
+            for item in self.fetch_open_tasks():
+                self._task_title_by_id[item.id] = item.title
+            current_title = self._task_title_by_id.get(task_id)
+        if current_title is None:
+            return False
+
+        target_title = title if title is not None and title.strip() else current_title
+
+        try:
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                browser = self._launch_browser(playwright)
+                try:
+                    context = browser.new_context(locale="pt-BR")
+                    try:
+                        page = context.new_page()
+                        page.set_default_timeout(self.timeout_seconds * 1000)
+                        self._login(page, username, password)
+                        page.goto("https://to-do.live.com/tasks/", wait_until="domcontentloaded")
+                        page.wait_for_timeout(1800)
+
+                        updated = self._update_task_in_page(
+                            page,
+                            current_title=current_title,
+                            new_title=target_title,
+                            due_date=due_date,
+                            notes=notes,
+                        )
+                        if updated:
+                            self._task_title_by_id[task_id] = target_title
+                        return updated
+                    finally:
+                        context.close()
+                finally:
+                    browser.close()
+        except PlaywrightTimeoutError:
+            print(f"[Microsoft To Do] Timeout ao atualizar tarefa {task_id} (web).")
+            return False
+        except Exception as exc:
+            print(f"[Microsoft To Do] Falha ao atualizar tarefa {task_id} (web): {exc}")
+            return False
+
+    def complete_task(self, *, task_id: str) -> bool:
+        username = (self.settings.username or "").strip()
+        password = (self.settings.password or "").strip()
+        if not username or not password:
+            return False
+        if not todo_web_automation_available():
+            return False
+
+        title = self._task_title_by_id.get(task_id)
+        if title is None:
+            for item in self.fetch_open_tasks():
+                self._task_title_by_id[item.id] = item.title
+            title = self._task_title_by_id.get(task_id)
+        if title is None:
+            return False
+
+        try:
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                browser = self._launch_browser(playwright)
+                try:
+                    context = browser.new_context(locale="pt-BR")
+                    try:
+                        page = context.new_page()
+                        page.set_default_timeout(self.timeout_seconds * 1000)
+                        self._login(page, username, password)
+                        page.goto("https://to-do.live.com/tasks/", wait_until="domcontentloaded")
+                        page.wait_for_timeout(1800)
+                        done = self._complete_task_in_page(page, title)
+                        if done:
+                            self._task_title_by_id.pop(task_id, None)
+                        return done
+                    finally:
+                        context.close()
+                finally:
+                    browser.close()
+        except PlaywrightTimeoutError:
+            print(f"[Microsoft To Do] Timeout ao concluir tarefa {task_id} (web).")
+            return False
+        except Exception as exc:
+            print(f"[Microsoft To Do] Falha ao concluir tarefa {task_id} (web): {exc}")
+            return False
 
     def _launch_browser(self, playwright: Playwright):
         # No Windows, preferimos o Edge instalado na maquina.
@@ -235,3 +399,118 @@ class MicrosoftTodoWebGateway:
             except Exception:
                 continue
         return False
+
+    def _create_task_in_page(self, page: Page, title: str) -> bool:
+        selectors = [
+            "input[aria-label*='Adicionar uma tarefa' i]",
+            "input[placeholder*='Adicionar tarefa' i]",
+            "input[placeholder*='Add a task' i]",
+            "textarea[aria-label*='Adicionar uma tarefa' i]",
+            "textarea[placeholder*='Adicionar tarefa' i]",
+            "textarea[placeholder*='Add a task' i]",
+        ]
+        for selector in selectors:
+            locator = page.locator(selector)
+            if locator.count() == 0:
+                continue
+            try:
+                locator.first.fill(title, timeout=2000)
+                locator.first.press("Enter", timeout=2000)
+                page.wait_for_timeout(800)
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _complete_task_in_page(self, page: Page, title: str) -> bool:
+        row_selectors = ["[role='listitem']", "[data-testid*='task']", "[data-is-focusable='true']"]
+        checkbox_selectors = [
+            "input[type='checkbox']",
+            "button[aria-label*='Concluir' i]",
+            "button[aria-label*='Complete' i]",
+            "button[aria-label*='Marcar como concluida' i]",
+        ]
+        for row_selector in row_selectors:
+            row = page.locator(row_selector).filter(has_text=title)
+            if row.count() == 0:
+                continue
+            for checkbox_selector in checkbox_selectors:
+                checkbox = row.first.locator(checkbox_selector)
+                if checkbox.count() == 0:
+                    continue
+                try:
+                    checkbox.first.click(timeout=2000)
+                    page.wait_for_timeout(600)
+                    return True
+                except Exception:
+                    continue
+        return False
+
+    def _update_task_in_page(
+        self,
+        page: Page,
+        *,
+        current_title: str,
+        new_title: str,
+        due_date: date | None,
+        notes: str | None,
+    ) -> bool:
+        row = page.locator("[role='listitem']").filter(has_text=current_title)
+        if row.count() == 0:
+            row = page.locator("[data-testid*='task']").filter(has_text=current_title)
+        if row.count() == 0:
+            return False
+
+        if new_title != current_title:
+            if not self._create_task_in_page(page, new_title):
+                return False
+            return self._complete_task_in_page(page, current_title)
+
+        try:
+            row.first.click(timeout=2000)
+        except Exception:
+            pass
+
+        if due_date is not None:
+            due_text = due_date.strftime("%d/%m/%Y")
+            due_clicked = self._click_if_visible(
+                page,
+                selectors=[
+                    "text=Adicionar data de vencimento",
+                    "text=Due date",
+                    "button[aria-label*='vencimento' i]",
+                ],
+                timeout_ms=1800,
+            )
+            if due_clicked:
+                for selector in (
+                    "input[aria-label*='vencimento' i]",
+                    "input[placeholder*='dd/mm' i]",
+                    "input[aria-label*='due date' i]",
+                ):
+                    field = page.locator(selector)
+                    if field.count() == 0:
+                        continue
+                    try:
+                        field.first.fill(due_text, timeout=1800)
+                        field.first.press("Enter", timeout=1000)
+                        break
+                    except Exception:
+                        continue
+
+        if notes is not None and notes.strip():
+            for selector in (
+                "textarea[aria-label*='Anotacao' i]",
+                "textarea[placeholder*='Adicionar anotacao' i]",
+                "textarea[placeholder*='Add note' i]",
+            ):
+                field = page.locator(selector)
+                if field.count() == 0:
+                    continue
+                try:
+                    field.first.fill(notes.strip(), timeout=1800)
+                    break
+                except Exception:
+                    continue
+
+        return True

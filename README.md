@@ -100,6 +100,7 @@ Para ativar o modo real no To Do, configure no `.env`:
 - `MICROSOFT_TODO_CLIENT_ID`
 - `MICROSOFT_TODO_REFRESH_TOKEN` (recomendado) ou `MICROSOFT_TODO_USER` + `MICROSOFT_TODO_PASSWORD`
 - `MICROSOFT_TODO_TENANT_ID` (opcional, padrao `common`)
+- `MICROSOFT_TODO_LIST_NAME` (opcional, ex.: `Principal`)
 
 ## Microsoft To Do sem Client ID (fallback Windows)
 
@@ -119,6 +120,13 @@ Variaveis relevantes no `.env`:
 - `MICROSOFT_TODO_PASSWORD`
 - `MICROSOFT_TODO_WEB_HEADLESS` (`1` padrao; use `0` para abrir o navegador e depurar)
 
+Com To Do configurado (`GRAPH` ou `WEB_AUTOMATION`), o bot consegue:
+
+- ler tarefas abertas;
+- criar tarefas operacionais;
+- atualizar tarefas ja existentes;
+- concluir tarefas sincronizadas da agenda.
+
 ## Integracoes Operacionais (Agenda, Gmail, Segfy, WhatsApp, SMTP)
 
 Variaveis no `.env` para ativacao real:
@@ -128,12 +136,25 @@ Variaveis no `.env` para ativacao real:
   - `GOOGLE_CLIENT_SECRET`
   - `GOOGLE_REFRESH_TOKEN`
   - `GOOGLE_CALENDAR_ID` (opcional, padrao `primary`)
+  - `GOOGLE_COLOR_IDS_VERMELHO` (padrao `4,11`)
+  - `GOOGLE_COLOR_IDS_AZUL` (padrao `9`)
+  - `GOOGLE_COLOR_IDS_CINZA` (padrao `8`)
+  - `GOOGLE_COLOR_IDS_VERDE` (padrao `10`)
 - Gmail:
   - `GMAIL_IMAP_USER`
   - `GMAIL_IMAP_PASSWORD`
   - `GMAIL_IMAP_HOST` (opcional, padrao `imap.gmail.com`)
 - Segfy:
   - `SEGFY_API_BASE_URL` + (`SEGFY_API_TOKEN` ou `SEGFY_USER` + `SEGFY_PASSWORD`)
+  - ou automacao web no Windows:
+    - `SEGFY_WEB_ENABLED=1`
+    - `SEGFY_WEB_BASE_URL` (ex.: `https://app.segfy.com`)
+    - `SEGFY_WEB_BROWSER_CHANNEL=chrome`
+    - `SEGFY_WEB_HEADLESS` (`1` padrao; use `0` para depurar)
+    - `SEGFY_WEB_IMPORT_ENABLED=1` (importa documentos na tela "Importar PDF/Excel")
+    - `SEGFY_IMPORT_SOURCE_DIR` (pasta local dos arquivos a importar)
+    - `SEGFY_WEB_IMPORT_URL` (opcional, se quiser forcar URL exata da tela)
+    - `SEGFY_IMPORT_STATE_PATH` (controle da ultima execucao para importar apenas arquivos novos)
   - ou `SEGFY_EXPORT_XLSX` para leitura via exportacao
 - WhatsApp:
   - `WHATSAPP_PROVIDER_URL`
@@ -155,7 +176,7 @@ Quando uma integracao externa nao estiver configurada, o projeto nao injeta dado
 
 - Agenda/Gmail: modo `NOOP` (sem leitura).
 - WhatsApp/E-mail: grava em `outputs/whatsapp_outbox.jsonl` e `outputs/email_outbox.jsonl`.
-- Segfy sem API/export: grava fila de baixa em `outputs/segfy_payment_queue.jsonl`.
+- Segfy sem API/web/export: grava fila de baixa em `outputs/segfy_payment_queue.jsonl`.
 - Em todas as execucoes, o diagnostico do runtime e salvo em `outputs/windows_runtime_report.json`
   (ou caminho definido por `--windows-audit-output`).
 - Em todas as execucoes, tambem sao gerados:

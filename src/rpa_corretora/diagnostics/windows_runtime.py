@@ -55,6 +55,22 @@ def _find_edge_executable() -> str | None:
     return None
 
 
+def _find_chrome_executable() -> str | None:
+    chrome_path = shutil.which("chrome") or shutil.which("chrome.exe")
+    if chrome_path:
+        return chrome_path
+
+    candidates = [
+        Path(os.getenv("PROGRAMFILES", "")) / "Google" / "Chrome" / "Application" / "chrome.exe",
+        Path(os.getenv("PROGRAMFILES(X86)", "")) / "Google" / "Chrome" / "Application" / "chrome.exe",
+        Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "Application" / "chrome.exe",
+    ]
+    for candidate in candidates:
+        if str(candidate).strip() and candidate.exists():
+            return str(candidate)
+    return None
+
+
 def _playwright_module_available() -> bool:
     try:
         return importlib.util.find_spec("playwright.sync_api") is not None
@@ -179,8 +195,13 @@ def build_windows_runtime_report(
             )
         )
 
-    need_browser_automation = todo_mode == "WEB_AUTOMATION" or portal_mode.startswith("WEB")
+    need_browser_automation = (
+        todo_mode == "WEB_AUTOMATION"
+        or portal_mode.startswith("WEB")
+        or segfy_mode.startswith("WEB")
+    )
     edge_path = _find_edge_executable()
+    chrome_path = _find_chrome_executable()
     playwright_available = _playwright_module_available()
     chromium_installed, chromium_root = _playwright_chromium_installed()
 
@@ -189,9 +210,18 @@ def build_windows_runtime_report(
             _component(
                 key="msedge",
                 label="Microsoft Edge",
-                status="OK" if edge_path else ("MISSING" if need_browser_automation else "WARN"),
-                required=need_browser_automation,
+                status="OK" if edge_path else "WARN",
+                required=False,
                 details=edge_path or "Executavel msedge.exe nao encontrado",
+            )
+        )
+        components.append(
+            _component(
+                key="chrome",
+                label="Google Chrome",
+                status="OK" if chrome_path else "WARN",
+                required=False,
+                details=chrome_path or "Executavel chrome.exe nao encontrado",
             )
         )
         components.append(
@@ -218,8 +248,17 @@ def build_windows_runtime_report(
                 key="msedge",
                 label="Microsoft Edge",
                 status="N_A",
-                required=need_browser_automation,
-                details="Automacao web de portais/To Do requer Windows",
+                required=False,
+                details="Automacao web de portais/To Do/Segfy requer Windows",
+            )
+        )
+        components.append(
+            _component(
+                key="chrome",
+                label="Google Chrome",
+                status="N_A",
+                required=False,
+                details="Automacao web de portais/To Do/Segfy requer Windows",
             )
         )
         components.append(
@@ -228,7 +267,7 @@ def build_windows_runtime_report(
                 label="Playwright Python",
                 status="N_A",
                 required=need_browser_automation,
-                details="Automacao web de portais/To Do requer Windows",
+                details="Automacao web de portais/To Do/Segfy requer Windows",
             )
         )
         components.append(
@@ -237,7 +276,7 @@ def build_windows_runtime_report(
                 label="Playwright Chromium Bundle",
                 status="N_A",
                 required=need_browser_automation,
-                details="Automacao web de portais/To Do requer Windows",
+                details="Automacao web de portais/To Do/Segfy requer Windows",
             )
         )
 

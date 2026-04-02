@@ -26,6 +26,28 @@ class TodoGateway(Protocol):
     def fetch_open_tasks(self) -> list[TodoTask]:
         ...
 
+    def create_task(
+        self,
+        *,
+        title: str,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> str | None:
+        ...
+
+    def update_task(
+        self,
+        *,
+        task_id: str,
+        title: str | None = None,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> bool:
+        ...
+
+    def complete_task(self, *, task_id: str) -> bool:
+        ...
+
 
 class GmailGateway(Protocol):
     def fetch_unread_messages(self) -> list[EmailMessage]:

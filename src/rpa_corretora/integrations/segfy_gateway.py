@@ -72,6 +72,10 @@ class SegfyGateway:
             return api_data
         return self._fetch_policy_data_from_export()
 
+    def import_documents(self) -> int:
+        # Gateway API/export nao possui rotina de importacao documental por navegador.
+        return 0
+
     def register_payment(self, *, commitment_id: str, description: str) -> bool:
         payload = {
             "commitment_id": commitment_id,

@@ -10,7 +10,8 @@ Automacao operacional para corretora de seguros com processamento diario de agen
   - `ACOMPANHAMENTO 2026.xlsx`
   - `FLUXO DE CAIXA.xlsx`
 - OCR opcional de `SENHAS.pdf` para catalogar servicos de credenciais.
-- Integracao Microsoft To Do via Microsoft Graph pronta (com fallback web para Windows).
+- Integracao Microsoft To Do via Microsoft Graph pronta (com fallback web para Windows),
+  incluindo leitura + criacao + atualizacao + conclusao de tarefas.
 - Integracoes operacionais ja plugadas no fluxo principal:
   - Google Calendar (API);
   - Gmail (IMAP);
@@ -30,7 +31,7 @@ Automacao operacional para corretora de seguros com processamento diario de agen
 - `src/rpa_corretora/processing/dashboard.py`: consolidacao de KPIs.
 - `src/rpa_corretora/domain/rules.py`: regras de negocio e alertas.
 - `src/rpa_corretora/integrations/workbook_gateway.py`: leitura/escrita real de Excel.
-- `src/rpa_corretora/integrations/microsoft_todo_graph.py`: leitura de tarefas do Microsoft To Do via Graph.
+- `src/rpa_corretora/integrations/microsoft_todo_graph.py`: leitura e manipulacao de tarefas do Microsoft To Do via Graph.
 - `src/rpa_corretora/integrations/credentials_pdf.py`: OCR do PDF de senhas.
 - `docs/adendo_escopo_final_v1.md`: adendo oficial do escopo final (sem regressao).
 - `docs/mapeamento_portais_wave1.md`: mapeamento dos 3 primeiros portais (Yelum, Porto, Mapfre).
@@ -52,6 +53,7 @@ Exemplo minimo para o estado atual:
 MICROSOFT_TODO_CLIENT_ID=
 MICROSOFT_TODO_REFRESH_TOKEN=
 MICROSOFT_TODO_TENANT_ID=common
+MICROSOFT_TODO_LIST_NAME=Principal
 MICROSOFT_TODO_USER=cadastro.segurados@hotmail.com
 MICROSOFT_TODO_PASSWORD=******
 ```
@@ -61,7 +63,11 @@ Observacoes:
 - Para ativar To Do real (`GRAPH`), e necessario ao menos:
   - `MICROSOFT_TODO_CLIENT_ID`
   - `MICROSOFT_TODO_REFRESH_TOKEN` (recomendado)
+- Opcional: `MICROSOFT_TODO_LIST_NAME` para escolher a lista-alvo de escrita
+  (criacao/atualizacao/conclusao) pelo bot.
 - Sem esses valores, no Windows o sistema tenta `WEB_AUTOMATION` com login/senha.
+- No modo `WEB_AUTOMATION`, o bot usa o Microsoft To Do na web (Edge/Playwright) com a mesma conta do To Do local instalado no Windows.
+  Atualmente, nao ha leitura direta da aplicacao desktop nativa.
 - Se Graph e automacao web nao estiverem disponiveis, o sistema entra em `NOOP` (sem dados ficticios).
 
 ### 1.1) Integracoes operacionais (agenda, e-mail, Segfy, WhatsApp)
@@ -73,6 +79,10 @@ Variaveis no `.env`:
   - `GOOGLE_CLIENT_SECRET`
   - `GOOGLE_REFRESH_TOKEN`
   - `GOOGLE_CALENDAR_ID` (opcional, padrao `primary`)
+  - `GOOGLE_COLOR_IDS_VERMELHO` (padrao `4,11`)
+  - `GOOGLE_COLOR_IDS_AZUL` (padrao `9`)
+  - `GOOGLE_COLOR_IDS_CINZA` (padrao `8`)
+  - `GOOGLE_COLOR_IDS_VERDE` (padrao `10`)
 - Gmail:
   - `GMAIL_IMAP_USER`
   - `GMAIL_IMAP_PASSWORD`
@@ -80,6 +90,15 @@ Variaveis no `.env`:
   - `GMAIL_IMAP_MAILBOX` (opcional)
 - Segfy:
   - `SEGFY_API_BASE_URL` + (`SEGFY_API_TOKEN` ou `SEGFY_USER` + `SEGFY_PASSWORD`)
+  - ou automacao web no Windows:
+    - `SEGFY_WEB_ENABLED=1`
+    - `SEGFY_WEB_BASE_URL` (ex.: `https://app.segfy.com`)
+    - `SEGFY_WEB_BROWSER_CHANNEL=chrome`
+    - `SEGFY_WEB_HEADLESS` (`1` padrao; use `0` para depurar)
+    - `SEGFY_WEB_IMPORT_ENABLED=1` (importa documentos na tela "Importar PDF/Excel")
+    - `SEGFY_IMPORT_SOURCE_DIR` (pasta local dos arquivos a importar)
+    - `SEGFY_WEB_IMPORT_URL` (opcional, se quiser forcar URL exata da tela)
+    - `SEGFY_IMPORT_STATE_PATH` (controle da ultima execucao para importar apenas arquivos novos)
   - ou `SEGFY_EXPORT_XLSX`
 - WhatsApp:
   - `WHATSAPP_PROVIDER_URL`
@@ -248,7 +267,7 @@ Ao rodar, o sistema imprime:
 - lancamentos de caixa detectados
 - modo de integracao da agenda (`GOOGLE_API` ou `NOOP`)
 - modo de integracao do Gmail (`GMAIL_IMAP` ou `NOOP`)
-- modo de integracao do Segfy (`API_OR_QUEUE`, `EXPORT_XLSX_OR_QUEUE` ou `QUEUE_ONLY`)
+- modo de integracao do Segfy (`API_OR_QUEUE`, `WEB_AUTOMATION_OR_QUEUE`, `WEB_AUTOMATION_OR_EXPORT_OR_QUEUE`, `EXPORT_XLSX_OR_QUEUE` ou `QUEUE_ONLY`)
 - modo de integracao do WhatsApp (`HTTP_API` ou `OUTBOX_FILE`)
 - modo de integracao de e-mail (`SMTP` ou `OUTBOX_FILE`)
 - modo de integracao do To Do (`GRAPH`, `WEB_AUTOMATION` ou `NOOP`)

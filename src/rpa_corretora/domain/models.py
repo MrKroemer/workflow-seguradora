@@ -26,6 +26,8 @@ class TodoTask:
     title: str
     due_date: date | None = None
     completed: bool = False
+    list_name: str | None = None
+    external_ref: str | None = None
 
 
 @dataclass(slots=True)

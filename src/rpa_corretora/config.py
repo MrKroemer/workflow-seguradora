@@ -32,6 +32,7 @@ class MicrosoftTodoSettings:
     refresh_token: str | None = None
     tenant_id: str = "common"
     web_headless: bool = True
+    list_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +111,7 @@ def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
         refresh_token=_env_str("MICROSOFT_TODO_REFRESH_TOKEN"),
         tenant_id=_env_str("MICROSOFT_TODO_TENANT_ID") or "common",
         web_headless=_env_bool("MICROSOFT_TODO_WEB_HEADLESS", default=True),
+        list_name=_env_str("MICROSOFT_TODO_LIST_NAME"),
     )
 
     return AppSettings(

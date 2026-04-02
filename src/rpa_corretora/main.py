@@ -55,6 +55,11 @@ from rpa_corretora.integrations.noop_adapters import (
     NoopTodoGateway,
 )
 from rpa_corretora.integrations.segfy_gateway import SegfyGateway
+from rpa_corretora.integrations.segfy_web_gateway import (
+    CascadingSegfyGateway,
+    SegfyWebGateway,
+    segfy_web_automation_available,
+)
 from rpa_corretora.integrations.smtp_email_sender import SmtpEmailSenderGateway
 from rpa_corretora.integrations.stub_adapters import (
     StubInsurerPortalGateway,
@@ -172,6 +177,31 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_csv(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    raw = (os.getenv(name) or "").strip()
+    if raw == "":
+        return default
+    tokens = [item.strip() for item in raw.replace(";", ",").split(",")]
+    cleaned = tuple(item for item in tokens if item)
+    if not cleaned:
+        return default
+    return cleaned
+
+
+def _build_google_color_map_from_env() -> dict[str, str]:
+    color_map: dict[str, str] = {}
+    rules = (
+        ("GOOGLE_COLOR_IDS_VERMELHO", "VERMELHO", ("4", "11")),
+        ("GOOGLE_COLOR_IDS_AZUL", "AZUL", ("9",)),
+        ("GOOGLE_COLOR_IDS_CINZA", "CINZA", ("8",)),
+        ("GOOGLE_COLOR_IDS_VERDE", "VERDE", ("10",)),
+    )
+    for env_key, semantic, defaults in rules:
+        for color_id in _env_csv(env_key, defaults):
+            color_map[color_id] = semantic
+    return color_map
+
+
 def _resolve_portal_credentials(
     *,
     env_user_key: str,
@@ -278,6 +308,7 @@ def main() -> None:
                 refresh_token=google_refresh_token,
                 calendar_id=google_calendar_id,
                 timeout_seconds=_env_int("GOOGLE_CALENDAR_TIMEOUT_SECONDS", default=20),
+                color_map=_build_google_color_map_from_env(),
             )
             calendar_mode = "GOOGLE_API"
         else:
@@ -339,28 +370,64 @@ def main() -> None:
             ):
                 todo_hint = "Defina MICROSOFT_TODO_REFRESH_TOKEN (ou usuario/senha) para ativar Graph."
 
-        segfy_gateway = SegfyGateway(
-            username=(os.getenv("SEGFY_USER") or "").strip(),
-            password=(os.getenv("SEGFY_PASSWORD") or "").strip(),
-            api_base_url=(os.getenv("SEGFY_API_BASE_URL") or "").strip() or None,
+        segfy_user = (os.getenv("SEGFY_USER") or "").strip()
+        segfy_password = (os.getenv("SEGFY_PASSWORD") or "").strip()
+        segfy_api_base_url = (os.getenv("SEGFY_API_BASE_URL") or "").strip()
+        segfy_export_xlsx = (os.getenv("SEGFY_EXPORT_XLSX") or "").strip()
+        segfy_fallback_gateway = SegfyGateway(
+            username=segfy_user,
+            password=segfy_password,
+            api_base_url=segfy_api_base_url or None,
             api_token=(os.getenv("SEGFY_API_TOKEN") or "").strip() or None,
             api_login_path=(os.getenv("SEGFY_API_LOGIN_PATH") or "/auth/login").strip(),
             api_policies_path=(os.getenv("SEGFY_API_POLICIES_PATH") or "/policies").strip(),
             api_register_payment_path=(os.getenv("SEGFY_API_REGISTER_PAYMENT_PATH") or "/payments/register").strip(),
-            export_xlsx_path=(os.getenv("SEGFY_EXPORT_XLSX") or "").strip() or None,
+            export_xlsx_path=segfy_export_xlsx or None,
             timeout_seconds=_env_int("SEGFY_API_TIMEOUT_SECONDS", default=20),
         )
+        segfy_gateway = segfy_fallback_gateway
         segfy_mode = "QUEUE_ONLY"
         segfy_hint = (
-            "Defina SEGFY_API_BASE_URL + credenciais/token para integracao API "
-            "ou informe SEGFY_EXPORT_XLSX para leitura por export."
+            "Defina SEGFY_API_BASE_URL + credenciais/token para integracao API, "
+            "ou habilite automacao web do Segfy, ou informe SEGFY_EXPORT_XLSX para leitura por export."
         )
-        if (os.getenv("SEGFY_API_BASE_URL") or "").strip():
+        if segfy_api_base_url:
             segfy_mode = "API_OR_QUEUE"
             segfy_hint = ""
-        elif (os.getenv("SEGFY_EXPORT_XLSX") or "").strip():
+        elif segfy_user and segfy_password and segfy_web_automation_available() and _env_flag("SEGFY_WEB_ENABLED", default=True):
+            segfy_gateway = CascadingSegfyGateway(
+                primary=SegfyWebGateway(
+                    username=segfy_user,
+                    password=segfy_password,
+                    base_url=(os.getenv("SEGFY_WEB_BASE_URL") or "https://app.segfy.com").strip(),
+                    headless=_env_flag("SEGFY_WEB_HEADLESS", default=True),
+                    browser_channel=(os.getenv("SEGFY_WEB_BROWSER_CHANNEL") or "chrome").strip().lower(),
+                    timeout_seconds=_env_int("SEGFY_WEB_TIMEOUT_SECONDS", default=35),
+                    import_enabled=_env_flag("SEGFY_WEB_IMPORT_ENABLED", default=True),
+                    import_page_url=(os.getenv("SEGFY_WEB_IMPORT_URL") or "").strip() or None,
+                    import_source_dir=(os.getenv("SEGFY_IMPORT_SOURCE_DIR") or "").strip() or None,
+                    import_max_files=_env_int("SEGFY_WEB_IMPORT_MAX_FILES", default=100),
+                    import_state_path=(
+                        os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json"
+                    ).strip(),
+                ),
+                fallback=segfy_fallback_gateway,
+            )
+            segfy_mode = "WEB_AUTOMATION_OR_QUEUE"
+            if segfy_export_xlsx:
+                segfy_mode = "WEB_AUTOMATION_OR_EXPORT_OR_QUEUE"
+            segfy_hint = (
+                "Segfy via navegador (Playwright) ativo. "
+                "Se a exportacao web nao for encontrada, o bot usa export configurado ou fila local."
+            )
+        elif segfy_export_xlsx:
             segfy_mode = "EXPORT_XLSX_OR_QUEUE"
             segfy_hint = ""
+        elif segfy_user and segfy_password and not segfy_web_automation_available():
+            segfy_hint = (
+                "Credenciais do Segfy detectadas, mas automacao web nao esta disponivel. "
+                "No Windows, instale playwright para usar Segfy via navegador."
+            )
 
         whatsapp_gateway = FileOutboxWhatsAppGateway()
         whatsapp_mode = "OUTBOX_FILE"

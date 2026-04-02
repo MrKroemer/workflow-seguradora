@@ -40,3 +40,32 @@ def test_google_calendar_gateway_maps_colors_and_fields(monkeypatch) -> None:
     assert commitment.color == "VERMELHO"
     assert commitment.client_name == "Ana Silva"
     assert commitment.whatsapp_number == "+5583999897477"
+
+
+def test_google_calendar_gateway_accepts_custom_color_map(monkeypatch) -> None:
+    gateway = GoogleCalendarGateway(
+        client_id="client",
+        client_secret="secret",
+        refresh_token="refresh",
+        color_map={"1": "AZUL"},
+    )
+    monkeypatch.setattr(gateway, "_acquire_access_token", lambda: "token")
+    monkeypatch.setattr(
+        gateway,
+        "_google_get",
+        lambda path, access_token: {
+            "items": [
+                {
+                    "id": "evt-1",
+                    "summary": "Baixa de parcela - Joao",
+                    "colorId": "1",
+                    "start": {"date": "2026-03-30"},
+                },
+            ]
+        },
+    )
+
+    commitments = gateway.fetch_daily_commitments(date(2026, 3, 30))
+
+    assert len(commitments) == 1
+    assert commitments[0].color == "AZUL"

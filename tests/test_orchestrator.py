@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from rpa_corretora.config import AppSettings, RenewalSettings
+from rpa_corretora.config import AppSettings, MicrosoftTodoSettings, RenewalSettings
 from rpa_corretora.domain.models import (
     CalendarCommitment,
     DashboardSnapshot,
@@ -52,8 +52,27 @@ class _CalendarGateway:
 
 
 class _TodoGateway:
+    def __init__(self) -> None:
+        self.created: list[str] = []
+        self.updated: list[str] = []
+        self.completed: list[str] = []
+
     def fetch_open_tasks(self):
         return []
+
+    def create_task(self, *, title: str, due_date=None, notes=None):
+        _ = (due_date, notes)
+        self.created.append(title)
+        return f"todo-{len(self.created)}"
+
+    def update_task(self, *, task_id: str, title=None, due_date=None, notes=None):
+        _ = (title, due_date, notes)
+        self.updated.append(task_id)
+        return True
+
+    def complete_task(self, *, task_id: str):
+        self.completed.append(task_id)
+        return True
 
 
 class _GmailGateway:
@@ -163,7 +182,7 @@ def _settings() -> AppSettings:
             holidays=frozenset(),
         ),
         files=None,
-        microsoft_todo=None,
+        microsoft_todo=MicrosoftTodoSettings(username="user@example.com", password="Senha@123"),
     )
 
 
@@ -172,11 +191,12 @@ def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch) -> None:
     portals = _PortalGateway()
     whatsapp = _WhatsAppGateway()
     email_sender = _EmailGateway()
+    todo = _TodoGateway()
 
     processor = DailyProcessor(
         settings=_settings(),
         calendar=_CalendarGateway(),
-        todo=_TodoGateway(),
+        todo=todo,
         gmail=_GmailGateway(),
         sheets=_SheetsGateway(),
         segfy=segfy,
@@ -201,3 +221,6 @@ def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch) -> None:
     assert "Ana Silva" in subject
     assert "Modelo: ONIX" in content
     assert "Placa: QWE1A23" in content
+
+    # Cada compromisso pendente da agenda vira tarefa operacional no To Do.
+    assert len(todo.created) == 4

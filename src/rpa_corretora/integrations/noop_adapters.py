@@ -17,6 +17,31 @@ class NoopTodoGateway:
     def fetch_open_tasks(self) -> list[TodoTask]:
         return []
 
+    def create_task(
+        self,
+        *,
+        title: str,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> str | None:
+        _ = (title, due_date, notes)
+        return None
+
+    def update_task(
+        self,
+        *,
+        task_id: str,
+        title: str | None = None,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> bool:
+        _ = (task_id, title, due_date, notes)
+        return False
+
+    def complete_task(self, *, task_id: str) -> bool:
+        _ = task_id
+        return False
+
 
 class NoopGmailGateway:
     def fetch_unread_messages(self) -> list[EmailMessage]:

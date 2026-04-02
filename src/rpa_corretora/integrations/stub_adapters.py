@@ -53,16 +53,80 @@ class StubCalendarGateway:
 
 
 class StubTodoGateway:
+    def __init__(self) -> None:
+        self._tasks: list[TodoTask] = []
+
     def fetch_open_tasks(self) -> list[TodoTask]:
-        today = date.today()
-        return [
-            TodoTask(
-                id="todo-1",
-                title="Conferir comissao de renovacoes",
-                due_date=today - timedelta(days=1),
-                completed=False,
+        if not self._tasks:
+            today = date.today()
+            self._tasks.append(
+                TodoTask(
+                    id="todo-1",
+                    title="Conferir comissao de renovacoes",
+                    due_date=today - timedelta(days=1),
+                    completed=False,
+                    list_name="Principal",
+                )
             )
-        ]
+        return [item for item in self._tasks if not item.completed]
+
+    def create_task(
+        self,
+        *,
+        title: str,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> str | None:
+        _ = notes
+        task_id = f"todo-{len(self._tasks) + 1}"
+        self._tasks.append(
+            TodoTask(
+                id=task_id,
+                title=title,
+                due_date=due_date,
+                completed=False,
+                list_name="Principal",
+            )
+        )
+        return task_id
+
+    def update_task(
+        self,
+        *,
+        task_id: str,
+        title: str | None = None,
+        due_date: date | None = None,
+        notes: str | None = None,
+    ) -> bool:
+        _ = notes
+        for idx, task in enumerate(self._tasks):
+            if task.id != task_id:
+                continue
+            self._tasks[idx] = TodoTask(
+                id=task.id,
+                title=title if title is not None else task.title,
+                due_date=due_date if due_date is not None else task.due_date,
+                completed=task.completed,
+                list_name=task.list_name,
+                external_ref=task.external_ref,
+            )
+            return True
+        return False
+
+    def complete_task(self, *, task_id: str) -> bool:
+        for idx, task in enumerate(self._tasks):
+            if task.id != task_id:
+                continue
+            self._tasks[idx] = TodoTask(
+                id=task.id,
+                title=task.title,
+                due_date=task.due_date,
+                completed=True,
+                list_name=task.list_name,
+                external_ref=task.external_ref,
+            )
+            return True
+        return False
 
 
 class StubGmailGateway:
