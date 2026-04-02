@@ -21,6 +21,22 @@ def test_segfy_register_payment_writes_queue_when_no_api(tmp_path) -> None:
     assert "Baixa de parcela" in content
 
 
+def test_segfy_register_payment_without_queue_fallback_returns_false(tmp_path) -> None:
+    queue_file = tmp_path / "segfy_queue.jsonl"
+    gateway = SegfyGateway(
+        queue_path=queue_file,
+        allow_queue_fallback=False,
+    )
+
+    success = gateway.register_payment(
+        commitment_id="agenda-2",
+        description="Baixa sem fallback",
+    )
+
+    assert success is False
+    assert not queue_file.exists()
+
+
 def test_segfy_fetch_policy_data_from_export_xlsx(tmp_path) -> None:
     export_file = tmp_path / "segfy_export.xlsx"
     workbook = Workbook()

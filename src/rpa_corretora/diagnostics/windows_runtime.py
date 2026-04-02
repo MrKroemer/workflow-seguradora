@@ -158,6 +158,8 @@ def build_windows_runtime_report(
     whatsapp_mode: str,
     email_mode: str,
     files_to_check: list[Path],
+    strict_production: bool = False,
+    require_todo_desktop: bool = False,
 ) -> WindowsRuntimeReport:
     is_windows = sys.platform.startswith("win")
     platform_text = f"{sys.platform} | python={sys.version.split()[0]}"
@@ -368,6 +370,40 @@ def build_windows_runtime_report(
             details=f"{sum(1 for item in files if item.exists)}/{len(files)} encontrados" if files else "Nenhum arquivo configurado",
         )
     )
+
+    if strict_production:
+        integration_blockers: list[str] = []
+        if calendar_mode != "GOOGLE_API":
+            integration_blockers.append("calendar_mode")
+        if gmail_mode != "GMAIL_IMAP":
+            integration_blockers.append("gmail_mode")
+        if require_todo_desktop:
+            if todo_mode != "DESKTOP_APP":
+                integration_blockers.append("todo_mode")
+        elif todo_mode not in {"DESKTOP_APP", "GRAPH"}:
+            integration_blockers.append("todo_mode")
+        if segfy_mode not in {"API_ONLY", "WEB_AUTOMATION_ONLY"}:
+            integration_blockers.append("segfy_mode")
+        if portal_mode != "WEB_MULTI_ONLY":
+            integration_blockers.append("portal_mode")
+        if whatsapp_mode != "HTTP_API":
+            integration_blockers.append("whatsapp_mode")
+        if email_mode != "SMTP":
+            integration_blockers.append("email_mode")
+
+        components.append(
+            _component(
+                key="strict_integrations",
+                label="Integracoes em modo real (strict)",
+                status="OK" if not integration_blockers else "MISSING",
+                required=True,
+                details=(
+                    "Todos os modulos estao em modo real sem fallback."
+                    if not integration_blockers
+                    else "Pendencias: " + ", ".join(integration_blockers)
+                ),
+            )
+        )
 
     ready = is_windows and all(
         component.status == "OK"

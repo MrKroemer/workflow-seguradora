@@ -24,6 +24,7 @@ from rpa_corretora.integrations.insurer_portal_wave1 import (
     CascadingInsurerPortalGateway,
     MapfrePortalCredentials,
     MapfrePortalGateway,
+    MultiInsurerPortalGateway,
     YelumPortalCredentials,
     YelumPortalGateway,
     web_portal_automation_available,
@@ -150,6 +151,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Diretorio para salvar relatorio_execucao_YYYYMMDD_HHMMSS.{json,pdf}",
     )
+    parser.add_argument(
+        "--strict-production",
+        action="store_true",
+        help=(
+            "Forca modo producao estrito (sem fallback): bloqueia execucao quando qualquer "
+            "integracao estiver em NOOP/STUB/QUEUE/OUTBOX."
+        ),
+    )
     return parser
 
 
@@ -229,6 +238,61 @@ def _resolve_portal_credentials(
     return None, None
 
 
+def _enforce_strict_production_or_fail(
+    *,
+    strict_production: bool,
+    using_real_sheets: bool,
+    calendar_mode: str,
+    gmail_mode: str,
+    todo_mode: str,
+    segfy_mode: str,
+    portal_mode: str,
+    whatsapp_mode: str,
+    email_mode: str,
+    report_email_to: str,
+    require_todo_desktop: bool,
+) -> None:
+    if not strict_production:
+        return
+
+    blockers: list[str] = []
+    if not using_real_sheets:
+        blockers.append("Planilhas reais obrigatorias nao estao disponiveis.")
+
+    if calendar_mode != "GOOGLE_API":
+        blockers.append("Google Agenda precisa estar em GOOGLE_API (sem NOOP).")
+    if gmail_mode != "GMAIL_IMAP":
+        blockers.append("Gmail precisa estar em GMAIL_IMAP (sem NOOP).")
+
+    if require_todo_desktop:
+        if todo_mode != "DESKTOP_APP":
+            blockers.append("Microsoft To Do precisa operar via aplicativo desktop (DESKTOP_APP).")
+    elif todo_mode not in {"DESKTOP_APP", "GRAPH"}:
+        blockers.append("Microsoft To Do precisa estar em DESKTOP_APP ou GRAPH (sem fallback web/noop).")
+
+    if segfy_mode not in {"API_ONLY", "WEB_AUTOMATION_ONLY"}:
+        blockers.append(
+            "Segfy em producao estrita precisa estar em API_ONLY ou WEB_AUTOMATION_ONLY "
+            "(sem QUEUE/EXPORT/STUB/fallback)."
+        )
+    if portal_mode != "WEB_MULTI_ONLY":
+        blockers.append("Portais precisam estar em WEB_MULTI_ONLY (sem STUB).")
+    if whatsapp_mode != "HTTP_API":
+        blockers.append("WhatsApp precisa estar em HTTP_API (sem OUTBOX_FILE).")
+    if email_mode != "SMTP":
+        blockers.append("E-mail precisa estar em SMTP (sem OUTBOX_FILE).")
+    if not report_email_to:
+        blockers.append("EXECUTION_REPORT_EMAIL_TO e obrigatorio para entrega automatica em producao estrita.")
+
+    if blockers:
+        numbered = "\n".join(f"{index}. {item}" for index, item in enumerate(blockers, start=1))
+        raise RuntimeError(
+            "Execucao bloqueada pelo modo --strict-production.\n"
+            "Corrija os itens abaixo para rodar sem fallback:\n"
+            f"{numbered}"
+        )
+
+
 def main() -> None:
     parser = build_arg_parser()
     args = parser.parse_args()
@@ -273,6 +337,11 @@ def main() -> None:
 
         run_date = _parse_date(args.date)
         settings = load_settings()
+        strict_production = args.strict_production or _env_flag("RPA_STRICT_PRODUCTION", default=False)
+        require_todo_desktop = _env_flag(
+            "MICROSOFT_TODO_REQUIRE_DESKTOP",
+            default=strict_production,
+        )
         credentials_from_pdf: dict[str, object] = {}
         if _env_flag("PORTAL_USE_PDF_CREDENTIALS", default=False):
             if settings.files is None or settings.files.senhas_pdf is None or not settings.files.senhas_pdf.exists():
@@ -363,28 +432,33 @@ def main() -> None:
                 timeout_seconds=todo_settings.desktop_timeout_seconds,
             )
             todo_mode = "DESKTOP_APP"
-        elif can_use_graph and todo_settings is not None:
+        elif not require_todo_desktop and can_use_graph and todo_settings is not None:
             todo_gateway = MicrosoftTodoGraphGateway(todo_settings)
             todo_mode = "GRAPH"
-        elif can_use_web_fallback and todo_settings is not None:
+        elif not strict_production and can_use_web_fallback and todo_settings is not None:
             todo_gateway = MicrosoftTodoWebGateway(
                 todo_settings,
                 headless=todo_settings.web_headless,
             )
             todo_mode = "WEB_AUTOMATION"
         elif todo_settings is not None:
-            if todo_settings.desktop_enabled and not todo_desktop_automation_available():
+            if require_todo_desktop:
+                todo_hint = (
+                    "Microsoft To Do em producao estrita requer app desktop. "
+                    "Habilite pywinauto e mantenha MICROSOFT_TODO_DESKTOP_ENABLED=1."
+                )
+            elif todo_settings.desktop_enabled and not todo_desktop_automation_available():
                 todo_hint = (
                     "Modo desktop habilitado, mas pywinauto nao esta disponivel no Windows. "
                     "Instale: py -3 -m pip install pywinauto."
                 )
             elif has_todo_login and not todo_settings.client_id:
-                if todo_web_automation_available():
+                if not strict_production and todo_web_automation_available():
                     todo_hint = "Graph indisponivel sem MICROSOFT_TODO_CLIENT_ID; fallback web disponivel."
                 else:
                     todo_hint = (
-                        "Defina MICROSOFT_TODO_CLIENT_ID para ativar Graph, "
-                        "ou habilite desktop com pywinauto."
+                        "Defina MICROSOFT_TODO_CLIENT_ID e MICROSOFT_TODO_REFRESH_TOKEN para ativar Graph, "
+                        "ou use app desktop com pywinauto."
                     )
             elif todo_settings.client_id and not (
                 todo_settings.refresh_token or (todo_settings.username and todo_settings.password)
@@ -394,30 +468,41 @@ def main() -> None:
         segfy_user = (os.getenv("SEGFY_USER") or "").strip()
         segfy_password = (os.getenv("SEGFY_PASSWORD") or "").strip()
         segfy_api_base_url = (os.getenv("SEGFY_API_BASE_URL") or "").strip()
+        segfy_api_token = (os.getenv("SEGFY_API_TOKEN") or "").strip()
         segfy_export_xlsx = (os.getenv("SEGFY_EXPORT_XLSX") or "").strip()
-        segfy_fallback_gateway = SegfyGateway(
+        segfy_api_gateway = SegfyGateway(
             username=segfy_user,
             password=segfy_password,
             api_base_url=segfy_api_base_url or None,
-            api_token=(os.getenv("SEGFY_API_TOKEN") or "").strip() or None,
+            api_token=segfy_api_token or None,
             api_login_path=(os.getenv("SEGFY_API_LOGIN_PATH") or "/auth/login").strip(),
             api_policies_path=(os.getenv("SEGFY_API_POLICIES_PATH") or "/policies").strip(),
             api_register_payment_path=(os.getenv("SEGFY_API_REGISTER_PAYMENT_PATH") or "/payments/register").strip(),
             export_xlsx_path=segfy_export_xlsx or None,
             timeout_seconds=_env_int("SEGFY_API_TIMEOUT_SECONDS", default=20),
+            allow_queue_fallback=not strict_production,
         )
-        segfy_gateway = segfy_fallback_gateway
+        segfy_gateway = segfy_api_gateway
         segfy_mode = "QUEUE_ONLY"
         segfy_hint = (
             "Defina SEGFY_API_BASE_URL + credenciais/token para integracao API, "
             "ou habilite automacao web do Segfy, ou informe SEGFY_EXPORT_XLSX para leitura por export."
         )
-        if segfy_api_base_url:
-            segfy_mode = "API_OR_QUEUE"
-            segfy_hint = ""
-        elif segfy_user and segfy_password and segfy_web_automation_available() and _env_flag("SEGFY_WEB_ENABLED", default=True):
-            segfy_gateway = CascadingSegfyGateway(
-                primary=SegfyWebGateway(
+
+        has_segfy_api = bool(segfy_api_base_url and (segfy_api_token or (segfy_user and segfy_password)))
+        can_use_segfy_web = bool(
+            segfy_user
+            and segfy_password
+            and segfy_web_automation_available()
+            and _env_flag("SEGFY_WEB_ENABLED", default=True)
+        )
+        if strict_production:
+            if has_segfy_api:
+                segfy_gateway = segfy_api_gateway
+                segfy_mode = "API_ONLY"
+                segfy_hint = ""
+            elif can_use_segfy_web:
+                segfy_gateway = SegfyWebGateway(
                     username=segfy_user,
                     password=segfy_password,
                     base_url=(os.getenv("SEGFY_WEB_BASE_URL") or "https://app.segfy.com").strip(),
@@ -428,27 +513,57 @@ def main() -> None:
                     import_page_url=(os.getenv("SEGFY_WEB_IMPORT_URL") or "").strip() or None,
                     import_source_dir=(os.getenv("SEGFY_IMPORT_SOURCE_DIR") or "").strip() or None,
                     import_max_files=_env_int("SEGFY_WEB_IMPORT_MAX_FILES", default=100),
-                    import_state_path=(
-                        os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json"
-                    ).strip(),
-                ),
-                fallback=segfy_fallback_gateway,
-            )
-            segfy_mode = "WEB_AUTOMATION_OR_QUEUE"
-            if segfy_export_xlsx:
-                segfy_mode = "WEB_AUTOMATION_OR_EXPORT_OR_QUEUE"
-            segfy_hint = (
-                "Segfy via navegador (Playwright) ativo. "
-                "Se a exportacao web nao for encontrada, o bot usa export configurado ou fila local."
-            )
-        elif segfy_export_xlsx:
-            segfy_mode = "EXPORT_XLSX_OR_QUEUE"
-            segfy_hint = ""
-        elif segfy_user and segfy_password and not segfy_web_automation_available():
-            segfy_hint = (
-                "Credenciais do Segfy detectadas, mas automacao web nao esta disponivel. "
-                "No Windows, instale playwright para usar Segfy via navegador."
-            )
+                    import_state_path=(os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json").strip(),
+                )
+                segfy_mode = "WEB_AUTOMATION_ONLY"
+                segfy_hint = (
+                    "Segfy web ativo sem fallback. "
+                    "Para cobertura completa de baixa de parcelas, configure API do Segfy."
+                )
+            elif segfy_user and segfy_password and not segfy_web_automation_available():
+                segfy_hint = (
+                    "Credenciais do Segfy detectadas, mas automacao web nao esta disponivel. "
+                    "No Windows, instale playwright para usar Segfy via navegador."
+                )
+        else:
+            segfy_gateway = segfy_api_gateway
+            if segfy_api_base_url:
+                segfy_mode = "API_OR_QUEUE"
+                segfy_hint = ""
+            elif can_use_segfy_web:
+                segfy_gateway = CascadingSegfyGateway(
+                    primary=SegfyWebGateway(
+                        username=segfy_user,
+                        password=segfy_password,
+                        base_url=(os.getenv("SEGFY_WEB_BASE_URL") or "https://app.segfy.com").strip(),
+                        headless=_env_flag("SEGFY_WEB_HEADLESS", default=True),
+                        browser_channel=(os.getenv("SEGFY_WEB_BROWSER_CHANNEL") or "chrome").strip().lower(),
+                        timeout_seconds=_env_int("SEGFY_WEB_TIMEOUT_SECONDS", default=35),
+                        import_enabled=_env_flag("SEGFY_WEB_IMPORT_ENABLED", default=True),
+                        import_page_url=(os.getenv("SEGFY_WEB_IMPORT_URL") or "").strip() or None,
+                        import_source_dir=(os.getenv("SEGFY_IMPORT_SOURCE_DIR") or "").strip() or None,
+                        import_max_files=_env_int("SEGFY_WEB_IMPORT_MAX_FILES", default=100),
+                        import_state_path=(
+                            os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json"
+                        ).strip(),
+                    ),
+                    fallback=segfy_api_gateway,
+                )
+                segfy_mode = "WEB_AUTOMATION_OR_QUEUE"
+                if segfy_export_xlsx:
+                    segfy_mode = "WEB_AUTOMATION_OR_EXPORT_OR_QUEUE"
+                segfy_hint = (
+                    "Segfy via navegador (Playwright) ativo. "
+                    "Se a exportacao web nao for encontrada, o bot usa export configurado ou fila local."
+                )
+            elif segfy_export_xlsx:
+                segfy_mode = "EXPORT_XLSX_OR_QUEUE"
+                segfy_hint = ""
+            elif segfy_user and segfy_password and not segfy_web_automation_available():
+                segfy_hint = (
+                    "Credenciais do Segfy detectadas, mas automacao web nao esta disponivel. "
+                    "No Windows, instale playwright para usar Segfy via navegador."
+                )
 
         whatsapp_gateway = FileOutboxWhatsAppGateway()
         whatsapp_mode = "OUTBOX_FILE"
@@ -664,22 +779,46 @@ def main() -> None:
         else:
             missing_labels.append("AZUL")
 
-        if web_available and web_gateways:
-            portal_gateway = CascadingInsurerPortalGateway(
-                gateways=web_gateways,
-                fallback=StubInsurerPortalGateway(),
-            )
-            portal_mode = "WEB_MULTI+STUB"
-            portal_hint = f"Gateways ativos: {', '.join(enabled_labels)}."
-            if missing_labels:
-                portal_hint += f" Sem credenciais: {', '.join(missing_labels)}."
-        elif any_portal_creds and not web_available:
-            portal_hint = "Credenciais de portais detectadas, mas Playwright para Windows nao esta disponivel."
+        required_portal_labels = ["YELUM", "PORTO", "MAPFRE", "BRADESCO", "ALLIANZ", "SUHAI", "TOKIO", "HDI", "AZUL"]
+        missing_required_portals = [label for label in required_portal_labels if label in missing_labels]
+
+        if strict_production:
+            if web_available and web_gateways and not missing_required_portals:
+                portal_gateway = MultiInsurerPortalGateway(gateways=web_gateways)
+                portal_mode = "WEB_MULTI_ONLY"
+                portal_hint = f"Gateways ativos: {', '.join(enabled_labels)}."
+            elif any_portal_creds and not web_available:
+                portal_hint = (
+                    "Credenciais de portais detectadas, mas Playwright para Windows nao esta disponivel."
+                )
+            else:
+                portal_hint = (
+                    "Produção estrita exige credenciais de todos os portais obrigatorios: "
+                    "YELUM, PORTO, MAPFRE, BRADESCO, ALLIANZ, SUHAI, TOKIO, HDI e AZUL."
+                )
+                if missing_required_portals:
+                    portal_hint += f" Faltando: {', '.join(missing_required_portals)}."
         else:
-            portal_hint = (
-                "Defina credenciais de YELUM/PORTO/MAPFRE/BRADESCO/ALLIANZ/SUHAI/TOKIO/HDI/AZUL "
-                "ou habilite PORTAL_USE_PDF_CREDENTIALS=1 para mapeamento automatico."
-            )
+            if web_available and web_gateways and not missing_required_portals:
+                portal_gateway = MultiInsurerPortalGateway(gateways=web_gateways)
+                portal_mode = "WEB_MULTI_ONLY"
+                portal_hint = f"Gateways ativos: {', '.join(enabled_labels)}."
+            elif web_available and web_gateways:
+                portal_gateway = CascadingInsurerPortalGateway(
+                    gateways=web_gateways,
+                    fallback=StubInsurerPortalGateway(),
+                )
+                portal_mode = "WEB_MULTI+STUB"
+                portal_hint = f"Gateways ativos: {', '.join(enabled_labels)}."
+                if missing_labels:
+                    portal_hint += f" Sem credenciais: {', '.join(missing_labels)}."
+            elif any_portal_creds and not web_available:
+                portal_hint = "Credenciais de portais detectadas, mas Playwright para Windows nao esta disponivel."
+            else:
+                portal_hint = (
+                    "Defina credenciais de YELUM/PORTO/MAPFRE/BRADESCO/ALLIANZ/SUHAI/TOKIO/HDI/AZUL "
+                    "ou habilite PORTAL_USE_PDF_CREDENTIALS=1 para mapeamento automatico."
+                )
 
         files_to_check: list[Path] = []
         if settings.files is not None:
@@ -698,11 +837,28 @@ def main() -> None:
             whatsapp_mode=whatsapp_mode,
             email_mode=email_mode,
             files_to_check=files_to_check,
+            strict_production=strict_production,
+            require_todo_desktop=require_todo_desktop,
         )
         for line in render_windows_runtime_report(windows_report):
             print(line)
         windows_report_path = write_windows_runtime_report(windows_report, args.windows_audit_output)
         print(f"Windows audit JSON: {windows_report_path.resolve()}")
+
+        _enforce_strict_production_or_fail(
+            strict_production=strict_production,
+            using_real_sheets=using_real_sheets,
+            calendar_mode=calendar_mode,
+            gmail_mode=gmail_mode,
+            todo_mode=todo_mode,
+            segfy_mode=segfy_mode,
+            portal_mode=portal_mode,
+            whatsapp_mode=whatsapp_mode,
+            email_mode=email_mode,
+            report_email_to=report_email_to,
+            require_todo_desktop=require_todo_desktop,
+        )
+
         if args.windows_audit_only:
             return
 
@@ -730,6 +886,7 @@ def main() -> None:
         print(f"Lancamentos de caixa: {len(result.cashflow_entries)}")
         print(f"Alertas criticos: {result.dashboard.critical_alerts}")
         print(f"Planilhas reais: {'SIM' if using_real_sheets else 'NAO'}")
+        print(f"Producao estrita: {'SIM' if strict_production else 'NAO'}")
         if sheets_hint:
             print(f"Planilhas observacao: {sheets_hint}")
         print(f"Agenda modo: {calendar_mode}")

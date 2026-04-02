@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from difflib import SequenceMatcher
 import re
 import os
-import sys
 import unicodedata
 
 from rpa_corretora.config import AppSettings
@@ -42,7 +41,11 @@ from rpa_corretora.templates.messages import cobranca_parcela_message
 class NotificationDispatchSummary:
     whatsapp_sent: int = 0
     segfy_payments: int = 0
+    segfy_payment_failures: int = 0
+    segfy_payment_failed_ids: list[str] = field(default_factory=list)
     portal_claim_checks: int = 0
+    portal_claim_failures: int = 0
+    portal_claim_failed_ids: list[str] = field(default_factory=list)
     insured_emails_sent: int = 0
     skipped_without_phone: int = 0
     skipped_without_email_target: int = 0
@@ -189,15 +192,7 @@ class DailyProcessor:
         return summary
 
     def _todo_is_writable(self) -> bool:
-        todo_settings = self.settings.microsoft_todo
-        if todo_settings is None:
-            return False
-        has_desktop = bool(todo_settings.desktop_enabled and sys.platform.startswith("win"))
-        has_web_login = bool((todo_settings.username or "").strip() and (todo_settings.password or "").strip())
-        has_graph = bool((todo_settings.client_id or "").strip()) and bool(
-            (todo_settings.refresh_token or "").strip() or has_web_login
-        )
-        return has_desktop or has_graph or has_web_login
+        return self.todo.__class__.__name__ != "NoopTodoGateway"
 
     def run(
         self,
@@ -458,6 +453,26 @@ class DailyProcessor:
                     trace.fail_stage("whatsapp", exc, context={"acao": "dispatch_notifications"})
                 raise
 
+        for commitment_id in notification_summary.segfy_payment_failed_ids:
+            alerts.append(
+                Alert(
+                    code="SEGFY_BAIXA_FALHOU",
+                    severity="CRITICA",
+                    message=f"Falha ao registrar baixa de parcela no Segfy ({commitment_id}).",
+                    context={"commitment_id": commitment_id},
+                )
+            )
+
+        for commitment_id in notification_summary.portal_claim_failed_ids:
+            alerts.append(
+                Alert(
+                    code="PORTAL_SINISTRO_CONSULTA_FALHOU",
+                    severity="ALTA",
+                    message=f"Falha ao consultar status de sinistro no portal ({commitment_id}).",
+                    context={"commitment_id": commitment_id},
+                )
+            )
+
         blue_pending = [item for item in commitments if not item.resolved and item.color == "AZUL"]
         if dry_run and trace is not None:
             for commitment in blue_pending:
@@ -491,6 +506,7 @@ class DailyProcessor:
                 (
                     f"{len(segfy_data)} registros consultados; "
                     f"{notification_summary.segfy_payments} baixas registradas; "
+                    f"{notification_summary.segfy_payment_failures} falhas de baixa; "
                     f"{imported_documents} documentos importados."
                 ),
             )
@@ -498,7 +514,8 @@ class DailyProcessor:
                 "insurer_portals",
                 (
                     f"{len(portal_data)} registros de apolices retornados; "
-                    f"{notification_summary.portal_claim_checks} consultas de sinistro por agenda."
+                    f"{notification_summary.portal_claim_checks} consultas de sinistro por agenda; "
+                    f"{notification_summary.portal_claim_failures} falhas de consulta."
                 ),
             )
             if notification_summary.skipped_without_email_target > 0:
@@ -547,13 +564,21 @@ class DailyProcessor:
                 continue
 
             if commitment.color == "AZUL":
-                self.segfy.register_payment(commitment_id=commitment.id, description=commitment.title)
-                summary.segfy_payments += 1
+                payment_ok = self.segfy.register_payment(commitment_id=commitment.id, description=commitment.title)
+                if payment_ok:
+                    summary.segfy_payments += 1
+                else:
+                    summary.segfy_payment_failures += 1
+                    summary.segfy_payment_failed_ids.append(commitment.id)
                 continue
 
             if commitment.color == "CINZA":
-                self.portals.check_claim_status(commitment_id=commitment.id, description=commitment.title)
-                summary.portal_claim_checks += 1
+                claim_status = self.portals.check_claim_status(commitment_id=commitment.id, description=commitment.title)
+                if claim_status is None:
+                    summary.portal_claim_failures += 1
+                    summary.portal_claim_failed_ids.append(commitment.id)
+                else:
+                    summary.portal_claim_checks += 1
                 continue
 
             if commitment.color == "VERDE":

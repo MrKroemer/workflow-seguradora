@@ -128,3 +128,71 @@ def test_windows_runtime_report_requires_desktop_components_for_todo_desktop(mon
     assert report.ready is False
     assert _component_status(report, "pywinauto_module") == "MISSING"
     assert _component_status(report, "microsoft_todo_desktop") == "MISSING"
+
+
+def test_windows_runtime_report_strict_requires_real_integration_modes(monkeypatch, tmp_path: Path) -> None:
+    file_a = tmp_path / "SEGUROS PBSEG.xlsx"
+    file_b = tmp_path / "ACOMPANHAMENTO 2026.xlsx"
+    file_c = tmp_path / "FLUXO DE CAIXA.xlsx"
+    file_a.write_text("ok", encoding="utf-8")
+    file_b.write_text("ok", encoding="utf-8")
+    file_c.write_text("ok", encoding="utf-8")
+
+    monkeypatch.setattr(windows_runtime.sys, "platform", "win32")
+    monkeypatch.setattr(windows_runtime, "_find_edge_executable", lambda: r"C:\Edge\msedge.exe")
+    monkeypatch.setattr(windows_runtime, "_find_chrome_executable", lambda: r"C:\Chrome\chrome.exe")
+    monkeypatch.setattr(windows_runtime, "_playwright_module_available", lambda: True)
+    monkeypatch.setattr(windows_runtime, "_playwright_chromium_installed", lambda: (True, r"C:\ms-playwright"))
+    monkeypatch.setattr(windows_runtime, "_pywinauto_available", lambda: True)
+    monkeypatch.setattr(windows_runtime, "_microsoft_todo_desktop_available", lambda: True)
+    monkeypatch.setattr(windows_runtime.shutil, "which", lambda _: r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
+
+    report = windows_runtime.build_windows_runtime_report(
+        calendar_mode="GOOGLE_API",
+        gmail_mode="NOOP",
+        todo_mode="DESKTOP_APP",
+        segfy_mode="API_ONLY",
+        portal_mode="WEB_MULTI_ONLY",
+        whatsapp_mode="HTTP_API",
+        email_mode="SMTP",
+        files_to_check=[file_a, file_b, file_c],
+        strict_production=True,
+        require_todo_desktop=True,
+    )
+
+    assert report.ready is False
+    assert _component_status(report, "strict_integrations") == "MISSING"
+
+
+def test_windows_runtime_report_strict_accepts_segfy_web_automation_only(monkeypatch, tmp_path: Path) -> None:
+    file_a = tmp_path / "SEGUROS PBSEG.xlsx"
+    file_b = tmp_path / "ACOMPANHAMENTO 2026.xlsx"
+    file_c = tmp_path / "FLUXO DE CAIXA.xlsx"
+    file_a.write_text("ok", encoding="utf-8")
+    file_b.write_text("ok", encoding="utf-8")
+    file_c.write_text("ok", encoding="utf-8")
+
+    monkeypatch.setattr(windows_runtime.sys, "platform", "win32")
+    monkeypatch.setattr(windows_runtime, "_find_edge_executable", lambda: r"C:\Edge\msedge.exe")
+    monkeypatch.setattr(windows_runtime, "_find_chrome_executable", lambda: r"C:\Chrome\chrome.exe")
+    monkeypatch.setattr(windows_runtime, "_playwright_module_available", lambda: True)
+    monkeypatch.setattr(windows_runtime, "_playwright_chromium_installed", lambda: (True, r"C:\ms-playwright"))
+    monkeypatch.setattr(windows_runtime, "_pywinauto_available", lambda: True)
+    monkeypatch.setattr(windows_runtime, "_microsoft_todo_desktop_available", lambda: True)
+    monkeypatch.setattr(windows_runtime.shutil, "which", lambda _: r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
+
+    report = windows_runtime.build_windows_runtime_report(
+        calendar_mode="GOOGLE_API",
+        gmail_mode="GMAIL_IMAP",
+        todo_mode="DESKTOP_APP",
+        segfy_mode="WEB_AUTOMATION_ONLY",
+        portal_mode="WEB_MULTI_ONLY",
+        whatsapp_mode="HTTP_API",
+        email_mode="SMTP",
+        files_to_check=[file_a, file_b, file_c],
+        strict_production=True,
+        require_todo_desktop=True,
+    )
+
+    assert report.ready is True
+    assert _component_status(report, "strict_integrations") == "OK"

@@ -30,6 +30,11 @@ Use `.env.example` como base e preencha as variaveis do seu ambiente.
 
 Blocos principais:
 
+- Producao estrita (sem fallback):
+  - `RPA_STRICT_PRODUCTION=1`
+  - `MICROSOFT_TODO_REQUIRE_DESKTOP=1`
+  - com isso, o bot bloqueia execucao se qualquer modulo cair em `NOOP/STUB/QUEUE/OUTBOX`.
+
 - Microsoft To Do:
   - `MICROSOFT_TODO_DESKTOP_ENABLED=1` (modo prioritario: app nativo no Windows)
   - `MICROSOFT_TODO_CLIENT_ID` + `MICROSOFT_TODO_REFRESH_TOKEN` (modo Graph opcional)
@@ -51,6 +56,7 @@ Blocos principais:
   - para importacao no Segfy Web: `SEGFY_WEB_IMPORT_ENABLED=1` + `SEGFY_IMPORT_SOURCE_DIR`
   - para importar so arquivos novos desde a ultima execucao: `SEGFY_IMPORT_STATE_PATH`
   - ou exportacao: `SEGFY_EXPORT_XLSX`
+  - em producao estrita, o Segfy e aceito em `API_ONLY` ou `WEB_AUTOMATION_ONLY`
 - Portais: usuarios e senhas de cada seguradora
 - WhatsApp API: `WHATSAPP_PROVIDER_URL`, `WHATSAPP_PROVIDER_TOKEN`
 - SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
@@ -89,7 +95,7 @@ No dry-run, o bot processa leitura/regras/dashboard/relatorios, mas nao envia in
 ## 7) Execucao real
 
 ```bat
-scripts\run_rpa_windows.bat
+scripts\run_rpa_windows.bat --strict-production
 ```
 
 ## 8) Evidencias esperadas
@@ -112,6 +118,8 @@ cmd /c "cd /d C:\caminho\do\projeto && scripts\run_rpa_windows.bat"
 ## 10) Solucao rapida de problemas
 
 - `Playwright nao encontrado`: rode `scripts\setup_windows.bat` novamente.
+- `No module named pip` durante setup: o `setup_windows.bat` agora tenta reparar/recriar `.venv` automaticamente.
+  Se ainda falhar, apague `.venv` manualmente e rode `scripts\setup_windows.bat`.
 - `To Do sem dados`: confirmar `MICROSOFT_TODO_*` e validar se entrou em `DESKTOP_APP`, `GRAPH` ou `WEB_AUTOMATION`.
 - `Portais sem consulta`: conferir credenciais no `.env` e se Edge/Playwright estao OK.
 - `Sem envio de e-mail`: revisar bloco SMTP e `EXECUTION_REPORT_EMAIL_TO`.

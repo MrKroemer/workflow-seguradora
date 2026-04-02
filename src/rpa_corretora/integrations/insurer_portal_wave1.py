@@ -164,6 +164,41 @@ class CascadingInsurerPortalGateway:
         return self.fallback.check_claim_status(commitment_id=commitment_id, description=description)
 
 
+class MultiInsurerPortalGateway:
+    """Aggregator sem fallback sintético.
+
+    Usa somente os gateways web configurados. Se um policy_id não for encontrado
+    por nenhum portal, ele simplesmente não aparece no retorno.
+    """
+
+    def __init__(self, gateways: list[_PortalGatewayLike]) -> None:
+        self.gateways = gateways
+
+    def fetch_policy_data(self, policy_ids: list[str]) -> list[PortalPolicyData]:
+        if not policy_ids:
+            return []
+
+        pending = list(policy_ids)
+        collected: list[PortalPolicyData] = []
+        for gateway in self.gateways:
+            if not pending:
+                break
+            data = gateway.fetch_policy_data(pending)
+            if not data:
+                continue
+            collected.extend(data)
+            found_ids = {item.policy_id for item in data}
+            pending = [policy_id for policy_id in pending if policy_id not in found_ids]
+        return collected
+
+    def check_claim_status(self, *, commitment_id: str, description: str) -> str | None:
+        for gateway in self.gateways:
+            status = gateway.check_claim_status(commitment_id=commitment_id, description=description)
+            if status:
+                return status
+        return None
+
+
 @dataclass(frozen=True, slots=True)
 class YelumPortalCredentials:
     username: str

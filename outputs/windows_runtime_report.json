@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-01T12:37:50",
+  "generated_at": "2026-04-02T10:28:43",
   "platform": "linux | python=3.11.9",
   "is_windows": false,
   "integrations": {
@@ -38,21 +38,42 @@
       "label": "Microsoft Edge",
       "status": "N_A",
       "required": false,
-      "details": "Automacao web de portais/To Do requer Windows"
+      "details": "Automacao web de portais/To Do/Segfy requer Windows"
+    },
+    {
+      "key": "chrome",
+      "label": "Google Chrome",
+      "status": "N_A",
+      "required": false,
+      "details": "Automacao web de portais/To Do/Segfy requer Windows"
     },
     {
       "key": "playwright_module",
       "label": "Playwright Python",
       "status": "N_A",
       "required": false,
-      "details": "Automacao web de portais/To Do requer Windows"
+      "details": "Automacao web de portais/To Do/Segfy requer Windows"
     },
     {
       "key": "playwright_chromium",
       "label": "Playwright Chromium Bundle",
       "status": "N_A",
       "required": false,
-      "details": "Automacao web de portais/To Do requer Windows"
+      "details": "Automacao web de portais/To Do/Segfy requer Windows"
+    },
+    {
+      "key": "pywinauto_module",
+      "label": "Pywinauto",
+      "status": "N_A",
+      "required": false,
+      "details": "Automacao desktop do Microsoft To Do requer Windows"
+    },
+    {
+      "key": "microsoft_todo_desktop",
+      "label": "Microsoft To Do Desktop App",
+      "status": "N_A",
+      "required": false,
+      "details": "Automacao desktop do Microsoft To Do requer Windows"
     },
     {
       "key": "operational_files",
@@ -60,6 +81,13 @@
       "status": "OK",
       "required": true,
       "details": "3/3 encontrados"
+    },
+    {
+      "key": "strict_integrations",
+      "label": "Integracoes em modo real (strict)",
+      "status": "MISSING",
+      "required": true,
+      "details": "Pendencias: calendar_mode, gmail_mode, todo_mode, segfy_mode, portal_mode, whatsapp_mode, email_mode"
     }
   ],
   "files": [

@@ -54,6 +54,7 @@ class SegfyGateway:
         export_xlsx_path: str | Path | None = None,
         queue_path: str | Path = "outputs/segfy_payment_queue.jsonl",
         timeout_seconds: int = 20,
+        allow_queue_fallback: bool = True,
     ) -> None:
         self.username = (username or "").strip()
         self.password = (password or "").strip()
@@ -65,6 +66,7 @@ class SegfyGateway:
         self.export_xlsx_path = Path(export_xlsx_path) if export_xlsx_path else None
         self.queue_path = Path(queue_path)
         self.timeout_seconds = timeout_seconds
+        self.allow_queue_fallback = allow_queue_fallback
 
     def fetch_policy_data(self) -> list[SegfyPolicyData]:
         api_data = self._fetch_policy_data_from_api()
@@ -83,6 +85,9 @@ class SegfyGateway:
         }
         if self._post_payment(payload):
             return True
+
+        if not self.allow_queue_fallback:
+            return False
 
         self.queue_path.parent.mkdir(parents=True, exist_ok=True)
         with self.queue_path.open("a", encoding="utf-8") as file:
