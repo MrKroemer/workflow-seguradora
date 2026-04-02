@@ -21,5 +21,9 @@ def load_env_file(path: str | Path = ".env") -> None:
         if value.startswith(('"', "'")) and value.endswith(('"', "'")) and len(value) >= 2:
             value = value[1:-1]
 
-        if key and key not in os.environ:
+        # Permite preencher variaveis ja existentes, mas vazias.
+        # Isso evita cenarios no Windows em que o shell exporta chave sem valor,
+        # bloqueando a leitura efetiva do .env.
+        existing = os.environ.get(key) if key else None
+        if key and (existing is None or existing.strip() == ""):
             os.environ[key] = value

@@ -43,6 +43,22 @@ def test_load_env_file_reads_todo_credentials(tmp_path: Path, monkeypatch) -> No
     assert os.getenv("MICROSOFT_TODO_PASSWORD") == "Senha@123"
 
 
+def test_load_env_file_overrides_empty_existing_env(tmp_path: Path, monkeypatch) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "MICROSOFT_TODO_USER=usuario@exemplo.com\nMICROSOFT_TODO_PASSWORD=Senha@123\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("MICROSOFT_TODO_USER", "")
+    monkeypatch.setenv("MICROSOFT_TODO_PASSWORD", "")
+
+    load_env_file(env_file)
+
+    assert os.getenv("MICROSOFT_TODO_USER") == "usuario@exemplo.com"
+    assert os.getenv("MICROSOFT_TODO_PASSWORD") == "Senha@123"
+
+
 def test_settings_reads_todo_credentials_and_file_override(tmp_path: Path, monkeypatch) -> None:
     settings_file = tmp_path / "settings.json"
     _write_settings(settings_file)
