@@ -10,7 +10,7 @@ Automacao operacional para corretora de seguros com processamento diario de agen
   - `ACOMPANHAMENTO 2026.xlsx`
   - `FLUXO DE CAIXA.xlsx`
 - OCR opcional de `SENHAS.pdf` para catalogar servicos de credenciais.
-- Integracao Microsoft To Do via Microsoft Graph pronta (com fallback web para Windows),
+- Integracao Microsoft To Do com modo desktop no Windows (prioritario), Graph e fallback web,
   incluindo leitura + criacao + atualizacao + conclusao de tarefas.
 - Integracoes operacionais ja plugadas no fluxo principal:
   - Google Calendar (API);
@@ -32,6 +32,7 @@ Automacao operacional para corretora de seguros com processamento diario de agen
 - `src/rpa_corretora/domain/rules.py`: regras de negocio e alertas.
 - `src/rpa_corretora/integrations/workbook_gateway.py`: leitura/escrita real de Excel.
 - `src/rpa_corretora/integrations/microsoft_todo_graph.py`: leitura e manipulacao de tarefas do Microsoft To Do via Graph.
+- `src/rpa_corretora/integrations/microsoft_todo_desktop.py`: leitura e manipulacao do Microsoft To Do via aplicativo desktop no Windows.
 - `src/rpa_corretora/integrations/credentials_pdf.py`: OCR do PDF de senhas.
 - `docs/adendo_escopo_final_v1.md`: adendo oficial do escopo final (sem regressao).
 - `docs/mapeamento_portais_wave1.md`: mapeamento dos 3 primeiros portais (Yelum, Porto, Mapfre).
@@ -60,14 +61,15 @@ MICROSOFT_TODO_PASSWORD=******
 
 Observacoes:
 
-- Para ativar To Do real (`GRAPH`), e necessario ao menos:
+- No Windows, o modo prioritario e `DESKTOP_APP` (Microsoft To Do nativo), com:
+  - `MICROSOFT_TODO_DESKTOP_ENABLED=1`
+  - dependencia: `pywinauto` instalado no ambiente (`py -3 -m pip install pywinauto`)
+- Para ativar To Do real via Graph (`GRAPH`), e necessario ao menos:
   - `MICROSOFT_TODO_CLIENT_ID`
   - `MICROSOFT_TODO_REFRESH_TOKEN` (recomendado)
 - Opcional: `MICROSOFT_TODO_LIST_NAME` para escolher a lista-alvo de escrita
   (criacao/atualizacao/conclusao) pelo bot.
-- Sem esses valores, no Windows o sistema tenta `WEB_AUTOMATION` com login/senha.
-- No modo `WEB_AUTOMATION`, o bot usa o Microsoft To Do na web (Edge/Playwright) com a mesma conta do To Do local instalado no Windows.
-  Atualmente, nao ha leitura direta da aplicacao desktop nativa.
+- Sem Graph e sem desktop, no Windows o sistema tenta `WEB_AUTOMATION` com login/senha.
 - Se Graph e automacao web nao estiverem disponiveis, o sistema entra em `NOOP` (sem dados ficticios).
 
 ### 1.1) Integracoes operacionais (agenda, e-mail, Segfy, WhatsApp)
@@ -117,9 +119,15 @@ Variaveis no `.env`:
 Com SMTP ativo e `EXECUTION_REPORT_EMAIL_TO` definido,
 o sistema envia o relatorio com anexos JSON e PDF.
 
-### 1.2) Fallback Windows sem Client ID
+### 1.2) Modo Desktop e Fallback sem Client ID
 
-Para usar To Do sem `MICROSOFT_TODO_CLIENT_ID` no Windows:
+Para usar modo desktop (recomendado no seu cenario Windows):
+
+```bash
+py -3 -m pip install pywinauto
+```
+
+Para usar fallback web sem `MICROSOFT_TODO_CLIENT_ID` no Windows:
 
 ```bash
 python -m pip install playwright
@@ -270,7 +278,7 @@ Ao rodar, o sistema imprime:
 - modo de integracao do Segfy (`API_OR_QUEUE`, `WEB_AUTOMATION_OR_QUEUE`, `WEB_AUTOMATION_OR_EXPORT_OR_QUEUE`, `EXPORT_XLSX_OR_QUEUE` ou `QUEUE_ONLY`)
 - modo de integracao do WhatsApp (`HTTP_API` ou `OUTBOX_FILE`)
 - modo de integracao de e-mail (`SMTP` ou `OUTBOX_FILE`)
-- modo de integracao do To Do (`GRAPH`, `WEB_AUTOMATION` ou `NOOP`)
+- modo de integracao do To Do (`DESKTOP_APP`, `GRAPH`, `WEB_AUTOMATION` ou `NOOP`)
 - modo de integracao dos portais (`WEB_MULTI+STUB` ou `STUB`)
 - auditoria de runtime Windows em JSON (`outputs/windows_runtime_report.json`)
 - relatorio de execucao em JSON/PDF (`relatorio_execucao_YYYYMMDD_HHMMSS.{json,pdf}`)
@@ -297,7 +305,8 @@ PYTHONPATH=src python3 -m pytest
 ## Proximos passos recomendados
 
 1. Escolher o modo do To Do:
+   - `DESKTOP_APP` (Windows): instalar `pywinauto` e manter `MICROSOFT_TODO_DESKTOP_ENABLED=1`.
    - `GRAPH`: preencher `MICROSOFT_TODO_CLIENT_ID` e `MICROSOFT_TODO_REFRESH_TOKEN`.
    - `WEB_AUTOMATION` (Windows): instalar Playwright e manter `MICROSOFT_TODO_USER` + `MICROSOFT_TODO_PASSWORD`.
-2. Rodar `--dry-run` e confirmar `Microsoft To Do modo: GRAPH` ou `WEB_AUTOMATION`.
+2. Rodar `--dry-run` e confirmar `Microsoft To Do modo: DESKTOP_APP`, `GRAPH` ou `WEB_AUTOMATION`.
 3. Avancar no mapeamento detalhado dos portais restantes (unica frente ainda parcial).

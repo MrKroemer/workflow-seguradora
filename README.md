@@ -37,6 +37,7 @@ Base inicial de implementacao do sistema RPA para operacao de corretora de segur
 - `src/rpa_corretora/integrations/workbook_gateway.py`: integracao real com planilhas Excel.
 - `src/rpa_corretora/integrations/credentials_pdf.py`: OCR e parsing de credenciais por PDF.
 - `src/rpa_corretora/integrations/microsoft_todo_graph.py`: integracao Microsoft To Do via Graph API.
+- `src/rpa_corretora/integrations/microsoft_todo_desktop.py`: integracao Microsoft To Do via app desktop no Windows.
 - `docs/especificacao_tecnica.md`: especificacao de implementacao.
 - `docs/adendo_escopo_final_v1.md`: adendo formal do escopo final (nao regressivo).
 - `docs/mapeamento_portais_wave1.md`: mapeamento dos 3 primeiros portais (Yelum, Porto, Mapfre).
@@ -102,7 +103,20 @@ Para ativar o modo real no To Do, configure no `.env`:
 - `MICROSOFT_TODO_TENANT_ID` (opcional, padrao `common`)
 - `MICROSOFT_TODO_LIST_NAME` (opcional, ex.: `Principal`)
 
-## Microsoft To Do sem Client ID (fallback Windows)
+## Microsoft To Do desktop (Windows - recomendado)
+
+Para ativar automacao no app nativo (prioritario no Windows):
+
+- `MICROSOFT_TODO_DESKTOP_ENABLED=1`
+- `MICROSOFT_TODO_DESKTOP_TIMEOUT_SECONDS=40` (opcional)
+
+Dependencia:
+
+```bash
+py -3 -m pip install pywinauto
+```
+
+## Microsoft To Do sem Client ID (fallback web no Windows)
 
 Quando o `MICROSOFT_TODO_CLIENT_ID` nao estiver configurado, o projeto tenta automaticamente
 o modo `WEB_AUTOMATION` no Windows usando login/senha da conta Microsoft.
@@ -120,7 +134,7 @@ Variaveis relevantes no `.env`:
 - `MICROSOFT_TODO_PASSWORD`
 - `MICROSOFT_TODO_WEB_HEADLESS` (`1` padrao; use `0` para abrir o navegador e depurar)
 
-Com To Do configurado (`GRAPH` ou `WEB_AUTOMATION`), o bot consegue:
+Com To Do configurado (`DESKTOP_APP`, `GRAPH` ou `WEB_AUTOMATION`), o bot consegue:
 
 - ler tarefas abertas;
 - criar tarefas operacionais;

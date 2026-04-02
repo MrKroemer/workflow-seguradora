@@ -37,6 +37,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo [SETUP] Instalando pywinauto (Microsoft To Do app desktop)...
+%PY_CMD% -m pip install pywinauto
+if errorlevel 1 (
+  echo [SETUP] Falha ao instalar pywinauto.
+  exit /b 1
+)
+
 echo [SETUP] Instalando browser Chromium do Playwright...
 %PY_CMD% -m playwright install chromium
 if errorlevel 1 (

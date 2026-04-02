@@ -31,6 +31,8 @@ class MicrosoftTodoSettings:
     client_secret: str | None = None
     refresh_token: str | None = None
     tenant_id: str = "common"
+    desktop_enabled: bool = True
+    desktop_timeout_seconds: int = 40
     web_headless: bool = True
     list_name: str | None = None
 
@@ -77,6 +79,16 @@ def _env_bool(name: str, default: bool) -> bool:
     return default
 
 
+def _env_int(name: str, default: int) -> int:
+    value = _env_str(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
     with Path(path).open("r", encoding="utf-8") as file:
         data = json.load(file)
@@ -110,6 +122,8 @@ def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
         client_secret=_env_str("MICROSOFT_TODO_CLIENT_SECRET"),
         refresh_token=_env_str("MICROSOFT_TODO_REFRESH_TOKEN"),
         tenant_id=_env_str("MICROSOFT_TODO_TENANT_ID") or "common",
+        desktop_enabled=_env_bool("MICROSOFT_TODO_DESKTOP_ENABLED", default=True),
+        desktop_timeout_seconds=_env_int("MICROSOFT_TODO_DESKTOP_TIMEOUT_SECONDS", default=40),
         web_headless=_env_bool("MICROSOFT_TODO_WEB_HEADLESS", default=True),
         list_name=_env_str("MICROSOFT_TODO_LIST_NAME"),
     )

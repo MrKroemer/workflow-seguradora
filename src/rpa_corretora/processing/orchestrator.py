@@ -5,6 +5,7 @@ from datetime import date
 from difflib import SequenceMatcher
 import re
 import os
+import sys
 import unicodedata
 
 from rpa_corretora.config import AppSettings
@@ -191,11 +192,12 @@ class DailyProcessor:
         todo_settings = self.settings.microsoft_todo
         if todo_settings is None:
             return False
+        has_desktop = bool(todo_settings.desktop_enabled and sys.platform.startswith("win"))
         has_web_login = bool((todo_settings.username or "").strip() and (todo_settings.password or "").strip())
         has_graph = bool((todo_settings.client_id or "").strip()) and bool(
             (todo_settings.refresh_token or "").strip() or has_web_login
         )
-        return has_graph or has_web_login
+        return has_desktop or has_graph or has_web_login
 
     def run(
         self,

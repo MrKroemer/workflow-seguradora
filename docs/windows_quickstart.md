@@ -31,10 +31,12 @@ Use `.env.example` como base e preencha as variaveis do seu ambiente.
 Blocos principais:
 
 - Microsoft To Do:
-  - `MICROSOFT_TODO_CLIENT_ID` + `MICROSOFT_TODO_REFRESH_TOKEN` (modo Graph recomendado)
+  - `MICROSOFT_TODO_DESKTOP_ENABLED=1` (modo prioritario: app nativo no Windows)
+  - `MICROSOFT_TODO_CLIENT_ID` + `MICROSOFT_TODO_REFRESH_TOKEN` (modo Graph opcional)
   - ou `MICROSOFT_TODO_USER` + `MICROSOFT_TODO_PASSWORD` (fallback web no Windows)
   - opcional: `MICROSOFT_TODO_LIST_NAME=Principal`
-  - observacao: mesmo com o app local instalado, a leitura automatica atual acontece via web (Edge/Playwright), usando a mesma conta.
+  - opcional: `MICROSOFT_TODO_DESKTOP_TIMEOUT_SECONDS=40`
+  - para modo desktop, instale `pywinauto`: `py -3 -m pip install pywinauto`
   - com To Do configurado, o bot sincroniza tarefas da agenda (cria, atualiza e conclui tarefas automaticamente).
 - Agenda Google: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`
 - Cores da Agenda Google (opcional, mas recomendado para sua regra):
@@ -110,7 +112,7 @@ cmd /c "cd /d C:\caminho\do\projeto && scripts\run_rpa_windows.bat"
 ## 10) Solucao rapida de problemas
 
 - `Playwright nao encontrado`: rode `scripts\setup_windows.bat` novamente.
-- `To Do sem dados`: confirmar `MICROSOFT_TODO_*` e validar se entrou em `GRAPH` ou `WEB_AUTOMATION`.
+- `To Do sem dados`: confirmar `MICROSOFT_TODO_*` e validar se entrou em `DESKTOP_APP`, `GRAPH` ou `WEB_AUTOMATION`.
 - `Portais sem consulta`: conferir credenciais no `.env` e se Edge/Playwright estao OK.
 - `Sem envio de e-mail`: revisar bloco SMTP e `EXECUTION_REPORT_EMAIL_TO`.
 - `Sem envio WhatsApp`: revisar `WHATSAPP_PROVIDER_URL` e `WHATSAPP_PROVIDER_TOKEN`.

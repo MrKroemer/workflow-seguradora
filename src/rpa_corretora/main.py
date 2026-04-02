@@ -43,6 +43,10 @@ from rpa_corretora.integrations.insurer_portal_wave2 import (
     TokioPortalCredentials,
 )
 from rpa_corretora.integrations.microsoft_todo_graph import MicrosoftTodoGraphGateway
+from rpa_corretora.integrations.microsoft_todo_desktop import (
+    MicrosoftTodoDesktopGateway,
+    todo_desktop_automation_available,
+)
 from rpa_corretora.integrations.microsoft_todo_web import (
     MicrosoftTodoWebGateway,
     todo_web_automation_available,
@@ -238,7 +242,14 @@ def main() -> None:
     email_sender_gateway = FileOutboxEmailSenderGateway()
 
     try:
-        load_env_file(args.env_file)
+        env_path = Path(args.env_file).expanduser()
+        if not env_path.is_absolute():
+            env_path = Path.cwd() / env_path
+        if env_path.exists():
+            load_env_file(env_path)
+            print(f"[ENV] Arquivo carregado: {env_path.resolve()}")
+        else:
+            print(f"[ENV] Arquivo nao encontrado: {env_path.resolve()}")
 
         if args.files_dir:
             base_dir = Path(args.files_dir)
@@ -339,13 +350,20 @@ def main() -> None:
         todo_hint = ""
         todo_settings = settings.microsoft_todo
         has_todo_login = bool(todo_settings and todo_settings.username and todo_settings.password)
+        can_use_desktop = bool(todo_settings and todo_settings.desktop_enabled and todo_desktop_automation_available())
         can_use_graph = bool(
             todo_settings
             and todo_settings.client_id
             and (todo_settings.refresh_token or (todo_settings.username and todo_settings.password))
         )
         can_use_web_fallback = bool(has_todo_login and todo_web_automation_available())
-        if can_use_graph and todo_settings is not None:
+        if can_use_desktop and todo_settings is not None:
+            todo_gateway = MicrosoftTodoDesktopGateway(
+                settings=todo_settings,
+                timeout_seconds=todo_settings.desktop_timeout_seconds,
+            )
+            todo_mode = "DESKTOP_APP"
+        elif can_use_graph and todo_settings is not None:
             todo_gateway = MicrosoftTodoGraphGateway(todo_settings)
             todo_mode = "GRAPH"
         elif can_use_web_fallback and todo_settings is not None:
@@ -355,15 +373,18 @@ def main() -> None:
             )
             todo_mode = "WEB_AUTOMATION"
         elif todo_settings is not None:
-            if has_todo_login and not todo_settings.client_id:
+            if todo_settings.desktop_enabled and not todo_desktop_automation_available():
+                todo_hint = (
+                    "Modo desktop habilitado, mas pywinauto nao esta disponivel no Windows. "
+                    "Instale: py -3 -m pip install pywinauto."
+                )
+            elif has_todo_login and not todo_settings.client_id:
                 if todo_web_automation_available():
-                    todo_hint = (
-                        "Graph indisponivel sem MICROSOFT_TODO_CLIENT_ID; web automation usada como fallback."
-                    )
+                    todo_hint = "Graph indisponivel sem MICROSOFT_TODO_CLIENT_ID; fallback web disponivel."
                 else:
                     todo_hint = (
-                        "Defina MICROSOFT_TODO_CLIENT_ID para ativar Graph "
-                        "ou instale playwright no Windows para fallback sem Client ID."
+                        "Defina MICROSOFT_TODO_CLIENT_ID para ativar Graph, "
+                        "ou habilite desktop com pywinauto."
                     )
             elif todo_settings.client_id and not (
                 todo_settings.refresh_token or (todo_settings.username and todo_settings.password)

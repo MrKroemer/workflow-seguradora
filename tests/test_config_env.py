@@ -67,6 +67,8 @@ def test_settings_reads_todo_credentials_and_file_override(tmp_path: Path, monke
     monkeypatch.setenv("MICROSOFT_TODO_PASSWORD", "SenhaForte@2026")
     monkeypatch.setenv("SEGUROS_PBSEG_XLSX", "D:/RPA/SEGUROS PBSEG.xlsx")
     monkeypatch.setenv("MICROSOFT_TODO_WEB_HEADLESS", "0")
+    monkeypatch.setenv("MICROSOFT_TODO_DESKTOP_ENABLED", "1")
+    monkeypatch.setenv("MICROSOFT_TODO_DESKTOP_TIMEOUT_SECONDS", "55")
 
     settings = load_settings(settings_file)
 
@@ -74,4 +76,6 @@ def test_settings_reads_todo_credentials_and_file_override(tmp_path: Path, monke
     assert settings.microsoft_todo.username == "cadastro.segurados@hotmail.com"
     assert settings.microsoft_todo.password == "SenhaForte@2026"
     assert settings.microsoft_todo.web_headless is False
+    assert settings.microsoft_todo.desktop_enabled is True
+    assert settings.microsoft_todo.desktop_timeout_seconds == 55
     assert str(settings.files.seguros_pbseg_xlsx) == "D:/RPA/SEGUROS PBSEG.xlsx"

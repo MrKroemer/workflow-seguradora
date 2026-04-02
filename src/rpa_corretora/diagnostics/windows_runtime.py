@@ -7,6 +7,7 @@ from typing import Literal
 import importlib.util
 import json
 import os
+import subprocess
 import shutil
 import sys
 
@@ -75,6 +76,39 @@ def _playwright_module_available() -> bool:
     try:
         return importlib.util.find_spec("playwright.sync_api") is not None
     except ModuleNotFoundError:
+        return False
+
+
+def _pywinauto_available() -> bool:
+    try:
+        return importlib.util.find_spec("pywinauto") is not None
+    except ModuleNotFoundError:
+        return False
+
+
+def _microsoft_todo_desktop_available() -> bool:
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        command = [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            (
+                "$apps = Get-StartApps | Where-Object { "
+                "$_.Name -match 'To Do|A Fazer' -or $_.AppID -match 'Microsoft.Todos|ToDo' "
+                "}; if ($apps) { 'FOUND' }"
+            ),
+        ]
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        return "FOUND" in (result.stdout or "")
+    except Exception:
         return False
 
 
@@ -200,10 +234,13 @@ def build_windows_runtime_report(
         or portal_mode.startswith("WEB")
         or segfy_mode.startswith("WEB")
     )
+    need_todo_desktop = todo_mode == "DESKTOP_APP"
     edge_path = _find_edge_executable()
     chrome_path = _find_chrome_executable()
     playwright_available = _playwright_module_available()
     chromium_installed, chromium_root = _playwright_chromium_installed()
+    pywinauto_available = _pywinauto_available()
+    todo_desktop_available = _microsoft_todo_desktop_available()
 
     if is_windows:
         components.append(
@@ -242,6 +279,28 @@ def build_windows_runtime_report(
                 details=f"Diretorio: {chromium_root}",
             )
         )
+        components.append(
+            _component(
+                key="pywinauto_module",
+                label="Pywinauto",
+                status="OK" if pywinauto_available else ("MISSING" if need_todo_desktop else "WARN"),
+                required=need_todo_desktop,
+                details="Modulo pywinauto disponivel" if pywinauto_available else "Modulo pywinauto ausente",
+            )
+        )
+        components.append(
+            _component(
+                key="microsoft_todo_desktop",
+                label="Microsoft To Do Desktop App",
+                status="OK" if todo_desktop_available else ("MISSING" if need_todo_desktop else "WARN"),
+                required=need_todo_desktop,
+                details=(
+                    "Aplicativo detectado no menu Iniciar"
+                    if todo_desktop_available
+                    else "Aplicativo Microsoft To Do nao detectado no menu Iniciar"
+                ),
+            )
+        )
     else:
         components.append(
             _component(
@@ -277,6 +336,24 @@ def build_windows_runtime_report(
                 status="N_A",
                 required=need_browser_automation,
                 details="Automacao web de portais/To Do/Segfy requer Windows",
+            )
+        )
+        components.append(
+            _component(
+                key="pywinauto_module",
+                label="Pywinauto",
+                status="N_A",
+                required=need_todo_desktop,
+                details="Automacao desktop do Microsoft To Do requer Windows",
+            )
+        )
+        components.append(
+            _component(
+                key="microsoft_todo_desktop",
+                label="Microsoft To Do Desktop App",
+                status="N_A",
+                required=need_todo_desktop,
+                details="Automacao desktop do Microsoft To Do requer Windows",
             )
         )
 
