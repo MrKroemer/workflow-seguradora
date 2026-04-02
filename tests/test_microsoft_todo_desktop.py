@@ -57,3 +57,27 @@ def test_todo_desktop_automation_available_requires_pywinauto(monkeypatch) -> No
     )
 
     assert microsoft_todo_desktop.todo_desktop_automation_available() is False
+
+
+def test_parse_tasks_from_blocks_desktop_extracts_contact_fields() -> None:
+    today = date(2026, 4, 2)
+    blocks = [
+        (
+            "Cliente: Ana Silva\n"
+            "Telefone: +55 (83) 99989-7477\n"
+            "E-mail: ana.silva@pbseg.com\n"
+            "Endereco: Rua das Flores, 100 - Centro"
+        ),
+    ]
+
+    tasks = microsoft_todo_desktop._parse_tasks_from_blocks(
+        blocks,
+        today=today,
+        list_name="INATIVOS",
+    )
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task.contact_phone == "+5583999897477"
+    assert task.contact_email == "ana.silva@pbseg.com"
+    assert "Rua das Flores" in (task.contact_address or "")

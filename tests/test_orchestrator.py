@@ -8,6 +8,7 @@ from rpa_corretora.domain.models import (
     CalendarCommitment,
     DashboardSnapshot,
     PolicyRecord,
+    TodoTask,
 )
 from rpa_corretora.processing.orchestrator import DailyProcessor
 
@@ -51,6 +52,28 @@ class _CalendarGateway:
         ]
 
 
+class _CalendarGatewayWithWriter(_CalendarGateway):
+    def __init__(self) -> None:
+        self.upserted_task_ids: list[str] = []
+
+    def fetch_daily_commitments(self, day: date) -> list[CalendarCommitment]:
+        return [
+            CalendarCommitment(
+                id="agenda-red",
+                title="Cobranca de parcela - Ana Silva",
+                color="VERMELHO",
+                due_date=day,
+                resolved=False,
+                client_name="Ana Silva",
+                whatsapp_number=None,
+            )
+        ]
+
+    def upsert_todo_task_event(self, *, task: TodoTask) -> str | None:
+        self.upserted_task_ids.append(task.id)
+        return f"evt-{len(self.upserted_task_ids)}"
+
+
 class _TodoGateway:
     def __init__(self) -> None:
         self.created: list[str] = []
@@ -73,6 +96,43 @@ class _TodoGateway:
     def complete_task(self, *, task_id: str):
         self.completed.append(task_id)
         return True
+
+
+class _TodoGatewayWithLegacyAgendaTask(_TodoGateway):
+    def fetch_open_tasks(self):
+        # Simulates an old-format title already synchronized in the past.
+        return [
+            TodoTask(
+                id="legacy-1",
+                title="RPA-AGENDA:agenda-red | VERMELHO | Cobranca de parcela - Ana Silva",
+                due_date=date(2026, 3, 30),
+                completed=False,
+                list_name="INATIVOS",
+            )
+        ]
+
+
+class _TodoGatewayWithContacts(_TodoGateway):
+    def fetch_open_tasks(self):
+        return [
+            TodoTask(
+                id="todo-contact-ana",
+                title="Ana Silva - cadastro cliente",
+                due_date=date(2026, 3, 30),
+                completed=False,
+                list_name="INATIVOS",
+                external_ref="Telefone: +55 (83) 99989-1111 | E-mail: ana.silva@pbseg.com",
+                contact_phone="+5583999891111",
+                contact_email="ana.silva@pbseg.com",
+            ),
+            TodoTask(
+                id="todo-mirror-agenda",
+                title="VERMELHO | Ana Silva | AG:ABCDE12345",
+                due_date=date(2026, 3, 30),
+                completed=False,
+                list_name="INATIVOS",
+            ),
+        ]
 
 
 class _GmailGateway:
@@ -224,3 +284,69 @@ def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch) -> None:
 
     # Cada compromisso pendente da agenda vira tarefa operacional no To Do.
     assert len(todo.created) == 4
+
+    # Novo formato: titulo legivel com marcador compacto (sem id longo no prefixo).
+    assert any(title.startswith("VERMELHO | ") for title in todo.created)
+    assert all("RPA-AGENDA:" not in title for title in todo.created)
+    assert any("AG:" in title for title in todo.created)
+
+
+def test_sync_todo_keeps_compatibility_with_legacy_agenda_marker(monkeypatch) -> None:
+    segfy = _SegfyGateway()
+    portals = _PortalGateway()
+    whatsapp = _WhatsAppGateway()
+    email_sender = _EmailGateway()
+    todo = _TodoGatewayWithLegacyAgendaTask()
+
+    processor = DailyProcessor(
+        settings=_settings(),
+        calendar=_CalendarGateway(),
+        todo=todo,
+        gmail=_GmailGateway(),
+        sheets=_SheetsGateway(),
+        segfy=segfy,
+        portals=portals,
+        whatsapp=whatsapp,
+        email_sender=email_sender,
+        dashboard_builder=_DashboardBuilder(),
+    )
+
+    monkeypatch.setenv("INSURED_NOTIFY_EMAIL_TO", "operacional@pbseg.com")
+    processor.run(today=date(2026, 3, 30), dry_run=False)
+
+    # agenda-red already existed as legacy format, so it should be updated instead of re-created.
+    assert len(todo.updated) == 1
+    assert todo.updated[0] == "legacy-1"
+    assert len(todo.created) == 3
+
+
+def test_orchestrator_uses_todo_contacts_and_writes_calendar(monkeypatch) -> None:
+    segfy = _SegfyGateway()
+    portals = _PortalGateway()
+    whatsapp = _WhatsAppGateway()
+    email_sender = _EmailGateway()
+    todo = _TodoGatewayWithContacts()
+    calendar = _CalendarGatewayWithWriter()
+
+    processor = DailyProcessor(
+        settings=_settings(),
+        calendar=calendar,
+        todo=todo,
+        gmail=_GmailGateway(),
+        sheets=_SheetsGateway(),
+        segfy=segfy,
+        portals=portals,
+        whatsapp=whatsapp,
+        email_sender=email_sender,
+        dashboard_builder=_DashboardBuilder(),
+    )
+
+    monkeypatch.setenv("INSURED_NOTIFY_EMAIL_TO", "operacional@pbseg.com")
+    processor.run(today=date(2026, 3, 30), dry_run=False)
+
+    # WhatsApp number was absent in calendar and recovered from Microsoft To Do details.
+    assert len(whatsapp.sent) == 1
+    assert whatsapp.sent[0][0] == "+5583999891111"
+
+    # Only non-mirrored To Do tasks are upserted into Google Calendar.
+    assert calendar.upserted_task_ids == ["todo-contact-ana"]

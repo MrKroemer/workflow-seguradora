@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-02T10:28:43",
+  "generated_at": "2026-04-02T19:57:02",
   "platform": "linux | python=3.11.9",
   "is_windows": false,
   "integrations": {
@@ -81,13 +81,6 @@
       "status": "OK",
       "required": true,
       "details": "3/3 encontrados"
-    },
-    {
-      "key": "strict_integrations",
-      "label": "Integracoes em modo real (strict)",
-      "status": "MISSING",
-      "required": true,
-      "details": "Pendencias: calendar_mode, gmail_mode, todo_mode, segfy_mode, portal_mode, whatsapp_mode, email_mode"
     }
   ],
   "files": [

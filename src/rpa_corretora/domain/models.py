@@ -28,6 +28,9 @@ class TodoTask:
     completed: bool = False
     list_name: str | None = None
     external_ref: str | None = None
+    contact_phone: str | None = None
+    contact_email: str | None = None
+    contact_address: str | None = None
 
 
 @dataclass(slots=True)

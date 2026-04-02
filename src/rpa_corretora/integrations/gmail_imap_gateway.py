@@ -14,13 +14,22 @@ from rpa_corretora.domain.models import EmailMessage
 _HTML_TAGS = re.compile(r"<[^>]+>")
 
 
-def _decode_mime_header(raw: str | None) -> str:
+def _stringify_header(value: object | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def _decode_mime_header(raw: object | None) -> str:
     if raw is None:
         return ""
+    raw_text = _stringify_header(raw)
     try:
-        return str(make_header(decode_header(raw))).strip()
+        return str(make_header(decode_header(raw_text))).strip()
     except Exception:
-        return raw.strip()
+        return raw_text.strip()
 
 
 def _extract_body(msg: Message) -> str:
@@ -29,7 +38,7 @@ def _extract_body(msg: Message) -> str:
 
     if msg.is_multipart():
         for part in msg.walk():
-            content_disposition = (part.get("Content-Disposition") or "").lower()
+            content_disposition = _stringify_header(part.get("Content-Disposition")).lower()
             if "attachment" in content_disposition:
                 continue
             content_type = (part.get_content_type() or "").lower()
@@ -72,7 +81,7 @@ def _extract_body(msg: Message) -> str:
 def _extract_attachments(msg: Message) -> list[str]:
     filenames: list[str] = []
     for part in msg.walk():
-        content_disposition = (part.get("Content-Disposition") or "").lower()
+        content_disposition = _stringify_header(part.get("Content-Disposition")).lower()
         if "attachment" not in content_disposition:
             continue
         filename = _decode_mime_header(part.get_filename())
@@ -130,7 +139,7 @@ class GmailImapGateway:
                     date_header = parsed.get("Date")
                     if date_header:
                         try:
-                            received_at = parsedate_to_datetime(date_header)
+                            received_at = parsedate_to_datetime(_stringify_header(date_header))
                         except Exception:
                             pass
 

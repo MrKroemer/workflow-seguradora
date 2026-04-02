@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 
 DATE_PATTERN_DMY = re.compile(r"\b(\d{2})/(\d{2})(?:/(\d{4}))?\b")
 DATE_PATTERN_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+PHONE_PATTERN = re.compile(r"(?:\+?55)?\s*\(?(\d{2})\)?\s*(9?\d{4})[- ]?(\d{4})")
+ADDRESS_HINTS = ("RUA", "AV", "AVENIDA", "ALAMEDA", "TRAVESSA", "BAIRRO", "CEP", "N ", "Nº")
 
 NON_TASK_PATTERNS = (
     re.compile(r"^adicionar tarefa$", re.IGNORECASE),
@@ -118,6 +121,30 @@ def _extract_due_date(text: str, today: date) -> date | None:
     return None
 
 
+def _extract_phone(text: str) -> str | None:
+    match = PHONE_PATTERN.search(text)
+    if match is None:
+        return None
+    ddd, first, last = match.groups()
+    return f"+55{ddd}{first}{last}"
+
+
+def _extract_email(text: str) -> str | None:
+    match = EMAIL_PATTERN.search(text)
+    if match is None:
+        return None
+    return match.group(0).strip()
+
+
+def _extract_address(text: str) -> str | None:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in lines:
+        folded = _ascii_fold(line).upper()
+        if any(hint in folded for hint in ADDRESS_HINTS):
+            return line
+    return None
+
+
 def _parse_tasks_from_blocks(raw_blocks: list[str], *, today: date, list_name: str) -> list[TodoTask]:
     tasks: list[TodoTask] = []
     seen_titles: set[str] = set()
@@ -132,6 +159,9 @@ def _parse_tasks_from_blocks(raw_blocks: list[str], *, today: date, list_name: s
             continue
         seen_titles.add(title)
         due = _extract_due_date(block, today)
+        phone = _extract_phone(block)
+        email = _extract_email(block)
+        address = _extract_address(block)
         slug = _ascii_fold(title).lower().strip() or f"task-{index}"
         list_slug = _ascii_fold(list_name).lower().strip() or "lista"
         task_id = f"desktop:{list_slug}:{index}:{slug}"
@@ -143,6 +173,9 @@ def _parse_tasks_from_blocks(raw_blocks: list[str], *, today: date, list_name: s
                 completed=False,
                 list_name=list_name,
                 external_ref=block.strip(),
+                contact_phone=phone,
+                contact_email=email,
+                contact_address=address,
             )
         )
     return tasks
@@ -162,31 +195,41 @@ class MicrosoftTodoDesktopGateway:
             window = self._open_app_window()
             tasks: list[TodoTask] = []
             seen_keys: set[tuple[str, str]] = set()
-
-            lists = self._discover_task_lists(window)
-            if lists:
-                for list_name, list_control in lists:
-                    try:
-                        list_control.click_input()
-                        time.sleep(0.3)
-                    except Exception:
-                        continue
-                    blocks = self._collect_task_blocks_with_scrolling(window)
-                    parsed = _parse_tasks_from_blocks(blocks, today=date.today(), list_name=list_name)
-                    for task in parsed:
-                        dedupe_key = (
-                            _ascii_fold(task.list_name or "").lower().strip(),
-                            _ascii_fold(task.title).lower().strip(),
-                        )
-                        if dedupe_key in seen_keys:
-                            continue
-                        seen_keys.add(dedupe_key)
-                        tasks.append(task)
-            else:
-                target_list = (self.settings.list_name or "").strip() or "Principal"
-                self._select_target_list(window)
+            target_list = (self.settings.list_name or "").strip()
+            if target_list:
+                # In production we prefer operating a single explicit list to avoid
+                # side effects from navigating group/list containers.
+                self._select_target_list(window, target_list_name=target_list)
                 blocks = self._collect_task_blocks_with_scrolling(window)
                 tasks = _parse_tasks_from_blocks(blocks, today=date.today(), list_name=target_list)
+                self._enrich_tasks_with_details(window, tasks)
+            else:
+                lists = self._discover_task_lists(window)
+                if lists:
+                    for list_name, list_control in lists:
+                        try:
+                            list_control.click_input()
+                            time.sleep(0.3)
+                        except Exception:
+                            continue
+                        blocks = self._collect_task_blocks_with_scrolling(window)
+                        parsed = _parse_tasks_from_blocks(blocks, today=date.today(), list_name=list_name)
+                        self._enrich_tasks_with_details(window, parsed)
+                        for task in parsed:
+                            dedupe_key = (
+                                _ascii_fold(task.list_name or "").lower().strip(),
+                                _ascii_fold(task.title).lower().strip(),
+                            )
+                            if dedupe_key in seen_keys:
+                                continue
+                            seen_keys.add(dedupe_key)
+                            tasks.append(task)
+                else:
+                    default_list = "Principal"
+                    self._select_target_list(window, target_list_name=default_list)
+                    blocks = self._collect_task_blocks_with_scrolling(window)
+                    tasks = _parse_tasks_from_blocks(blocks, today=date.today(), list_name=default_list)
+                    self._enrich_tasks_with_details(window, tasks)
 
             self._task_title_by_id = {item.id: item.title for item in tasks}
             self._task_list_by_id = {item.id: (item.list_name or "Principal") for item in tasks}
@@ -489,7 +532,76 @@ class MicrosoftTodoDesktopGateway:
                         parts.append(extracted)
         except Exception:
             pass
-        return "\n".join(parts[:5]).strip()
+        return "\n".join(parts[:20]).strip()
+
+    def _enrich_tasks_with_details(self, window: BaseWrapper, tasks: list[TodoTask]) -> None:
+        # Best-effort enrichment: opens each task and reads right-side details pane
+        # so phone/e-mail/endereco can be extracted even when not visible in row list.
+        for task in tasks[:300]:
+            row = self._find_task_row(window, task.title)
+            if row is None:
+                continue
+            try:
+                row.click_input()
+                time.sleep(0.15)
+            except Exception:
+                continue
+            detail_text = self._capture_right_panel_text(window)
+            if not detail_text:
+                continue
+            merged = task.external_ref or ""
+            if detail_text not in merged:
+                merged = f"{merged}\n{detail_text}".strip()
+                task.external_ref = merged
+
+            if not task.contact_phone:
+                task.contact_phone = _extract_phone(merged)
+            if not task.contact_email:
+                task.contact_email = _extract_email(merged)
+            if not task.contact_address:
+                task.contact_address = _extract_address(merged)
+
+    def _capture_right_panel_text(self, window: BaseWrapper) -> str:
+        lines: list[str] = []
+        seen: set[str] = set()
+
+        try:
+            win_rect = window.rectangle()
+            split_x = win_rect.left + int(win_rect.width() * 0.45)
+        except Exception:
+            split_x = None
+
+        candidates: list[BaseWrapper] = []
+        for control_type in ("Text", "Edit", "Document"):
+            try:
+                candidates.extend(window.descendants(control_type=control_type))
+            except Exception:
+                continue
+
+        for candidate in candidates:
+            if split_x is not None:
+                try:
+                    rect = candidate.rectangle()
+                    if rect.left < split_x:
+                        continue
+                except Exception:
+                    continue
+
+            for value in self._extract_text_values(candidate):
+                normalized = _normalize_text(value)
+                if len(normalized) < 2:
+                    continue
+                folded = _ascii_fold(normalized).lower().strip()
+                if not folded:
+                    continue
+                if any(pattern.match(folded) for pattern in NON_TASK_PATTERNS):
+                    continue
+                if normalized in seen:
+                    continue
+                seen.add(normalized)
+                lines.append(normalized)
+
+        return "\n".join(lines[:80]).strip()
 
     def _extract_text_values(self, control: BaseWrapper) -> list[str]:
         texts: list[str] = []
@@ -532,14 +644,21 @@ class MicrosoftTodoDesktopGateway:
         except Exception:
             return editors
 
-        add_markers = ("adicionar", "nova tarefa", "add a task", "new task")
+        add_markers = (
+            "adicionar uma tarefa",
+            "adicionar tarefa",
+            "nova tarefa",
+            "add a task",
+            "add task",
+            "new task",
+        )
         for candidate in candidates:
             text_blob = " ".join(self._extract_text_values(candidate)).lower()
             if any(marker in text_blob for marker in add_markers):
                 editors.append(candidate)
-        if editors:
-            return editors
-        return candidates[:4]
+        # Nao usar fallback generico de "Edit", pois isso pode escrever em campos
+        # laterais (ex.: nova lista/grupo) e gerar artefatos indesejados.
+        return editors
 
     def _complete_task_in_ui(self, window: BaseWrapper, title: str) -> bool:
         from pywinauto.keyboard import send_keys

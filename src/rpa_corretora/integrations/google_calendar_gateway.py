@@ -6,7 +6,7 @@ import re
 from urllib.parse import quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
-from rpa_corretora.domain.models import CalendarCommitment
+from rpa_corretora.domain.models import CalendarCommitment, TodoTask
 
 
 _DEFAULT_COLOR_MAP = {
@@ -18,6 +18,7 @@ _DEFAULT_COLOR_MAP = {
 }
 
 _PHONE_PATTERN = re.compile(r"(?:\+?55)?\s*\(?(\d{2})\)?\s*(9?\d{4})[- ]?(\d{4})")
+_MARKER_PATTERN = re.compile(r"\bAG:([A-F0-9]{10})\b", re.IGNORECASE)
 
 
 def _parse_date_only(raw: str | None) -> date | None:
@@ -98,6 +99,12 @@ class GoogleCalendarGateway:
         self.calendar_id = calendar_id
         self.timeout_seconds = timeout_seconds
         self.color_map = dict(color_map or _DEFAULT_COLOR_MAP)
+        self._semantic_color_to_google_id = {
+            "VERMELHO": "11",
+            "AZUL": "9",
+            "CINZA": "8",
+            "VERDE": "10",
+        }
 
     def fetch_daily_commitments(self, day: date) -> list[CalendarCommitment]:
         access_token = self._acquire_access_token()
@@ -161,6 +168,118 @@ class GoogleCalendarGateway:
             )
         return commitments
 
+    def upsert_todo_task_event(self, *, task: TodoTask) -> str | None:
+        access_token = self._acquire_access_token()
+        if access_token is None:
+            return None
+
+        event_date = task.due_date or date.today()
+        marker = self._extract_task_marker(task.title)
+        source_key = marker or task.id
+        event_summary = task.title.strip() or "Tarefa Microsoft To Do"
+        event_description = self._build_todo_event_description(task=task, marker=marker)
+
+        existing_event = self._find_todo_event_by_source_key(access_token=access_token, source_key=source_key)
+        body = {
+            "summary": event_summary,
+            "description": event_description,
+            "start": {"date": event_date.isoformat()},
+            "end": {"date": (event_date + timedelta(days=1)).isoformat()},
+            "colorId": self._infer_google_color_id_from_task(task),
+            "extendedProperties": {
+                "private": {
+                    "rpaSource": "microsoft_todo",
+                    "rpaTodoTaskId": task.id,
+                    "rpaSourceKey": source_key,
+                }
+            },
+        }
+
+        try:
+            if existing_event is None:
+                created = self._google_json_request(
+                    method="POST",
+                    path=f"/calendar/v3/calendars/{quote(self.calendar_id, safe='')}/events",
+                    access_token=access_token,
+                    payload=body,
+                )
+                if not isinstance(created, dict):
+                    return None
+                return str(created.get("id", "")).strip() or None
+
+            event_id = str(existing_event.get("id", "")).strip()
+            if not event_id:
+                return None
+            updated = self._google_json_request(
+                method="PATCH",
+                path=f"/calendar/v3/calendars/{quote(self.calendar_id, safe='')}/events/{quote(event_id, safe='')}",
+                access_token=access_token,
+                payload=body,
+            )
+            if not isinstance(updated, dict):
+                return None
+            return str(updated.get("id", "")).strip() or event_id
+        except Exception as exc:
+            print(f"[Google Calendar] Falha ao criar/atualizar evento vindo do To Do: {exc}")
+            return None
+
+    @staticmethod
+    def _extract_task_marker(title: str) -> str | None:
+        match = _MARKER_PATTERN.search(title or "")
+        if match is None:
+            return None
+        return match.group(1).upper()
+
+    def _infer_google_color_id_from_task(self, task: TodoTask) -> str:
+        text = f"{task.title}\n{task.external_ref or ''}".upper()
+        if "VERMELHO" in text:
+            return self._semantic_color_to_google_id["VERMELHO"]
+        if "AZUL" in text:
+            return self._semantic_color_to_google_id["AZUL"]
+        if "CINZA" in text:
+            return self._semantic_color_to_google_id["CINZA"]
+        return self._semantic_color_to_google_id["VERDE"]
+
+    @staticmethod
+    def _build_todo_event_description(task: TodoTask, marker: str | None) -> str:
+        lines: list[str] = [
+            "Origem: Microsoft To Do",
+            f"ToDo ID: {task.id}",
+        ]
+        if marker:
+            lines.append(f"Marcador agenda: AG:{marker}")
+        if task.contact_phone:
+            lines.append(f"Telefone: {task.contact_phone}")
+        if task.contact_email:
+            lines.append(f"E-mail: {task.contact_email}")
+        if task.contact_address:
+            lines.append(f"Endereco: {task.contact_address}")
+        if task.external_ref:
+            lines.append("")
+            lines.append("Detalhes:")
+            lines.append(task.external_ref.strip())
+        return "\n".join(lines)
+
+    def _find_todo_event_by_source_key(self, *, access_token: str, source_key: str) -> dict[str, object] | None:
+        calendar_id = quote(self.calendar_id, safe="")
+        query = urlencode(
+            {
+                "singleEvents": "true",
+                "maxResults": "1",
+                "privateExtendedProperty": f"rpaSourceKey={source_key}",
+            }
+        )
+        payload = self._google_get(f"/calendar/v3/calendars/{calendar_id}/events?{query}", access_token)
+        if payload is None:
+            return None
+        items = payload.get("items")
+        if not isinstance(items, list) or not items:
+            return None
+        item = items[0]
+        if isinstance(item, dict):
+            return item
+        return None
+
     def _acquire_access_token(self) -> str | None:
         data = urlencode(
             {
@@ -189,20 +308,39 @@ class GoogleCalendarGateway:
         return token.strip()
 
     def _google_get(self, path: str, access_token: str) -> dict[str, object] | None:
+        payload = self._google_json_request(method="GET", path=path, access_token=access_token)
+        if isinstance(payload, dict):
+            return payload
+        return None
+
+    def _google_json_request(
+        self,
+        *,
+        method: str,
+        path: str,
+        access_token: str,
+        payload: dict[str, object] | None = None,
+    ) -> dict[str, object] | None:
         base = "https://www.googleapis.com"
         parsed = urlparse(path)
         if parsed.scheme:
             url = path
         else:
             url = f"{base}{path}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        body = None
+        if payload is not None:
+            body = json.dumps(payload).encode("utf-8")
+            headers["Content-Type"] = "application/json"
         request = Request(
             url,
-            headers={"Authorization": f"Bearer {access_token}"},
-            method="GET",
+            headers=headers,
+            data=body,
+            method=method.upper(),
         )
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 return json.loads(response.read().decode("utf-8"))
         except Exception as exc:
-            print(f"[Google Calendar] Falha ao consultar eventos: {exc}")
+            print(f"[Google Calendar] Falha na requisicao {method.upper()} ({path}): {exc}")
             return None

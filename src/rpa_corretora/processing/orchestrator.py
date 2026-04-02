@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from difflib import SequenceMatcher
+import hashlib
 import re
 import os
 import unicodedata
@@ -71,7 +72,10 @@ class DailyProcessor:
     whatsapp: WhatsAppGateway
     email_sender: EmailSenderGateway
     dashboard_builder: DashboardBuilder
-    _todo_marker_pattern = re.compile(r"RPA-AGENDA:([A-Za-z0-9_-]+)")
+    _todo_marker_pattern_legacy = re.compile(r"RPA-AGENDA:([A-Za-z0-9_-]+)")
+    _todo_marker_pattern_compact = re.compile(r"\bAG:([A-F0-9]{10})\b")
+    _phone_pattern = re.compile(r"(?:\+?55)?\s*\(?(\d{2})\)?\s*(9?\d{4})[- ]?(\d{4})")
+    _email_pattern = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 
     @staticmethod
     def _normalize_name(value: str) -> str:
@@ -108,8 +112,15 @@ class DailyProcessor:
             if followup.fase.strip() or followup.status.strip():
                 policy.renewal_started = True
 
+    @staticmethod
+    def _build_compact_agenda_marker(commitment_id: str) -> str:
+        # Compact marker to keep To Do task title readable while preserving a stable id.
+        digest = hashlib.sha1(commitment_id.encode("utf-8")).hexdigest().upper()
+        return digest[:10]
+
     def _build_todo_title_from_commitment(self, commitment: CalendarCommitment) -> str:
-        return f"RPA-AGENDA:{commitment.id} | {commitment.color} | {commitment.title}"
+        marker = self._build_compact_agenda_marker(commitment.id)
+        return f"{commitment.color} | {commitment.title} | AG:{marker}"
 
     def _build_todo_notes_from_commitment(self, commitment: CalendarCommitment) -> str:
         pieces = [
@@ -122,12 +133,22 @@ class DailyProcessor:
             pieces.append(f"Cliente: {commitment.client_name}")
         return "\n".join(pieces)
 
-    def _extract_agenda_marker(self, title: str) -> str | None:
-        match = self._todo_marker_pattern.search(title)
-        if match is None:
-            return None
-        value = match.group(1).strip()
-        return value or None
+    def _extract_agenda_marker_keys(self, title: str) -> list[str]:
+        keys: list[str] = []
+
+        legacy_match = self._todo_marker_pattern_legacy.search(title)
+        if legacy_match is not None:
+            legacy_value = legacy_match.group(1).strip()
+            if legacy_value:
+                keys.append(f"id:{legacy_value}")
+
+        compact_match = self._todo_marker_pattern_compact.search(title)
+        if compact_match is not None:
+            compact_value = compact_match.group(1).strip().upper()
+            if compact_value:
+                keys.append(f"hash:{compact_value}")
+
+        return keys
 
     def _sync_todo_from_calendar(
         self,
@@ -139,12 +160,13 @@ class DailyProcessor:
         by_agenda_id: dict[str, TodoTask] = {}
         for task in todo_tasks:
             title = getattr(task, "title", "")
-            marker = self._extract_agenda_marker(str(title))
-            if marker is not None:
-                by_agenda_id[marker] = task
+            for marker_key in self._extract_agenda_marker_keys(str(title)):
+                by_agenda_id[marker_key] = task
 
         for commitment in commitments:
-            existing = by_agenda_id.get(commitment.id)
+            commitment_id_key = f"id:{commitment.id}"
+            commitment_hash_key = f"hash:{self._build_compact_agenda_marker(commitment.id)}"
+            existing = by_agenda_id.get(commitment_id_key) or by_agenda_id.get(commitment_hash_key)
             if commitment.resolved:
                 if existing is None:
                     continue
@@ -191,6 +213,85 @@ class DailyProcessor:
                     summary.failed += 1
         return summary
 
+    def _resolve_contact_from_todo(self, *, client_name: str, todo_tasks: list[TodoTask]) -> tuple[str | None, str | None]:
+        target = self._normalize_name(client_name)
+        if not target:
+            return None, None
+
+        for task in todo_tasks:
+            haystack = "\n".join(
+                [
+                    str(task.title or ""),
+                    str(task.external_ref or ""),
+                    str(task.contact_email or ""),
+                    str(task.contact_phone or ""),
+                    str(task.contact_address or ""),
+                ]
+            )
+            haystack_norm = self._normalize_name(haystack)
+            if target not in haystack_norm and haystack_norm not in target:
+                continue
+
+            phone = task.contact_phone or self._extract_phone(haystack)
+            email = task.contact_email or self._extract_email(haystack)
+            return phone, email
+        return None, None
+
+    @classmethod
+    def _extract_phone(cls, text: str) -> str | None:
+        match = cls._phone_pattern.search(text)
+        if match is None:
+            return None
+        ddd, first, last = match.groups()
+        return f"+55{ddd}{first}{last}"
+
+    @classmethod
+    def _extract_email(cls, text: str) -> str | None:
+        match = cls._email_pattern.search(text)
+        if match is None:
+            return None
+        return match.group(0).strip()
+
+    def _hydrate_commitments_with_todo_contacts(
+        self,
+        *,
+        commitments: list[CalendarCommitment],
+        todo_tasks: list[TodoTask],
+    ) -> tuple[int, int]:
+        hydrated_phones = 0
+        hydrated_emails = 0
+        for commitment in commitments:
+            client_name = (commitment.client_name or "").strip()
+            if not client_name:
+                continue
+            phone, _email = self._resolve_contact_from_todo(client_name=client_name, todo_tasks=todo_tasks)
+            if not commitment.whatsapp_number and phone:
+                commitment.whatsapp_number = phone
+                hydrated_phones += 1
+            if _email:
+                hydrated_emails += 1
+        return hydrated_phones, hydrated_emails
+
+    def _sync_calendar_from_todo(self, *, todo_tasks: list[TodoTask]) -> tuple[int, int]:
+        writer = getattr(self.calendar, "upsert_todo_task_event", None)
+        if not callable(writer):
+            return 0, 0
+
+        created_or_updated = 0
+        failed = 0
+        for task in todo_tasks:
+            if task.completed:
+                continue
+            if self._extract_agenda_marker_keys(str(task.title)):
+                # Skip tasks that are already mapped from agenda into To Do.
+                continue
+            event_id = writer(task=task)
+            if event_id:
+                created_or_updated += 1
+            else:
+                failed += 1
+        return created_or_updated, failed
+
     def _todo_is_writable(self) -> bool:
         return self.todo.__class__.__name__ != "NoopTodoGateway"
 
@@ -210,11 +311,6 @@ class DailyProcessor:
                     "google_calendar",
                     f"{len(commitments)} compromissos lidos ({unresolved_commitments} pendentes).",
                 )
-                trace.add_non_executed_item(
-                    item_id="Google Calendar - criacao de eventos",
-                    reason="Fluxo atual nao possui rotina de criacao automatica de eventos.",
-                    recommended_action="Manter criacao manual dos eventos ate mapear regras de escrita.",
-                )
         except Exception as exc:
             if trace is not None:
                 trace.fail_stage(
@@ -232,6 +328,11 @@ class DailyProcessor:
             if trace is not None:
                 trace.fail_stage("microsoft_todo", exc, context={"acao": "fetch_open_tasks"})
             raise
+
+        hydrated_phones, hydrated_emails = self._hydrate_commitments_with_todo_contacts(
+            commitments=commitments,
+            todo_tasks=todo_tasks,
+        )
 
         if trace is not None:
             trace.start_stage("gmail")
@@ -380,13 +481,23 @@ class DailyProcessor:
                 )
         else:
             todo_sync = self._sync_todo_from_calendar(commitments=commitments, todo_tasks=todo_tasks)
+            calendar_upserts, calendar_upsert_failures = self._sync_calendar_from_todo(todo_tasks=todo_tasks)
             if trace is not None:
+                if calendar_upsert_failures > 0:
+                    trace.add_non_executed_item(
+                        item_id="Google Calendar - escrita de eventos",
+                        reason=f"{calendar_upsert_failures} tarefa(s) do To Do nao puderam ser sincronizadas para a agenda.",
+                        recommended_action="Revisar token/escopo do Google Calendar e repetir o ciclo.",
+                    )
                 trace.complete_stage(
                     "microsoft_todo",
                     (
                         f"{len(todo_tasks)} tarefas abertas lidas; "
                         f"{todo_sync.created} criadas; {todo_sync.updated} atualizadas; "
-                        f"{todo_sync.completed} concluidas; {todo_sync.failed} falhas."
+                        f"{todo_sync.completed} concluidas; {todo_sync.failed} falhas; "
+                        f"{hydrated_phones} contato(s) de telefone reaproveitados do To Do; "
+                        f"{hydrated_emails} e-mail(s) detectados; "
+                        f"{calendar_upserts} evento(s) enviados para Google Calendar."
                     ),
                 )
 
