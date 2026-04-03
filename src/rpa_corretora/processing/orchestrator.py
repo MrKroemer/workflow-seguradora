@@ -285,6 +285,9 @@ class DailyProcessor:
             if self._extract_agenda_marker_keys(str(task.title)):
                 # Skip tasks that are already mapped from agenda into To Do.
                 continue
+            if "origem: google agenda" in str(task.external_ref or "").lower():
+                # Legacy tasks previously mirrored from agenda may not have marker in title.
+                continue
             event_id = writer(task=task)
             if event_id:
                 created_or_updated += 1

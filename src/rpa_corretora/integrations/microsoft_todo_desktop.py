@@ -193,6 +193,7 @@ class MicrosoftTodoDesktopGateway:
             return []
         try:
             window = self._open_app_window()
+            self._clear_search_filter(window)
             tasks: list[TodoTask] = []
             seen_keys: set[tuple[str, str]] = set()
             target_list = (self.settings.list_name or "").strip()
@@ -252,6 +253,7 @@ class MicrosoftTodoDesktopGateway:
             return None
         try:
             window = self._open_app_window()
+            self._clear_search_filter(window)
             self._select_target_list(window)
             if not self._create_task_in_ui(window, normalized_title):
                 return None
@@ -291,6 +293,7 @@ class MicrosoftTodoDesktopGateway:
 
         try:
             window = self._open_app_window()
+            self._clear_search_filter(window)
             self._select_target_list(window, target_list_name=current_list)
 
             # Em UI desktop do To Do, a troca de titulo e mais robusta com "criar novo + concluir antigo".
@@ -325,6 +328,7 @@ class MicrosoftTodoDesktopGateway:
         current_list = self._task_list_by_id.get(task_id)
         try:
             window = self._open_app_window()
+            self._clear_search_filter(window)
             self._select_target_list(window, target_list_name=current_list)
             completed = self._complete_task_in_ui(window, title)
             if completed:
@@ -722,11 +726,7 @@ class MicrosoftTodoDesktopGateway:
             except Exception:
                 continue
 
-        try:
-            editors = window.descendants(control_type="Edit")
-        except Exception:
-            return False
-        for editor in editors:
+        for editor in self._candidate_due_date_editors(window):
             try:
                 editor.click_input()
                 try:
@@ -763,12 +763,76 @@ class MicrosoftTodoDesktopGateway:
 
         markers = ("anot", "nota", "note")
         for candidate in candidates:
+            if not self._is_right_panel_control(window, candidate):
+                continue
             text_blob = " ".join(self._extract_text_values(candidate)).lower()
+            if self._looks_like_search_or_quick_add(text_blob):
+                continue
             if any(marker in text_blob for marker in markers):
                 matches.append(candidate)
+        return matches
+
+    def _candidate_due_date_editors(self, window: BaseWrapper) -> list[BaseWrapper]:
+        matches: list[BaseWrapper] = []
+        try:
+            candidates = list(window.descendants(control_type="Edit"))
+        except Exception:
+            return matches
+
+        markers = ("vencimento", "due", "prazo", "data")
+        for candidate in candidates:
+            if not self._is_right_panel_control(window, candidate):
+                continue
+            text_blob = " ".join(self._extract_text_values(candidate)).lower()
+            if self._looks_like_search_or_quick_add(text_blob):
+                continue
+            if any(marker in text_blob for marker in markers):
+                matches.append(candidate)
+
         if matches:
             return matches
-        return candidates[-2:]
+
+        # Last-resort: right panel editors only, still excluding search/quick-add.
+        for candidate in candidates:
+            if not self._is_right_panel_control(window, candidate):
+                continue
+            text_blob = " ".join(self._extract_text_values(candidate)).lower()
+            if self._looks_like_search_or_quick_add(text_blob):
+                continue
+            matches.append(candidate)
+        return matches[:4]
+
+    def _is_right_panel_control(self, window: BaseWrapper, control: BaseWrapper) -> bool:
+        try:
+            win_rect = window.rectangle()
+            split_x = win_rect.left + int(win_rect.width() * 0.45)
+            rect = control.rectangle()
+            return rect.left >= split_x
+        except Exception:
+            return True
+
+    @staticmethod
+    def _looks_like_search_or_quick_add(text_blob: str) -> bool:
+        normalized = text_blob.lower()
+        search_markers = ("pesquisar", "search", "busca")
+        add_markers = ("adicionar uma tarefa", "adicionar tarefa", "add a task", "nova tarefa", "new task")
+        return any(marker in normalized for marker in search_markers + add_markers)
+
+    def _clear_search_filter(self, window: BaseWrapper) -> None:
+        from pywinauto.keyboard import send_keys
+
+        try:
+            window.set_focus()
+        except Exception:
+            pass
+        try:
+            # Guarantees any active query is cleared before list scanning/writing.
+            send_keys("^f")
+            time.sleep(0.1)
+            send_keys("^a{BACKSPACE}{ESC}")
+            time.sleep(0.1)
+        except Exception:
+            pass
 
     def _find_task_row(self, window: BaseWrapper, title: str) -> BaseWrapper | None:
         target = _ascii_fold(title).lower().strip()

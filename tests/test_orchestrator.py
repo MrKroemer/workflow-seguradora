@@ -132,6 +132,14 @@ class _TodoGatewayWithContacts(_TodoGateway):
                 completed=False,
                 list_name="INATIVOS",
             ),
+            TodoTask(
+                id="todo-legacy-mirror-no-marker",
+                title="Ana Silva - tarefa antiga",
+                due_date=date(2026, 3, 30),
+                completed=False,
+                list_name="INATIVOS",
+                external_ref="Origem: Google Agenda\nCompromisso: agenda-red",
+            ),
         ]
 
 
