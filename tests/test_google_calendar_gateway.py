@@ -72,6 +72,43 @@ def test_google_calendar_gateway_accepts_custom_color_map(monkeypatch) -> None:
     assert commitments[0].color == "AZUL"
 
 
+def test_google_calendar_gateway_extracts_client_name_from_colon_and_action_text(monkeypatch) -> None:
+    gateway = GoogleCalendarGateway(
+        client_id="client",
+        client_secret="secret",
+        refresh_token="refresh",
+    )
+    monkeypatch.setattr(gateway, "_acquire_access_token", lambda: "token")
+    monkeypatch.setattr(
+        gateway,
+        "_google_get",
+        lambda path, access_token: {
+            "items": [
+                {
+                    "id": "evt-1",
+                    "summary": "AZUL/PORTO(PBSEG): EDILEUZA CAMARA CALAZANS - GERAR/ENVIAR BOLETO",
+                    "colorId": "9",
+                    "start": {"date": "2026-03-30"},
+                },
+                {
+                    "id": "evt-2",
+                    "summary": "Tratativa diversa",
+                    "description": "Segurado(a): Maria Eduarda Melo\nTelefone: +55 (83) 98888-7777",
+                    "colorId": "10",
+                    "start": {"date": "2026-03-30"},
+                },
+            ]
+        },
+    )
+
+    commitments = gateway.fetch_daily_commitments(date(2026, 3, 30))
+
+    assert len(commitments) == 2
+    assert commitments[0].client_name == "EDILEUZA CAMARA CALAZANS"
+    assert commitments[1].client_name == "Maria Eduarda Melo"
+    assert commitments[1].whatsapp_number == "+5583988887777"
+
+
 def test_google_calendar_gateway_upserts_todo_event_create(monkeypatch) -> None:
     gateway = GoogleCalendarGateway(
         client_id="client",

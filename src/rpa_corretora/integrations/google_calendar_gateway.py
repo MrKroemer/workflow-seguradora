@@ -19,6 +19,26 @@ _DEFAULT_COLOR_MAP = {
 
 _PHONE_PATTERN = re.compile(r"(?:\+?55)?\s*\(?(\d{2})\)?\s*(9?\d{4})[- ]?(\d{4})")
 _MARKER_PATTERN = re.compile(r"\bAG:([A-F0-9]{10})\b", re.IGNORECASE)
+_CLIENT_LABEL_PATTERN = re.compile(r"\b(?:cliente|segurado(?:a)?|nome)\s*:\s*([^\n\r|;]+)", re.IGNORECASE)
+_ACTION_BREAK_PATTERN = re.compile(
+    r"\s[-|:]\s*(?=(?:GERAR|ENVIAR|COBRAN|BAIXA|SINISTRO|ENDOSSO|TRATATIVA|RENOVA|PAGAMENTO|VENCIMENTO)\b)",
+    re.IGNORECASE,
+)
+_COLOR_PREFIX_PATTERN = re.compile(r"^(?:VERMELHO|AZUL|CINZA|VERDE)(?:/[A-Z0-9() _-]+)?\s*:\s*", re.IGNORECASE)
+_OPERATION_KEYWORDS = (
+    "COBRANCA",
+    "COBRANÇA",
+    "PARCELA",
+    "BAIXA",
+    "SINISTRO",
+    "ENDOSSO",
+    "TRATATIVA",
+    "RENOVACAO",
+    "RENOVAÇÃO",
+    "PAGAMENTO",
+    "AGENDA",
+    "GOOGLE",
+)
 
 
 def _parse_date_only(raw: str | None) -> date | None:
@@ -40,15 +60,79 @@ def _parse_datetime_to_date(raw: str | None) -> date | None:
         return None
 
 
-def _extract_client_name(summary: str) -> str | None:
-    if " - " in summary:
-        maybe_name = summary.split(" - ", 1)[1].strip()
-        if maybe_name:
-            return maybe_name
-    if ":" in summary:
-        maybe_name = summary.split(":", 1)[1].strip()
-        if maybe_name:
-            return maybe_name
+def _looks_like_client_name(value: str) -> bool:
+    candidate = " ".join(value.split()).strip(" -|;,.")
+    if len(candidate) < 4:
+        return False
+    if candidate.upper().startswith("RPA-AGENDA"):
+        return False
+    if any(ch.isdigit() for ch in candidate):
+        return False
+    words = [token for token in candidate.replace("/", " ").split() if token]
+    if len(words) < 2 or len(words) > 10:
+        return False
+    normalized = candidate.upper()
+    operation_hits = sum(1 for key in _OPERATION_KEYWORDS if key in normalized)
+    if operation_hits >= 2:
+        return False
+    if operation_hits >= 1 and len(words) <= 3:
+        return False
+    alpha_chars = sum(1 for ch in candidate if ch.isalpha())
+    return alpha_chars >= int(len(candidate) * 0.6)
+
+
+def _trim_action_suffix(value: str) -> str:
+    match = _ACTION_BREAK_PATTERN.search(value)
+    if match is None:
+        return value
+    return value[: match.start()]
+
+
+def _clean_name(value: str) -> str:
+    cleaned = " ".join(value.split())
+    cleaned = _COLOR_PREFIX_PATTERN.sub("", cleaned)
+    cleaned = _trim_action_suffix(cleaned)
+    return cleaned.strip(" -|;,.")
+
+
+def _iter_name_candidates(text: str) -> list[str]:
+    candidates: list[str] = []
+    if text.strip() == "":
+        return candidates
+
+    for chunk in re.split(r"[\n\r|;]", text):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        chunk = re.sub(r"^\s*RPA-AGENDA:[^|]*\|\s*", "", chunk, flags=re.IGNORECASE)
+        if ":" in chunk:
+            left, right = chunk.split(":", 1)
+            candidates.append(right.strip())
+            candidates.append(left.strip())
+        if " - " in chunk:
+            left, right = chunk.split(" - ", 1)
+            candidates.append(right.strip())
+            candidates.append(left.strip())
+        candidates.append(chunk)
+    return candidates
+
+
+def _extract_client_name(summary: str, description: str = "") -> str | None:
+    combined = f"{summary}\n{description}"
+    for labeled in _CLIENT_LABEL_PATTERN.finditer(combined):
+        parsed = _clean_name(labeled.group(1))
+        if _looks_like_client_name(parsed):
+            return parsed
+
+    for candidate_raw in _iter_name_candidates(summary):
+        candidate = _clean_name(candidate_raw)
+        if _looks_like_client_name(candidate):
+            return candidate
+
+    for candidate_raw in _iter_name_candidates(description):
+        candidate = _clean_name(candidate_raw)
+        if _looks_like_client_name(candidate):
+            return candidate
     return None
 
 
@@ -152,8 +236,8 @@ class GoogleCalendarGateway:
             description = str(raw_item.get("description", "")).strip()
             status = str(raw_item.get("status", "")).strip().lower()
             resolved = status == "cancelled" or "concluido" in description.lower() or "resolvido" in description.lower()
-            client_name = _extract_client_name(summary)
-            whatsapp_number = _extract_whatsapp_number(description)
+            client_name = _extract_client_name(summary, description)
+            whatsapp_number = _extract_whatsapp_number(f"{summary}\n{description}")
 
             commitments.append(
                 CalendarCommitment(

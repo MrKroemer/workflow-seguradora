@@ -14,6 +14,7 @@ from rpa_corretora.domain.rules import (
     build_agenda_pending_alert,
     build_commission_pending_alert,
     build_followup_alerts,
+    build_nubank_email_alert,
     build_incident_alerts,
     build_renewal_alerts,
     build_renewal_report_alert,
@@ -309,10 +310,14 @@ class DailyProcessor:
         try:
             commitments = self.calendar.fetch_daily_commitments(today)
             unresolved_commitments = sum(1 for item in commitments if not item.resolved)
+            commitments_with_client = sum(1 for item in commitments if bool(item.client_name))
             if trace is not None:
                 trace.complete_stage(
                     "google_calendar",
-                    f"{len(commitments)} compromissos lidos ({unresolved_commitments} pendentes).",
+                    (
+                        f"{len(commitments)} compromissos lidos ({unresolved_commitments} pendentes); "
+                        f"{commitments_with_client} com cliente identificado."
+                    ),
                 )
         except Exception as exc:
             if trace is not None:
@@ -373,6 +378,7 @@ class DailyProcessor:
             nubank_entry = extract_nubank_cashflow(message, today)
             if nubank_entry is not None:
                 cashflow_entries.append(nubank_entry)
+                alerts.append(build_nubank_email_alert(message, nubank_entry))
 
             expense_entry = extract_expense_from_email(message, today)
             if expense_entry is not None:

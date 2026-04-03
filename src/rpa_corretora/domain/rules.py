@@ -324,6 +324,22 @@ def extract_nubank_cashflow(message: EmailMessage, today: date) -> CashflowEntry
     )
 
 
+def build_nubank_email_alert(message: EmailMessage, entry: CashflowEntry) -> Alert:
+    value_brl = format(entry.value, ".2f").replace(".", ",")
+    return Alert(
+        code="EMAIL_NUBANK_IDENTIFICADO",
+        severity="BAIXA",
+        message=f"E-mail do Nubank identificado: {entry.specification} (R$ {value_brl}).",
+        context={
+            "email_id": message.id,
+            "sender": message.sender,
+            "date": entry.date.isoformat(),
+            "value": str(entry.value),
+            "specification": entry.specification,
+        },
+    )
+
+
 def _extract_expense_category(content: str) -> str:
     category_match = re.search(r"categoria\s*:\s*([A-Za-zÀ-ÿ ]+)", content, re.IGNORECASE)
     if category_match is not None:

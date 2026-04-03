@@ -1,10 +1,12 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from rpa_corretora.config import RenewalSettings
-from rpa_corretora.domain.models import FollowupRecord, PolicyRecord, TodoTask
+from rpa_corretora.domain.models import CashflowEntry, EmailMessage, FollowupRecord, PolicyRecord, TodoTask
 from rpa_corretora.domain.rules import (
     build_commission_pending_alert,
     build_followup_alerts,
+    build_nubank_email_alert,
     build_renewal_alerts,
     build_todo_pending_alert,
     business_day_with_anticipation,
@@ -148,3 +150,28 @@ def test_todo_pending_without_due_date_is_high_severity() -> None:
     assert alert is not None
     assert alert.code == "PENDENCIA_TODO_SEM_PRAZO"
     assert alert.severity == "ALTA"
+
+
+def test_build_nubank_email_alert_registers_context() -> None:
+    message = EmailMessage(
+        id="msg-nu-1",
+        sender="noreply@nubank.com.br",
+        subject="Extrato Nubank",
+        body="Pagamento recebido",
+        received_at=datetime(2026, 4, 2, 10, 0, 0),
+    )
+    entry = CashflowEntry(
+        date=date(2026, 4, 2),
+        value=Decimal("149.90"),
+        insurer="Nubank",
+        specification="Extrato Nubank",
+        source="EMAIL_NUBANK",
+    )
+
+    alert = build_nubank_email_alert(message, entry)
+
+    assert alert.code == "EMAIL_NUBANK_IDENTIFICADO"
+    assert alert.severity == "BAIXA"
+    assert "Nubank" in alert.message
+    assert alert.context["email_id"] == "msg-nu-1"
+    assert alert.context["value"] == "149.90"
