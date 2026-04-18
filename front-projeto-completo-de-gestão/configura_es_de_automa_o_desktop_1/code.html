@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Configurações de Automação - AutoFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="flex min-h-screen">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-slate-900 dark:bg-black text-white flex flex-col p-4 z-50">
+<div class="flex items-center gap-3 mb-8 px-2">
+<div class="bg-primary rounded-lg p-1.5 flex items-center justify-center">
+<span class="material-symbols-outlined text-white">bolt</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold leading-none">AutoFlow</h1>
+<p class="text-slate-400 text-xs font-normal">Painel de Controle</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-white" href="#">
+<span class="material-symbols-outlined">auto_fix</span>
+<span class="text-sm font-medium">Automações</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-sm font-medium">Relatórios</span>
+</a>
+<div class="mt-auto">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configurações</span>
+</a>
+</div>
+</nav>
+<div class="mt-4 pt-4 border-t border-slate-800 flex items-center gap-3 px-2">
+<div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Avatar do usuário administrador do sistema" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkG2JNqUN36loto_yoMExke9OyYQHEC6VobDT2AhbITnooOBdcCbUEdx3-YQyhEB38nThukz--XP-v3vx5nO-A5lShdmukZ0xBgqa9HvG8k6vInMrH4y3vRIwPumYqOzjm61l3bjtGUHQRnLnAvKTMwXlyhUicUDNUMe5FNBipwFg5Tf27WBG-Y4oSJuCHOI1uSaCbaoXv5Ygi3sgl8jpchc3ZushRfzx27s1kzCOhP89WVtepP54NRgZ3Jj_JOCYifp1IEt7TPzI"/>
+</div>
+<div class="flex flex-col overflow-hidden">
+<p class="text-sm font-medium truncate">Ricardo Silva</p>
+<p class="text-xs text-slate-500 truncate">Admin</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 p-8">
+<!-- Header Section -->
+<header class="mb-8">
+<div class="flex flex-col gap-2">
+<h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Configurações de Automação</h2>
+<p class="text-slate-500 dark:text-slate-400 max-w-2xl">Gerencie suas integrações e mensagens automáticas para otimizar o atendimento ao cliente e conversão de vendas.</p>
+</div>
+</header>
+<!-- Performance Tip Alert -->
+<div class="mb-8 bg-primary/10 border border-primary/20 rounded-xl p-4 flex gap-4 items-start">
+<div class="bg-primary/20 p-2 rounded-lg text-primary">
+<span class="material-symbols-outlined">lightbulb</span>
+</div>
+<div class="flex-1">
+<h4 class="font-bold text-slate-900 dark:text-white text-sm">Dica de Performance</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300">Automações de aniversário têm uma taxa de conversão 40% maior quando incluem um cupom de desconto exclusivo. <a class="text-primary font-medium hover:underline" href="#">Configurar cupom agora</a>.</p>
+</div>
+<button class="text-slate-400 hover:text-slate-600">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<!-- Configuration Sections -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Channels Section -->
+<section class="space-y-6">
+<h3 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">hub</span>
+                        Canais de Integração
+                    </h3>
+<!-- WhatsApp Card -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl">chat</span>
+</div>
+<div>
+<p class="text-base font-bold text-slate-900 dark:text-white">WhatsApp Business API</p>
+<p class="text-xs text-slate-500">Conectado via Meta Cloud API</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Envio automático de lembretes, cobranças e mensagens de boas-vindas diretamente no celular do cliente.</p>
+<button class="text-primary text-sm font-semibold flex items-center gap-1 hover:underline">
+                            Configurar Webhook <span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+<!-- Instagram Card -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-pink-100 dark:bg-pink-900/30 text-pink-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl">photo_camera</span>
+</div>
+<div>
+<p class="text-base font-bold text-slate-900 dark:text-white">Instagram Automation</p>
+<p class="text-xs text-slate-500">Respostas automáticas de Direct</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Responda comentários e mensagens diretas instantaneamente quando palavras-chave forem detectadas.</p>
+<button class="text-primary text-sm font-semibold flex items-center gap-1 hover:underline">
+                            Conectar Conta <span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Message Rules Section -->
+<section class="space-y-6">
+<h3 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">campaign</span>
+                        Regras de Mensagens
+                    </h3>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Birthday Messages -->
+<div class="p-5 flex items-start gap-4">
+<div class="bg-primary/10 p-2.5 rounded-lg text-primary">
+<span class="material-symbols-outlined">cake</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<h4 class="font-bold text-slate-900 dark:text-white">Mensagens de Aniversário</h4>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-sm text-slate-500 mb-3">Enviado automaticamente às 09:00 no dia do aniversário.</p>
+<div class="flex gap-2">
+<button class="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Editar Modelo</button>
+<button class="text-xs px-3 py-1.5 text-primary bg-primary/5 rounded-lg font-medium">Visualizar</button>
+</div>
+</div>
+</div>
+<!-- Contract Renewal -->
+<div class="p-5 flex items-start gap-4">
+<div class="bg-primary/10 p-2.5 rounded-lg text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<h4 class="font-bold text-slate-900 dark:text-white">Renovação de Contrato</h4>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-sm text-slate-500 mb-3">Alerta enviado 15 dias antes do vencimento do contrato.</p>
+<div class="flex items-center gap-3">
+<select class="text-xs bg-slate-100 dark:bg-slate-800 border-none rounded-lg focus:ring-primary py-1.5">
+<option>15 dias antes</option>
+<option>7 dias antes</option>
+<option>No dia</option>
+</select>
+<button class="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg font-medium">Configurar</button>
+</div>
+</div>
+</div>
+<!-- Renewal Reminders -->
+<div class="p-5 flex items-start gap-4">
+<div class="bg-primary/10 p-2.5 rounded-lg text-primary">
+<span class="material-symbols-outlined">notifications_active</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<h4 class="font-bold text-slate-900 dark:text-white">Lembretes de Pagamento</h4>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-sm text-slate-500 mb-3">Envia link de pagamento 2 dias antes do vencimento da fatura.</p>
+<div class="flex gap-2">
+<button class="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg font-medium">Gerenciar Fluxo</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Action Bar -->
+<div class="mt-12 flex items-center justify-end gap-4 pb-8 border-t border-slate-200 dark:border-slate-800 pt-6">
+<button class="px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    Descartar Alterações
+                </button>
+<button class="px-6 py-2.5 rounded-lg bg-primary text-white font-bold text-sm shadow-lg shadow-primary/25 hover:opacity-90 transition-opacity">
+                    Salvar Configurações
+                </button>
+</div>
+</main>
+</div>
+</body></html>

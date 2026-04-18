@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gestão de Clientes e Inadimplência - Corretora de Seguros</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header Section -->
+<header class="flex items-center bg-white dark:bg-background-dark/50 p-4 border-b border-slate-200 dark:border-slate-800 justify-between sticky top-0 z-10 backdrop-blur-md">
+<div class="flex items-center gap-3">
+<div class="text-primary flex size-10 items-center justify-center rounded-lg bg-primary/10">
+<span class="material-symbols-outlined">shield_person</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em]">Gestão de Clientes</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<!-- Summary Cards Section -->
+<div class="flex flex-wrap gap-4 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark/40 shadow-sm">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Inadimplência</p>
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+</div>
+<p class="text-slate-900 dark:text-slate-100 tracking-tight text-2xl font-bold leading-tight">R$ 12.450,00</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-red-500 text-sm">trending_up</span>
+<p class="text-red-500 text-xs font-semibold">+5.2% este mês</p>
+</div>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark/40 shadow-sm">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Clientes em Atraso</p>
+<span class="material-symbols-outlined text-primary text-xl">group_remove</span>
+</div>
+<p class="text-slate-900 dark:text-slate-100 tracking-tight text-2xl font-bold leading-tight">18</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-emerald-500 text-sm">trending_down</span>
+<p class="text-emerald-500 text-xs font-semibold">-2 de ontem</p>
+</div>
+</div>
+</div>
+<!-- Tabs Section -->
+<div class="px-4">
+<div class="flex border-b border-slate-200 dark:border-slate-800 gap-8 overflow-x-auto no-scrollbar">
+<a class="flex flex-col items-center justify-center border-b-[2px] border-primary text-primary pb-3 pt-2 whitespace-nowrap" href="#">
+<p class="text-sm font-bold tracking-[0.015em]">Inadimplentes</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[2px] border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-2 whitespace-nowrap" href="#">
+<p class="text-sm font-bold tracking-[0.015em]">Em dia</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[2px] border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-2 whitespace-nowrap" href="#">
+<p class="text-sm font-bold tracking-[0.015em]">Todos</p>
+</a>
+</div>
+</div>
+<!-- Filters Section -->
+<div class="flex gap-3 p-4 overflow-x-auto no-scrollbar">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 px-4 text-primary">
+<p class="text-sm font-semibold">Atraso &gt; 30 dias</p>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 text-slate-700 dark:text-slate-300">
+<p class="text-sm font-medium">Valor &gt; R$ 500</p>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 text-slate-700 dark:text-slate-300">
+<p class="text-sm font-medium">Produto</p>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+</div>
+<!-- Client List Section -->
+<div class="flex flex-col gap-3 px-4 pb-24">
+<!-- Client Card 1 -->
+<div class="flex flex-col p-4 bg-white dark:bg-background-dark/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm gap-4">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
+<img class="w-full h-full object-cover" data-alt="Portrait of a male client" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxAbSoDUwCBe3J5QQo41esVPZhUwjTo7D5ctH4mAz2qkoUZNFLxPDkwfEYCHzglzRnDOwarCEGkTQqBfmbaxXKUnl1-e1Jq_iiqBH2XKtE3kTuzfODlyE9SNiu4JrXZSW4Z5cgImOCLd7Hjz77E7IZbMjFc1259a-44X3s_5GOZmcbpsWJaI1QY1BkCGhBW7E9jI_a0MgVPaUWWXnjbj5WZUQieH3v73sigWGWgEqhryW2A4Dk-FItMHL4Vaz-16B5tgr6mAbzgTI"/>
+</div>
+<div>
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Ricardo Oliveira</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Seguro Automotivo • Porto Seguro</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">45 dias de atraso</span>
+<p class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">R$ 845,20</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex-1 bg-primary text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-lg">chat</span>
+                        Enviar Cobrança
+                    </button>
+<button class="w-12 h-10 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Client Card 2 -->
+<div class="flex flex-col p-4 bg-white dark:bg-background-dark/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm gap-4">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
+<img class="w-full h-full object-cover" data-alt="Portrait of a female client" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdempc4EmzhJL7faFaKuHC2PnCJvilzWOgFyUzRItNtvvsEnns5Yic2pRJV8Grt_6RHtsTsoPhxKRDSppe596Y7HT1sYr9Q2zlKgzqFNrCdGiskRPGDsJHX1IOR6oRq6URGdTRLarqGI56PV0oa0XIjjjuTRKcTS3YwMHU_2qdXj4RpDhkLTsNtN4-KLheQm18i3YZyqOBtjOLKCwExrCGN_EiD8IsA4806qAqAkADg6JMY7Op5V2URMsBG1Mcw7tpdyitQuSUmmE"/>
+</div>
+<div>
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Juliana Santos</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Plano de Saúde • Bradesco</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">12 dias de atraso</span>
+<p class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">R$ 1.250,00</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex-1 bg-primary text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-lg">chat</span>
+                        Enviar Cobrança
+                    </button>
+<button class="w-12 h-10 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Client Card 3 -->
+<div class="flex flex-col p-4 bg-white dark:bg-background-dark/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm gap-4">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
+<img class="w-full h-full object-cover" data-alt="Portrait of a business male client" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-U-WInuv9F17Lzng6js8yrxLlKbMPsCpzsO4B-u7f8zykWef8OKT0rlxrwJOK7y5zrnBKHMrtg8Cjb94JnhcXscWwyWgykyyt6g0QAl2TekDZkMWI5MzibGLBe8fH71SLHzX7QSYSAtnzqneFBn7kTxe1ujJnXIgs-ZZsm371Ioth7E3tg5luChRMYt8IN1jdiHZ9XRCDj-richhNptmoXnf8OgAxtlyqJu5BQXJWx_EOz8N2jdl57DtMwl_qOsv0d6yyriAFYFs"/>
+</div>
+<div>
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Marcos Vinícius</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Seguro Residencial • Liberty</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">62 dias de atraso</span>
+<p class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">R$ 312,40</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex-1 bg-primary text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-lg">chat</span>
+                        Enviar Cobrança
+                    </button>
+<button class="w-12 h-10 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pb-6 pt-2 z-20">
+<div class="flex justify-around items-center max-w-md mx-auto">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Início</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">group</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Clientes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Financeiro</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">insights</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Métricas</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Ajustes</p>
+</a>
+</div>
+</nav>
+<!-- Floating Action Button for manual WhatsApp -->
+<div class="fixed bottom-24 right-4 z-20">
+<button class="flex items-center justify-center w-14 h-14 bg-emerald-500 text-white rounded-full shadow-lg hover:bg-emerald-600 transition-transform active:scale-90">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1">phone_iphone</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -55,6 +55,7 @@ Blocos principais:
   - ou Web no Chrome: `SEGFY_WEB_ENABLED=1`, `SEGFY_WEB_BASE_URL`, `SEGFY_WEB_BROWSER_CHANNEL=chrome`
   - para importacao no Segfy Web: `SEGFY_WEB_IMPORT_ENABLED=1` + `SEGFY_IMPORT_SOURCE_DIR`
   - para importar so arquivos novos desde a ultima execucao: `SEGFY_IMPORT_STATE_PATH`
+  - para baixa de pagamentos no Segfy Web: `SEGFY_WEB_PAYMENT_ENABLED=1` (opcionalmente `SEGFY_WEB_PAYMENT_URL`)
   - ou exportacao: `SEGFY_EXPORT_XLSX`
   - em producao estrita, o Segfy e aceito em `API_ONLY` ou `WEB_AUTOMATION_ONLY`
 - Portais: usuarios e senhas de cada seguradora

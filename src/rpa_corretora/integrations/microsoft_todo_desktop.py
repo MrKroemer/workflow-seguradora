@@ -819,20 +819,61 @@ class MicrosoftTodoDesktopGateway:
         return any(marker in normalized for marker in search_markers + add_markers)
 
     def _clear_search_filter(self, window: BaseWrapper) -> None:
-        from pywinauto.keyboard import send_keys
+        send_keys = None
+        try:
+            from pywinauto.keyboard import send_keys as _send_keys
+            send_keys = _send_keys
+        except Exception:
+            send_keys = None
 
         try:
             window.set_focus()
         except Exception:
             pass
+
+        # First strategy: clear any visible search editor directly.
         try:
-            # Guarantees any active query is cleared before list scanning/writing.
+            for editor in self._find_search_editors(window):
+                try:
+                    editor.click_input()
+                    try:
+                        editor.set_edit_text("")
+                    except Exception:
+                        if send_keys is not None:
+                            send_keys("^a{BACKSPACE}")
+                    if send_keys is not None:
+                        send_keys("{ESC}")
+                    time.sleep(0.05)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        try:
+            if send_keys is None:
+                return
+            # Fallback strategy: explicit clear via Find shortcut.
             send_keys("^f")
             time.sleep(0.1)
             send_keys("^a{BACKSPACE}{ESC}")
             time.sleep(0.1)
         except Exception:
             pass
+
+    def _find_search_editors(self, window: BaseWrapper) -> list[BaseWrapper]:
+        matches: list[BaseWrapper] = []
+        try:
+            candidates = list(window.descendants(control_type="Edit"))
+        except Exception:
+            return matches
+
+        search_markers = ("pesquisar", "search", "busca", "procurar")
+        for candidate in candidates:
+            text_blob = " ".join(self._extract_text_values(candidate)).lower()
+            if self._looks_like_search_or_quick_add(text_blob):
+                if any(marker in text_blob for marker in search_markers):
+                    matches.append(candidate)
+        return matches
 
     def _find_task_row(self, window: BaseWrapper, title: str) -> BaseWrapper | None:
         target = _ascii_fold(title).lower().strip()

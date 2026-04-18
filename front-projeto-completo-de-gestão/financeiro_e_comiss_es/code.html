@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Painel Financeiro - Corretora</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .filled-icon { font-variation-settings: 'FILL' 1; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl">account_balance_wallet</span>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">SeguroDash</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="bg-primary text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">upload_file</span>
+<span class="hidden sm:inline">Importação Massiva</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6 space-y-6">
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Receita Total Bruta</p>
+<p class="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">R$ 145.200,00</p>
+<div class="flex items-center gap-1 mt-2 text-emerald-600 dark:text-emerald-400 text-sm">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+12.5% vs mês ant.</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Comissões a Receber</p>
+<p class="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">R$ 12.150,00</p>
+<div class="flex items-center gap-1 mt-2 text-primary text-sm">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span>8 extratos pendentes</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Processados via E-mail</p>
+<p class="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">342</p>
+<div class="flex items-center gap-1 mt-2 text-slate-500 text-sm">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+<span>Automação ativa</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Ticket Médio Comitê</p>
+<p class="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">R$ 420,00</p>
+<div class="flex items-center gap-1 mt-2 text-rose-600 dark:text-rose-400 text-sm">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+<span>-2.1% instabilidade</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Revenue Chart Area -->
+<div class="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-lg font-bold">Evolução de Receita</h2>
+<select class="bg-slate-50 dark:bg-slate-800 border-none text-sm rounded-lg focus:ring-primary">
+<option>Últimos 6 meses</option>
+<option>Este ano</option>
+</select>
+</div>
+<div class="h-[300px] w-full relative flex flex-col justify-end">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 472 150">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#ec5b13" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#ec5b13" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0 109C18.15 109 18.15 21 36.3 21C54.46 21 54.46 41 72.61 41C90.76 41 90.76 93 108.92 93C127.07 93 127.07 33 145.23 33C163.38 33 163.38 101 181.53 101C199.69 101 199.69 61 217.84 61C236 61 236 45 254.15 45C272.3 45 272.3 121 290.46 121C308.61 121 308.61 149 326.76 149C344.92 149 344.92 1 363.07 1C381.23 1 381.23 81 399.38 81C417.53 81 417.53 129 435.69 129C453.84 129 453.84 25 472 25V150H0V109Z" fill="url(#chartGradient)"></path>
+<path d="M0 109C18.15 109 18.15 21 36.3 21C54.46 21 54.46 41 72.61 41C90.76 41 90.76 93 108.92 93C127.07 93 127.07 33 145.23 33C163.38 33 163.38 101 181.53 101C199.69 101 199.69 61 217.84 61C236 61 236 45 254.15 45C272.3 45 272.3 121 290.46 121C308.61 121 308.61 149 326.76 149C344.92 149 344.92 1 363.07 1C381.23 1 381.23 81 399.38 81C417.53 81 417.53 129 435.69 129C453.84 129 453.84 25 472 25" fill="none" stroke="#ec5b13" stroke-width="3"></path>
+</svg>
+<div class="flex justify-between mt-4 text-xs font-bold text-slate-400 px-2">
+<span>JAN</span><span>FEV</span><span>MAR</span><span>ABR</span><span>MAI</span><span>JUN</span>
+</div>
+</div>
+</div>
+<!-- Commission by Insurer -->
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<h2 class="text-lg font-bold mb-6">Comissões por Seguradora</h2>
+<div class="space-y-4">
+<div class="space-y-2">
+<div class="flex justify-between text-sm">
+<span class="font-medium">Porto Seguro</span>
+<span class="text-slate-500">R$ 45.300</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm">
+<span class="font-medium">Bradesco Seguros</span>
+<span class="text-slate-500">R$ 32.100</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full opacity-80" style="width: 55%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm">
+<span class="font-medium">SulAmérica</span>
+<span class="text-slate-500">R$ 28.400</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full opacity-60" style="width: 45%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm">
+<span class="font-medium">Allianz</span>
+<span class="text-slate-500">R$ 15.200</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full opacity-40" style="width: 25%"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-2 text-sm font-semibold text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-colors">
+                    Ver Relatório Completo
+                </button>
+</div>
+</div>
+<!-- Automatic Email Statements -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<h2 class="text-lg font-bold">Extratos Lidos Automaticamente</h2>
+<p class="text-sm text-slate-500">Sincronizado com financeiro@suacorretora.com.br</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined block">sync</span>
+</button>
+<button class="px-4 py-2 text-sm font-semibold border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        Filtros
+                    </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 text-xs uppercase tracking-wider">
+<tr>
+<th class="px-6 py-4 font-semibold">Data Leitura</th>
+<th class="px-6 py-4 font-semibold">Seguradora</th>
+<th class="px-6 py-4 font-semibold">Assunto do E-mail</th>
+<th class="px-6 py-4 font-semibold">Valor Bruto</th>
+<th class="px-6 py-4 font-semibold text-center">Status</th>
+<th class="px-6 py-4 font-semibold text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4 text-sm whitespace-nowrap">Hoje, 09:24</td>
+<td class="px-6 py-4 text-sm font-medium whitespace-nowrap">Porto Seguro</td>
+<td class="px-6 py-4 text-sm text-slate-500 truncate max-w-xs">Extrato de Pagamento de Comissões - Ref 10/2023</td>
+<td class="px-6 py-4 text-sm font-bold whitespace-nowrap">R$ 4.250,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Processado</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">visibility</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4 text-sm whitespace-nowrap">Ontem, 14:12</td>
+<td class="px-6 py-4 text-sm font-medium whitespace-nowrap">SulAmérica</td>
+<td class="px-6 py-4 text-sm text-slate-500 truncate max-w-xs">Aviso de Crédito em Conta - Lote 5521</td>
+<td class="px-6 py-4 text-sm font-bold whitespace-nowrap">R$ 1.890,20</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pendente</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">visibility</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4 text-sm whitespace-nowrap">22 Out, 10:05</td>
+<td class="px-6 py-4 text-sm font-medium whitespace-nowrap">Bradesco</td>
+<td class="px-6 py-4 text-sm text-slate-500 truncate max-w-xs">Relatório Mensal de Produção - Automóvel</td>
+<td class="px-6 py-4 text-sm font-bold whitespace-nowrap">R$ 8.440,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Processado</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">visibility</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4 text-sm whitespace-nowrap">21 Out, 16:45</td>
+<td class="px-6 py-4 text-sm font-medium whitespace-nowrap">Liberty</td>
+<td class="px-6 py-4 text-sm text-slate-500 truncate max-w-xs">Extrato com Erro de Leitura - PDF Protegido</td>
+<td class="px-6 py-4 text-sm font-bold whitespace-nowrap">R$ 0,00</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">Erro</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">error</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<span class="text-xs text-slate-500">Exibindo 4 de 1.250 registros</span>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-800 rounded hover:bg-slate-50">Anterior</button>
+<button class="px-3 py-1 text-xs font-semibold border border-slate-200 dark:border-slate-800 rounded hover:bg-slate-50">Próximo</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) -->
+<nav class="lg:hidden sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-around">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Início</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined filled-icon">account_balance_wallet</span>
+<span class="text-[10px] font-medium">Financeiro</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-[10px] font-medium">Relatórios</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Ajustes</span>
+</a>
+</nav>
+<!-- Side Navigation (Desktop - conceptual) -->
+<div class="hidden lg:flex fixed left-0 top-16 bottom-0 w-20 flex-col items-center py-6 gap-8 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+<a class="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+</a>
+<a class="p-3 rounded-xl bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined filled-icon">account_balance_wallet</span>
+</a>
+<a class="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" href="#">
+<span class="material-symbols-outlined">description</span>
+</a>
+<a class="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" href="#">
+<span class="material-symbols-outlined">group</span>
+</a>
+<div class="mt-auto">
+<a class="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+</a>
+</div>
+</div>
+<style>
+        /* Desktop padding adjustment for sidebar */
+        @media (min-width: 1024px) {
+            main, header { padding-left: 5rem; }
+        }
+    </style>
+</body></html>

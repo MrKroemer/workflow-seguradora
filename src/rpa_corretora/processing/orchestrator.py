@@ -4,17 +4,30 @@ from dataclasses import dataclass, field
 from datetime import date
 from difflib import SequenceMatcher
 import hashlib
+import json
 import re
 import os
 import unicodedata
+from pathlib import Path
 
 from rpa_corretora.config import AppSettings
-from rpa_corretora.domain.models import Alert, CalendarCommitment, EmailMessage, FollowupRecord, PolicyRecord, RunResult, TodoTask
+from rpa_corretora.domain.models import (
+    Alert,
+    CalendarCommitment,
+    CashflowEntry,
+    EmailMessage,
+    FollowupRecord,
+    PolicyRecord,
+    RunResult,
+    TodoTask,
+)
 from rpa_corretora.domain.rules import (
     build_agenda_pending_alert,
     build_commission_pending_alert,
     build_followup_alerts,
     build_nubank_email_alert,
+    extract_overdue_due_date,
+    extract_renewal_vig_date,
     build_incident_alerts,
     build_renewal_alerts,
     build_renewal_report_alert,
@@ -22,7 +35,13 @@ from rpa_corretora.domain.rules import (
     build_todo_pending_alert,
     extract_expense_from_email,
     extract_nubank_cashflow,
+    is_bank_release_commitment,
     is_insurer_email,
+    is_renewal_commitment,
+    is_tangerine_overdue_commitment,
+    should_send_bank_release_message,
+    should_send_overdue_message,
+    should_send_renewal_message,
 )
 from rpa_corretora.integrations.interfaces import (
     CalendarGateway,
@@ -36,12 +55,20 @@ from rpa_corretora.integrations.interfaces import (
 )
 from rpa_corretora.processing.dashboard import DashboardBuilder
 from rpa_corretora.processing.execution_report import ExecutionTraceCollector
-from rpa_corretora.templates.messages import cobranca_parcela_message
+from rpa_corretora.templates.messages import (
+    atraso_boleto_message,
+    cobranca_parcela_message,
+    liberacao_banco_message,
+    renovacao_cliente_message,
+)
 
 
 @dataclass(slots=True)
 class NotificationDispatchSummary:
     whatsapp_sent: int = 0
+    renewal_messages_sent: int = 0
+    overdue_messages_sent: int = 0
+    bank_release_messages_sent: int = 0
     segfy_payments: int = 0
     segfy_payment_failures: int = 0
     segfy_payment_failed_ids: list[str] = field(default_factory=list)
@@ -49,8 +76,12 @@ class NotificationDispatchSummary:
     portal_claim_failures: int = 0
     portal_claim_failed_ids: list[str] = field(default_factory=list)
     insured_emails_sent: int = 0
+    nubank_notifications_sent: int = 0
+    nubank_notifications_skipped: int = 0
     skipped_without_phone: int = 0
     skipped_without_email_target: int = 0
+    duplicate_blocked: int = 0
+    blocked_alerts: list[Alert] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -119,14 +150,31 @@ class DailyProcessor:
         digest = hashlib.sha1(commitment_id.encode("utf-8")).hexdigest().upper()
         return digest[:10]
 
+    @staticmethod
+    def _normalize_todo_subject(value: str) -> str:
+        normalized = " ".join(str(value or "").split())
+        normalized = normalized.strip(" -|;,.")
+        if len(normalized) > 72:
+            return normalized[:69].rstrip() + "..."
+        return normalized
+
+    def _build_todo_subject_from_commitment(self, commitment: CalendarCommitment) -> str:
+        if commitment.client_name and commitment.client_name.strip():
+            subject = self._normalize_todo_subject(commitment.client_name)
+            if subject:
+                return subject
+        return self._normalize_todo_subject(commitment.title) or "Compromisso da agenda"
+
     def _build_todo_title_from_commitment(self, commitment: CalendarCommitment) -> str:
         marker = self._build_compact_agenda_marker(commitment.id)
-        return f"{commitment.color} | {commitment.title} | AG:{marker}"
+        subject = self._build_todo_subject_from_commitment(commitment)
+        return f"{commitment.color} | {subject} | AG:{marker}"
 
     def _build_todo_notes_from_commitment(self, commitment: CalendarCommitment) -> str:
         pieces = [
             f"Origem: Google Agenda",
             f"Compromisso: {commitment.id}",
+            f"Resumo agenda: {commitment.title}",
             f"Cor: {commitment.color}",
             f"Data: {commitment.due_date.isoformat()}",
         ]
@@ -299,6 +347,30 @@ class DailyProcessor:
     def _todo_is_writable(self) -> bool:
         return self.todo.__class__.__name__ != "NoopTodoGateway"
 
+    @staticmethod
+    def _dispatch_state_path() -> Path:
+        raw = (os.getenv("MESSAGE_DISPATCH_STATE_PATH") or "outputs/message_dispatch_state.json").strip()
+        return Path(raw or "outputs/message_dispatch_state.json")
+
+    def _load_dispatch_keys(self) -> set[str]:
+        path = self._dispatch_state_path()
+        if not path.exists():
+            return set()
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return set()
+        keys = payload.get("sent_keys") if isinstance(payload, dict) else None
+        if not isinstance(keys, list):
+            return set()
+        return {str(item).strip() for item in keys if str(item).strip()}
+
+    def _save_dispatch_keys(self, sent_keys: set[str]) -> None:
+        path = self._dispatch_state_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"sent_keys": sorted(sent_keys)}
+        path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+
     def run(
         self,
         today: date,
@@ -369,6 +441,7 @@ class DailyProcessor:
         insurer_emails: list[EmailMessage] = []
         cashflow_entries = []
         expense_entries = []
+        nubank_receipts: list[tuple[EmailMessage, CashflowEntry]] = []
         alerts: list[Alert] = []
 
         for message in messages:
@@ -379,6 +452,7 @@ class DailyProcessor:
             if nubank_entry is not None:
                 cashflow_entries.append(nubank_entry)
                 alerts.append(build_nubank_email_alert(message, nubank_entry))
+                nubank_receipts.append((message, nubank_entry))
 
             expense_entry = extract_expense_from_email(message, today)
             if expense_entry is not None:
@@ -558,13 +632,24 @@ class DailyProcessor:
             if trace is not None:
                 trace.start_stage("whatsapp")
             try:
-                notification_summary = self._dispatch_notifications(commitments, policies)
+                notification_summary = self._dispatch_notifications(
+                    today=today,
+                    commitments=commitments,
+                    policies=policies,
+                    nubank_receipts=nubank_receipts,
+                )
+                alerts.extend(notification_summary.blocked_alerts)
                 if trace is not None:
                     trace.complete_stage(
                         "whatsapp",
                         (
                             f"{notification_summary.whatsapp_sent} mensagens enviadas; "
+                            f"{notification_summary.renewal_messages_sent} de renovacao; "
+                            f"{notification_summary.overdue_messages_sent} de atraso; "
+                            f"{notification_summary.bank_release_messages_sent} de liberacao bancaria; "
+                            f"{notification_summary.nubank_notifications_sent} avisos Nubank para corretora; "
                             f"{notification_summary.skipped_without_phone} sem telefone; "
+                            f"{notification_summary.duplicate_blocked} bloqueadas por duplicidade; "
                             f"{notification_summary.insured_emails_sent} e-mails de segurado enviados."
                         ),
                     )
@@ -620,6 +705,36 @@ class DailyProcessor:
                     recommended_action="Executar sem --dry-run para enviar notificacao por e-mail.",
                 )
 
+        if dry_run and trace is not None:
+            for commitment in commitments:
+                if commitment.resolved:
+                    continue
+                if should_send_renewal_message(commitment, today):
+                    trace.add_non_executed_item(
+                        item_id=f"WhatsApp renovacao {commitment.id}",
+                        reason="Dry-run ativo, envio de mensagem de renovacao nao executado.",
+                        recommended_action="Executar sem --dry-run para disparar comunicacao de renovacao.",
+                    )
+                elif should_send_overdue_message(commitment, today):
+                    trace.add_non_executed_item(
+                        item_id=f"WhatsApp atraso {commitment.id}",
+                        reason="Dry-run ativo, envio de lembrete de atraso nao executado.",
+                        recommended_action="Executar sem --dry-run para disparar lembrete de boleto/parcela.",
+                    )
+                elif should_send_bank_release_message(commitment, today):
+                    trace.add_non_executed_item(
+                        item_id=f"WhatsApp liberacao banco {commitment.id}",
+                        reason="Dry-run ativo, envio de aviso de liberacao bancaria nao executado.",
+                        recommended_action="Executar sem --dry-run para disparar o informativo bancario.",
+                    )
+
+            for message, _entry in nubank_receipts:
+                trace.add_non_executed_item(
+                    item_id=f"Notificacao Nubank {message.id}",
+                    reason="Dry-run ativo, aviso de recebimento Nubank nao executado.",
+                    recommended_action="Executar sem --dry-run para enviar o aviso para a corretora.",
+                )
+
         if trace is not None:
             trace.complete_stage(
                 "segfy",
@@ -663,19 +778,141 @@ class DailyProcessor:
 
     def _dispatch_notifications(
         self,
+        *,
+        today: date,
         commitments: list[CalendarCommitment],
         policies: list[PolicyRecord],
+        nubank_receipts: list[tuple[EmailMessage, CashflowEntry]],
     ) -> NotificationDispatchSummary:
+        sent_keys = self._load_dispatch_keys()
+        state_dirty = False
+
+        def register_once(key: str) -> bool:
+            nonlocal state_dirty
+            if key in sent_keys:
+                return False
+            sent_keys.add(key)
+            state_dirty = True
+            return True
+
         insured_notification_email = os.getenv("INSURED_NOTIFY_EMAIL_TO", "").strip()
+        corretora_notification_email = (
+            os.getenv("CORRETORA_NOTIFY_EMAIL_TO", "").strip()
+            or os.getenv("EXECUTION_REPORT_EMAIL_TO", "").strip()
+            or insured_notification_email
+        )
         summary = NotificationDispatchSummary()
 
         for commitment in commitments:
             if commitment.resolved:
                 continue
             client_name = commitment.client_name or "Cliente"
+            has_context = bool((commitment.title or "").strip() or (commitment.description or "").strip())
+            if not has_context:
+                summary.blocked_alerts.append(
+                    Alert(
+                        code="DISPARO_BLOQUEADO_SEM_CONTEXTO",
+                        severity="MEDIA",
+                        message=f"Card {commitment.id} sem contexto textual suficiente para analise.",
+                        context={"commitment_id": commitment.id},
+                    )
+                )
+                continue
+
+            if is_renewal_commitment(commitment):
+                vig_date = extract_renewal_vig_date(commitment)
+                if vig_date is None:
+                    summary.blocked_alerts.append(
+                        Alert(
+                            code="DISPARO_BLOQUEADO_SEM_DADOS",
+                            severity="MEDIA",
+                            message=f"Card de renovacao sem VIG valida ({commitment.id}).",
+                            context={"commitment_id": commitment.id},
+                        )
+                    )
+                    continue
+                if should_send_renewal_message(commitment, today):
+                    if not commitment.whatsapp_number:
+                        summary.skipped_without_phone += 1
+                        summary.blocked_alerts.append(
+                            Alert(
+                                code="DISPARO_BLOQUEADO_SEM_TELEFONE",
+                                severity="MEDIA",
+                                message=f"Renovacao identificada sem telefone para envio ({commitment.id}).",
+                                context={"commitment_id": commitment.id},
+                            )
+                        )
+                        continue
+                    dispatch_key = f"whatsapp:renovacao:{commitment.id}:{vig_date.isoformat()}"
+                    if not register_once(dispatch_key):
+                        summary.duplicate_blocked += 1
+                        continue
+                    self.whatsapp.send_message(commitment.whatsapp_number, renovacao_cliente_message(client_name))
+                    summary.whatsapp_sent += 1
+                    summary.renewal_messages_sent += 1
+                continue
+
+            if is_tangerine_overdue_commitment(commitment):
+                due_date = extract_overdue_due_date(commitment)
+                if due_date is None:
+                    summary.blocked_alerts.append(
+                        Alert(
+                            code="DISPARO_BLOQUEADO_SEM_DADOS",
+                            severity="MEDIA",
+                            message=f"Card tangerina sem data de vencimento valida ({commitment.id}).",
+                            context={"commitment_id": commitment.id},
+                        )
+                    )
+                    continue
+                if should_send_overdue_message(commitment, today):
+                    if not commitment.whatsapp_number:
+                        summary.skipped_without_phone += 1
+                        summary.blocked_alerts.append(
+                            Alert(
+                                code="DISPARO_BLOQUEADO_SEM_TELEFONE",
+                                severity="MEDIA",
+                                message=f"Lembrete de atraso sem telefone para envio ({commitment.id}).",
+                                context={"commitment_id": commitment.id},
+                            )
+                        )
+                        continue
+                    dispatch_key = f"whatsapp:atraso:{commitment.id}:{due_date.isoformat()}"
+                    if not register_once(dispatch_key):
+                        summary.duplicate_blocked += 1
+                        continue
+                    self.whatsapp.send_message(commitment.whatsapp_number, atraso_boleto_message(client_name))
+                    summary.whatsapp_sent += 1
+                    summary.overdue_messages_sent += 1
+                continue
+
+            if is_bank_release_commitment(commitment):
+                if should_send_bank_release_message(commitment, today):
+                    if not commitment.whatsapp_number:
+                        summary.skipped_without_phone += 1
+                        summary.blocked_alerts.append(
+                            Alert(
+                                code="DISPARO_BLOQUEADO_SEM_TELEFONE",
+                                severity="MEDIA",
+                                message=f"Aviso de liberacao bancaria sem telefone ({commitment.id}).",
+                                context={"commitment_id": commitment.id},
+                            )
+                        )
+                        continue
+                    dispatch_key = f"whatsapp:liberacao_banco:{commitment.id}:{commitment.due_date.isoformat()}"
+                    if not register_once(dispatch_key):
+                        summary.duplicate_blocked += 1
+                        continue
+                    self.whatsapp.send_message(commitment.whatsapp_number, liberacao_banco_message())
+                    summary.whatsapp_sent += 1
+                    summary.bank_release_messages_sent += 1
+                continue
 
             if commitment.color == "VERMELHO":
                 if commitment.whatsapp_number:
+                    dispatch_key = f"whatsapp:vermelho:{commitment.id}"
+                    if not register_once(dispatch_key):
+                        summary.duplicate_blocked += 1
+                        continue
                     message = cobranca_parcela_message(client_name)
                     self.whatsapp.send_message(commitment.whatsapp_number, message)
                     summary.whatsapp_sent += 1
@@ -726,4 +963,40 @@ class DailyProcessor:
                     content=body,
                 )
                 summary.insured_emails_sent += 1
+
+        for message, entry in nubank_receipts:
+            if not corretora_notification_email:
+                summary.nubank_notifications_skipped += 1
+                summary.blocked_alerts.append(
+                    Alert(
+                        code="NUBANK_AVISO_BLOQUEADO_SEM_DESTINO",
+                        severity="MEDIA",
+                        message="E-mail Nubank identificado sem destino configurado para aviso da corretora.",
+                        context={"email_id": message.id},
+                    )
+                )
+                continue
+
+            dispatch_key = f"email:nubank_recebimento:{message.id}"
+            if not register_once(dispatch_key):
+                summary.duplicate_blocked += 1
+                continue
+
+            value_brl = format(entry.value, ".2f").replace(".", ",")
+            content = (
+                "Recebimento identificado no e-mail do Nubank.\n"
+                f"Data: {entry.date.isoformat()}\n"
+                f"Valor: R$ {value_brl}\n"
+                f"Descricao: {entry.specification}\n"
+                f"Remetente: {message.sender}\n"
+            )
+            self.email_sender.send_email(
+                recipient=corretora_notification_email,
+                subject=f"Aviso Nubank - recebimento ({entry.specification})",
+                content=content,
+            )
+            summary.nubank_notifications_sent += 1
+
+        if state_dirty:
+            self._save_dispatch_keys(sent_keys)
         return summary

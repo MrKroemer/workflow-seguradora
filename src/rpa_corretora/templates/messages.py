@@ -23,3 +23,33 @@ def cobranca_parcela_message(client_name: str) -> str:
         f"Ola, {client_name}. Identificamos parcela pendente do seu seguro. "
         "Pode me confirmar o pagamento para regularizarmos no sistema?"
     )
+
+
+def renovacao_cliente_message(client_name: str) -> str:
+    return (
+        f"Ola, {client_name}. Seu seguro esta em periodo de renovacao. "
+        "Para atualizar a cotacao, por favor envie os dados necessarios "
+        "(dados pessoais, dados do veiculo e informacoes de uso atualizadas)."
+    )
+
+
+def atraso_boleto_message(client_name: str) -> str:
+    return (
+        f"Ola, {client_name}. Identificamos boleto/parcela vencida ha mais de 5 dias. "
+        "Por favor, confirme a regularizacao para mantermos seu seguro em dia."
+    )
+
+
+def liberacao_banco_message() -> str:
+    return (
+        "INFORMATIVO LIBERACAO BANCO\n\n"
+        "Prezado(a) Cliente,\n\n"
+        "A cobranca do seu seguro esta disponivel para liberacao na sua conta corrente. "
+        "Para garantir a cobertura, libere em ate 48 horas no Internet Banking, "
+        "seguindo estes passos:\n\n"
+        "1. Acesse o Internet Banking com agencia, conta e senha.\n"
+        "2. Localize a area de Seguros ou Debitos Automaticos.\n"
+        "3. Encontre a cobranca do seguro (seguradora, apolice, etc.).\n"
+        "4. Autorize ou libere o debito.\n\n"
+        "Observacao: os procedimentos podem variar conforme o banco."
+    )

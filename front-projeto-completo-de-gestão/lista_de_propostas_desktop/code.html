@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SeguroGestão - Lista de Propostas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+<div class="flex min-h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-slate-900 dark:bg-black flex flex-col fixed inset-y-0 left-0 z-50">
+<div class="p-6 flex flex-col gap-8 h-full">
+<!-- Logo -->
+<div class="flex items-center gap-3">
+<div class="bg-primary rounded-lg p-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-2xl">shield</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold leading-tight">SeguroGestão</h1>
+<p class="text-slate-400 text-xs font-normal">Management System</p>
+</div>
+</div>
+<!-- Navigation -->
+<nav class="flex flex-col gap-2 grow">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-white bg-primary rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Propostas</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-sm font-medium">Financeiro</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">bolt</span>
+<span class="text-sm font-medium">Automação</span>
+</a>
+</nav>
+<!-- Footer Sidebar -->
+<div class="flex flex-col gap-2 pt-6 border-t border-slate-800">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Ajustes</span>
+</a>
+<div class="flex items-center gap-3 px-4 py-3">
+<div class="w-8 h-8 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Avatar of current system user profile" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA509MaFYE-aJWkrX39Fmeud_btuS-Z0b8nSAt-R_43GHfz3uWwu16rSB9eNseR_7_rmnPs6TLwJB9g6bcSkVav5rI-ugXekOQpx4juE74trtDXO111Yv77DEa32UmtHzW02SCR0fB3rb6WiFEoIPVmNEnPrd6kNEYzUY6pLDOVIUo5m5M_MDftN8cwY8v9LBXYYUOwvmGwX4wVlQwBOSmrvfE4_trFVbzjfnKuIGVxwEaOcmarSGuZtHdaqSuhzIrFB06wgVuczzQ');"></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-white text-xs font-semibold truncate">Ricardo Mendes</span>
+<span class="text-slate-500 text-[10px] truncate">Admin</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 ml-64 min-h-screen">
+<div class="max-w-7xl mx-auto p-8 flex flex-col gap-8">
+<!-- Header -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div>
+<h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Lista de Propostas</h2>
+<p class="text-slate-500 dark:text-slate-400">Gerencie e acompanhe o status de todas as cotações ativas.</p>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add</span>
+<span>Nova Proposta</span>
+</button>
+</div>
+<!-- Filters & Search -->
+<div class="bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+<!-- Search Bar -->
+<div class="md:col-span-6">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">search</span>
+<input class="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white dark:focus:bg-slate-900 transition-all text-slate-900 dark:text-slate-100" placeholder="Pesquisar por cliente, ID ou seguradora..." type="text"/>
+</div>
+</div>
+<!-- Filters -->
+<div class="md:col-span-6 flex flex-wrap gap-2 md:justify-end">
+<button class="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span>Status</span>
+<span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span>Seguradora</span>
+<span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<span>Data</span>
+<span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Table Container -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50">
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ID</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nome do Cliente</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipo de Seguro</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Seguradora</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Valor (R$)</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#8842</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">João Silva</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Automóvel</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Porto Seguro</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">R$ 2.450,00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pendente</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center gap-1 ml-auto">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                                            Visualizar
+                                        </button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#8841</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Maria Oliveira</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Residencial</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Allianz</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">R$ 1.200,00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Emitida</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center gap-1 ml-auto">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                                            Visualizar
+                                        </button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#8840</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Carlos Souza</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Vida</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Bradesco</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">R$ 890,00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">Recusada</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center gap-1 ml-auto">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                                            Visualizar
+                                        </button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#8839</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Ana Costa</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Empresarial</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Liberty</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">R$ 5.600,00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Emitida</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center gap-1 ml-auto">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                                            Visualizar
+                                        </button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">#8838</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Pedro Rocha</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Automóvel</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Azul</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">R$ 2.100,00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pendente</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center gap-1 ml-auto">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                                            Visualizar
+                                        </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Placeholder -->
+<div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<p class="text-sm text-slate-500">Mostrando <span class="font-medium">5</span> de <span class="font-medium">42</span> propostas</p>
+<div class="flex gap-2">
+<button class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

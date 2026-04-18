@@ -39,7 +39,6 @@ def _to_decimal(value: object) -> Decimal:
     except (InvalidOperation, ValueError):
         return Decimal("0")
 
-
 class SegfyGateway:
     def __init__(
         self,

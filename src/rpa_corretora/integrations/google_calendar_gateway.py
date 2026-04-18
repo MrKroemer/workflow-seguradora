@@ -11,6 +11,8 @@ from rpa_corretora.domain.models import CalendarCommitment, TodoTask
 
 _DEFAULT_COLOR_MAP = {
     "4": "VERMELHO",
+    "5": "AMARELO",
+    "6": "TANGERINA",
     "8": "CINZA",
     "9": "AZUL",
     "10": "VERDE",
@@ -24,7 +26,10 @@ _ACTION_BREAK_PATTERN = re.compile(
     r"\s[-|:]\s*(?=(?:GERAR|ENVIAR|COBRAN|BAIXA|SINISTRO|ENDOSSO|TRATATIVA|RENOVA|PAGAMENTO|VENCIMENTO)\b)",
     re.IGNORECASE,
 )
-_COLOR_PREFIX_PATTERN = re.compile(r"^(?:VERMELHO|AZUL|CINZA|VERDE)(?:/[A-Z0-9() _-]+)?\s*:\s*", re.IGNORECASE)
+_COLOR_PREFIX_PATTERN = re.compile(
+    r"^(?:VERMELHO|AZUL|CINZA|VERDE|AMARELO|TANGERINA)(?:/[A-Z0-9() _-]+)?\s*:\s*",
+    re.IGNORECASE,
+)
 _OPERATION_KEYWORDS = (
     "COBRANCA",
     "COBRANÇA",
@@ -163,6 +168,10 @@ def _extract_commitment_color(
         return "CINZA"
     if "[VERDE]" in text:
         return "VERDE"
+    if "[AMARELO]" in text:
+        return "AMARELO"
+    if "[TANGERINA]" in text:
+        return "TANGERINA"
     return None
 
 
@@ -188,6 +197,8 @@ class GoogleCalendarGateway:
             "AZUL": "9",
             "CINZA": "8",
             "VERDE": "10",
+            "AMARELO": "5",
+            "TANGERINA": "6",
         }
 
     def fetch_daily_commitments(self, day: date) -> list[CalendarCommitment]:
@@ -245,6 +256,7 @@ class GoogleCalendarGateway:
                     title=summary,
                     color=color,
                     due_date=due_date,
+                    description=description,
                     resolved=resolved,
                     client_name=client_name,
                     whatsapp_number=whatsapp_number,
@@ -322,6 +334,10 @@ class GoogleCalendarGateway:
             return self._semantic_color_to_google_id["AZUL"]
         if "CINZA" in text:
             return self._semantic_color_to_google_id["CINZA"]
+        if "AMARELO" in text:
+            return self._semantic_color_to_google_id["AMARELO"]
+        if "TANGERINA" in text:
+            return self._semantic_color_to_google_id["TANGERINA"]
         return self._semantic_color_to_google_id["VERDE"]
 
     @staticmethod

@@ -71,6 +71,8 @@ class SegfyWebGateway:
         import_source_dir: str | Path | None = None,
         import_max_files: int = 100,
         import_state_path: str | Path = "outputs/segfy_import_state.json",
+        payment_enabled: bool = True,
+        payment_page_url: str | None = None,
     ) -> None:
         self.username = username.strip()
         self.password = password.strip()
@@ -84,6 +86,8 @@ class SegfyWebGateway:
         self.import_source_dir = Path(import_source_dir) if import_source_dir else None
         self.import_max_files = max(1, import_max_files)
         self.import_state_path = Path(import_state_path)
+        self.payment_enabled = payment_enabled
+        self.payment_page_url = (payment_page_url or "").strip()
 
     def import_documents(self) -> int:
         if not self.import_enabled:
@@ -162,10 +166,40 @@ class SegfyWebGateway:
             return []
 
     def register_payment(self, *, commitment_id: str, description: str) -> bool:
-        # O registro de baixa no Segfy web depende do mapeamento detalhado da tela.
-        # Retornamos False para delegar o fallback (API ou fila local).
-        _ = commitment_id, description
-        return False
+        if not self.payment_enabled:
+            return False
+        if not self.username or not self.password or not self.base_url:
+            return False
+        if not segfy_web_automation_available():
+            return False
+
+        try:
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                browser = self._launch_browser(playwright)
+                try:
+                    context = browser.new_context(locale="pt-BR")
+                    try:
+                        page = context.new_page()
+                        page.set_default_timeout(self.timeout_seconds * 1000)
+                        self._login(page)
+                        return self._register_payment_on_page(
+                            page=page,
+                            commitment_id=commitment_id,
+                            description=description,
+                        )
+                    finally:
+                        context.close()
+                finally:
+                    browser.close()
+        except PlaywrightTimeoutError:
+            print(f"[Segfy] Timeout ao registrar baixa web ({commitment_id}).")
+            return False
+        except Exception as exc:
+            print(f"[Segfy] Falha ao registrar baixa web ({commitment_id}): {exc}")
+            return False
 
     def _launch_browser(self, playwright: Playwright):
         channels = [self.browser_channel, "chrome", "msedge"]
@@ -382,3 +416,289 @@ class SegfyWebGateway:
             except Exception:
                 continue
         return False
+
+    def _register_payment_on_page(self, *, page: Page, commitment_id: str, description: str) -> bool:
+        candidates = self._build_payment_queries(commitment_id=commitment_id, description=description)
+        target_urls = self._payment_urls()
+
+        # Tenta diretamente na tela corrente (dashboard inicial ja autenticado).
+        for query in candidates:
+            if self._try_register_payment_via_parcelas(page=page, query=query):
+                return True
+            if self._try_register_payment_by_query(page=page, query=query):
+                return True
+
+        for target_url in target_urls:
+            try:
+                page.goto(target_url, wait_until="domcontentloaded")
+                page.wait_for_timeout(900)
+            except Exception:
+                continue
+            for query in candidates:
+                if self._try_register_payment_via_parcelas(page=page, query=query):
+                    return True
+                if self._try_register_payment_by_query(page=page, query=query):
+                    return True
+        return False
+
+    def _payment_urls(self) -> list[str]:
+        urls: list[str] = []
+        if self.payment_page_url:
+            urls.append(self.payment_page_url)
+        urls.extend(
+            [
+                f"{self.base_url}/financeiro/parcelas",
+                f"{self.base_url}/financeiro/recebimentos",
+                f"{self.base_url}/financeiro/contasAReceber",
+                f"{self.base_url}/financeiro",
+                f"{self.base_url}/financeiro/faturas",
+                f"{self.base_url}/centralVendas",
+                self.base_url,
+            ]
+        )
+        dedup: list[str] = []
+        seen: set[str] = set()
+        for url in urls:
+            normalized = url.strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            dedup.append(normalized)
+        return dedup
+
+    def _build_payment_queries(self, *, commitment_id: str, description: str) -> list[str]:
+        raw_values = [
+            commitment_id.strip(),
+            description.strip(),
+        ]
+        queries: list[str] = []
+        seen: set[str] = set()
+        for raw in raw_values:
+            if not raw:
+                continue
+            tokens = [raw]
+            compact_digits = "".join(ch for ch in raw if ch.isdigit())
+            if len(compact_digits) >= 6:
+                tokens.append(compact_digits)
+            for token in tokens:
+                clean = " ".join(token.split()).strip()
+                if len(clean) < 3:
+                    continue
+                key = clean.casefold()
+                if key in seen:
+                    continue
+                seen.add(key)
+                queries.append(clean)
+
+                words = [item for item in re.split(r"\s+", clean) if len(item.strip(".,;:-_/")) >= 3]
+                if words:
+                    first_word = words[0].strip(".,;:-_/")
+                    key_first = first_word.casefold()
+                    if key_first not in seen and len(first_word) >= 3:
+                        seen.add(key_first)
+                        queries.append(first_word)
+                if len(words) >= 2:
+                    compact_name = " ".join(item.strip(".,;:-_/") for item in words[:3]).strip()
+                    key_compact = compact_name.casefold()
+                    if compact_name and key_compact not in seen:
+                        seen.add(key_compact)
+                        queries.append(compact_name)
+        return queries[:6]
+
+    def _try_register_payment_by_query(self, *, page: Page, query: str) -> bool:
+        if not query:
+            return False
+
+        search_selectors = [
+            "input[type='search']",
+            "input[placeholder*='Buscar' i]",
+            "input[placeholder*='Pesquisar' i]",
+            "input[placeholder*='Proposta' i]",
+            "input[placeholder*='Apolice' i]",
+            "input[placeholder*='Apolice' i]",
+            "input[name*='search' i]",
+            "input[name*='busca' i]",
+        ]
+        self._fill_first(page, selectors=search_selectors, value=query)
+        try:
+            page.keyboard.press("Enter")
+        except Exception:
+            pass
+        page.wait_for_timeout(650)
+
+        action_selectors = [
+            "button:has-text('Registrar pagamento')",
+            "button:has-text('Registrar baixa')",
+            "button:has-text('Baixar')",
+            "button:has-text('Receber')",
+            "button:has-text('Baixa manual')",
+            "a:has-text('Registrar pagamento')",
+            "a:has-text('Registrar baixa')",
+            "a:has-text('Baixar')",
+            "a:has-text('Receber')",
+            "a:has-text('Baixa manual')",
+        ]
+
+        query_selector = query.replace("\\", "\\\\").replace('"', '\\"')
+        row_selectors = [
+            f'tr:has-text("{query_selector}")',
+            f'div[role="row"]:has-text("{query_selector}")',
+            f'li:has-text("{query_selector}")',
+            f'div:has-text("{query_selector}")',
+        ]
+        for row_selector in row_selectors:
+            row = page.locator(row_selector)
+            if row.count() == 0:
+                continue
+            for action_selector in action_selectors:
+                action = row.first.locator(action_selector)
+                if action.count() == 0:
+                    continue
+                try:
+                    action.first.click(timeout=2200)
+                    return self._confirm_payment_modal(page)
+                except Exception:
+                    continue
+
+        if self._click_first(page, selectors=action_selectors, timeout_ms=1800):
+            return self._confirm_payment_modal(page)
+        return False
+
+    def _try_register_payment_via_parcelas(self, *, page: Page, query: str) -> bool:
+        if not query:
+            return False
+
+        # Fluxo observado nas telas enviadas:
+        # Financeiro > Parcelas do Segurado > pesquisar > coluna "Segurado pagou?" (Nao/Sim)
+        self._fill_first(
+            page,
+            selectors=[
+                "input[placeholder*='Segurado' i]",
+                "input[placeholder*='Apolice' i]",
+                "input[placeholder*='Apólice' i]",
+                "input[name*='segurado' i]",
+                "input[name*='apolice' i]",
+            ],
+            value=query,
+        )
+        self._click_first(
+            page,
+            selectors=[
+                "button:has-text('Pesquisar')",
+                "a:has-text('Pesquisar')",
+                "text=Pesquisar",
+            ],
+            timeout_ms=1800,
+        )
+        page.wait_for_timeout(650)
+
+        query_selector = query.replace("\\", "\\\\").replace('"', '\\"')
+        row_selectors = [
+            f'tr:has-text("{query_selector}")',
+            f'div[role="row"]:has-text("{query_selector}")',
+            f'li:has-text("{query_selector}")',
+            f'div:has-text("{query_selector}")',
+        ]
+        for row_selector in row_selectors:
+            row = page.locator(row_selector)
+            if row.count() == 0:
+                continue
+
+            paid_selectors = [
+                "select[name*='pago' i]",
+                "select[id*='pago' i]",
+                "select",
+            ]
+            for paid_selector in paid_selectors:
+                paid_field = row.first.locator(paid_selector)
+                if paid_field.count() == 0:
+                    continue
+                select = paid_field.first
+
+                current_value = ""
+                try:
+                    current_value = (select.input_value(timeout=1000) or "").strip().upper()
+                except Exception:
+                    pass
+                if current_value in {"SIM", "1", "TRUE"}:
+                    return True
+
+                switched = False
+                try:
+                    select.select_option(label="Sim", timeout=1800)
+                    switched = True
+                except Exception:
+                    try:
+                        select.select_option(value="1", timeout=1800)
+                        switched = True
+                    except Exception:
+                        try:
+                            select.select_option(index=1, timeout=1800)
+                            switched = True
+                        except Exception:
+                            switched = False
+
+                if not switched:
+                    continue
+
+                self._click_first(
+                    page,
+                    selectors=[
+                        "button:has-text('Salvar')",
+                        "button:has-text('Confirmar')",
+                        "button:has-text('Registrar')",
+                        "button:has-text('Concluir')",
+                        "text=Salvar",
+                        "text=Confirmar",
+                    ],
+                    timeout_ms=1200,
+                )
+                page.wait_for_timeout(450)
+
+                try:
+                    updated_value = (select.input_value(timeout=1000) or "").strip().upper()
+                    if updated_value in {"SIM", "1", "TRUE"}:
+                        return True
+                except Exception:
+                    pass
+
+                try:
+                    row_text = (row.first.inner_text(timeout=1200) or "").upper()
+                except Exception:
+                    row_text = ""
+                if "SIM" in row_text:
+                    return True
+        return False
+
+    def _confirm_payment_modal(self, page: Page) -> bool:
+        today_iso = datetime.now().date().isoformat()
+        self._fill_first(
+            page,
+            selectors=[
+                "input[type='date']",
+                "input[name*='data' i]",
+                "input[id*='data' i]",
+                "input[placeholder*='Data' i]",
+            ],
+            value=today_iso,
+        )
+
+        confirmed = self._click_first(
+            page,
+            selectors=[
+                "button:has-text('Confirmar')",
+                "button:has-text('Salvar')",
+                "button:has-text('Registrar')",
+                "button:has-text('Concluir')",
+                "button:has-text('OK')",
+                "text=Confirmar",
+                "text=Salvar",
+                "text=Registrar",
+            ],
+            timeout_ms=2500,
+        )
+        if not confirmed:
+            return False
+
+        page.wait_for_timeout(700)
+        return True

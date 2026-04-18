@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Seguros Pro - Dashboard Principal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-slate-900 dark:bg-black flex flex-col h-full border-r border-slate-200 dark:border-slate-800">
+<div class="p-6">
+<div class="flex items-center gap-3">
+<div class="bg-primary size-10 rounded-xl flex items-center justify-center text-white">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div>
+<h1 class="text-white text-lg font-bold leading-none">Seguros Pro</h1>
+<p class="text-slate-400 text-xs mt-1">Corretora Digital</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white font-medium transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">group</span>
+<span>Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>Propostas</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span>Financeiro</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">bolt</span>
+<span>Automação</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Ajustes</span>
+</a>
+</nav>
+<div class="p-4 mt-auto border-t border-slate-800">
+<div class="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-slate-800 transition-all cursor-pointer">
+<div class="size-10 rounded-full bg-slate-700 bg-cover bg-center" data-alt="Portrait photo of Ricardo Silva" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQPi1dbeHZUMZBHMkyDjXzIYho75I6LpoKcw9z2ubB9UhJ7LSLrUYjab9ygykeHLWbYRUwboV9DkmjGs7aLr6ZgbxVgKKkbZQfjEnAl67WEeytCxrdXCiJaS-3UODyEedoQr4jw1FQq2NCtRrG5BEXwwZmmIT9D2JUsK7DaXso1a0y73hlkoI-h4ahywtN8fTjr7gdHQfqopMDV8OMaxyq8ZYz3PP7K9CNLRN0vpQue9P-aiDFJq2s5wdb7rwp4OPCrfDbL6fk2ME')"></div>
+<div class="flex-1 overflow-hidden">
+<p class="text-white text-sm font-semibold truncate">Ricardo Silva</p>
+<p class="text-slate-400 text-xs truncate">Administrador</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Header -->
+<header class="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+<div class="w-full max-w-xl">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-transparent focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-slate-700 rounded-xl text-sm transition-all outline-none" placeholder="Pesquisar por cliente, proposta ou sinistro..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2.5 right-2.5 size-2 bg-primary rounded-full ring-2 ring-white dark:ring-slate-900"></span>
+</button>
+<button class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-all">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2"></div>
+<button class="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">add</span>
+                        Nova Proposta
+                    </button>
+</div>
+</header>
+<!-- Scrollable Area -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- Title Section -->
+<div class="flex flex-col gap-1">
+<h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Resumo Operacional</h2>
+<p class="text-slate-500 dark:text-slate-400">Bem-vindo de volta! Aqui está o status da sua corretora hoje.</p>
+</div>
+<!-- Main Grid -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Section: KPIs & Chart -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Propostas Pendentes</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-black text-slate-900 dark:text-white">24</h3>
+<span class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-bold px-2 py-1 rounded-lg">+5% vs. ontem</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Inadimplência</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-black text-slate-900 dark:text-white">12%</h3>
+<span class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 rounded-lg">-2.4% este mês</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Alertas de Renovação</p>
+<div class="flex items-end justify-between">
+<h3 class="text-4xl font-black text-slate-900 dark:text-white">15</h3>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium pb-1">Próximos 30 dias</p>
+</div>
+</div>
+</div>
+<!-- Chart Card -->
+<div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Desempenho Semanal</p>
+<h4 class="text-2xl font-bold text-slate-900 dark:text-white">R$ 45.200,00</h4>
+</div>
+<select class="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold px-4 py-2 focus:ring-primary">
+<option>Últimos 7 dias</option>
+<option>Este Mês</option>
+</select>
+</div>
+<div class="h-64 flex items-end justify-between px-4 gap-4">
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg relative group overflow-hidden" style="height: 60%">
+<div class="absolute bottom-0 left-0 right-0 bg-primary h-full opacity-20 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="text-xs font-bold text-slate-400">SEG</span>
+</div>
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg relative group overflow-hidden" style="height: 45%">
+<div class="absolute bottom-0 left-0 right-0 bg-primary h-full opacity-20 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="text-xs font-bold text-slate-400">TER</span>
+</div>
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg relative group overflow-hidden" style="height: 80%">
+<div class="absolute bottom-0 left-0 right-0 bg-primary h-full opacity-20 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="text-xs font-bold text-slate-400">QUA</span>
+</div>
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg relative group overflow-hidden" style="height: 70%">
+<div class="absolute bottom-0 left-0 right-0 bg-primary h-full opacity-20 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="text-xs font-bold text-slate-400">QUI</span>
+</div>
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg relative group overflow-hidden" style="height: 55%">
+<div class="absolute bottom-0 left-0 right-0 bg-primary h-full opacity-20 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="text-xs font-bold text-slate-400">SEX</span>
+</div>
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-primary rounded-t-lg h-full"></div>
+<span class="text-xs font-bold text-slate-900 dark:text-white">SAB</span>
+</div>
+<div class="flex flex-col items-center gap-4 flex-1">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg relative group overflow-hidden" style="height: 40%">
+<div class="absolute bottom-0 left-0 right-0 bg-primary h-full opacity-20 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="text-xs font-bold text-slate-400">DOM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Section: Ações Urgentes -->
+<div class="col-span-12 lg:col-span-4 h-full">
+<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col overflow-hidden">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800">
+<h5 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">notification_important</span>
+                                    Ações Urgentes
+                                </h5>
+</div>
+<div class="flex-1 p-4 space-y-4">
+<div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined">refresh</span>
+</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Renovar Auto - João Silva</p>
+<p class="text-xs text-slate-500 mt-1">Apólice vence em 48 horas</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<div class="size-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 shrink-0">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Proposta #4432 Pendente</p>
+<p class="text-xs text-slate-500 mt-1">Aguardando anexos do cliente</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<div class="size-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shrink-0">
+<span class="material-symbols-outlined">rate_review</span>
+</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Feedback: Seguro Vida</p>
+<p class="text-xs text-slate-500 mt-1">Cliente solicitou revisão de valor</p>
+</div>
+</div>
+</div>
+<div class="p-4 mt-auto">
+<button class="w-full py-3 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl transition-all">Ver todas as notificações</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Automação -->
+<div class="space-y-4">
+<h5 class="text-lg font-bold text-slate-900 dark:text-white">Status de Automação</h5>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="size-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined">chat</span>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">WhatsApp</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="size-2 bg-green-500 rounded-full animate-pulse"></span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Conectado</span>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="size-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined">camera</span>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Instagram</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="size-2 bg-slate-400 rounded-full"></span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Inativo</span>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">mail</span>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Email Marketing</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="size-2 bg-primary rounded-full"></span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Agendado</span>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="size-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">IA Assistente</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="size-2 bg-purple-500 rounded-full animate-bounce"></span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Processando</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

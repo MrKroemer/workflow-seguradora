@@ -208,6 +208,8 @@ def _build_google_color_map_from_env() -> dict[str, str]:
         ("GOOGLE_COLOR_IDS_AZUL", "AZUL", ("9",)),
         ("GOOGLE_COLOR_IDS_CINZA", "CINZA", ("8",)),
         ("GOOGLE_COLOR_IDS_VERDE", "VERDE", ("10",)),
+        ("GOOGLE_COLOR_IDS_AMARELO", "AMARELO", ("5",)),
+        ("GOOGLE_COLOR_IDS_TANGERINA", "TANGERINA", ("6",)),
     )
     for env_key, semantic, defaults in rules:
         for color_id in _env_csv(env_key, defaults):
@@ -514,11 +516,12 @@ def main() -> None:
                     import_source_dir=(os.getenv("SEGFY_IMPORT_SOURCE_DIR") or "").strip() or None,
                     import_max_files=_env_int("SEGFY_WEB_IMPORT_MAX_FILES", default=100),
                     import_state_path=(os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json").strip(),
+                    payment_enabled=_env_flag("SEGFY_WEB_PAYMENT_ENABLED", default=True),
+                    payment_page_url=(os.getenv("SEGFY_WEB_PAYMENT_URL") or "").strip() or None,
                 )
                 segfy_mode = "WEB_AUTOMATION_ONLY"
                 segfy_hint = (
-                    "Segfy web ativo sem fallback. "
-                    "Para cobertura completa de baixa de parcelas, configure API do Segfy."
+                    "Segfy web ativo sem fallback (importacao, leitura e baixa de pagamentos via navegador)."
                 )
             elif segfy_user and segfy_password and not segfy_web_automation_available():
                 segfy_hint = (
@@ -546,6 +549,8 @@ def main() -> None:
                         import_state_path=(
                             os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json"
                         ).strip(),
+                        payment_enabled=_env_flag("SEGFY_WEB_PAYMENT_ENABLED", default=True),
+                        payment_page_url=(os.getenv("SEGFY_WEB_PAYMENT_URL") or "").strip() or None,
                     ),
                     fallback=segfy_api_gateway,
                 )

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-item {
+            background-color: rgba(236, 91, 19, 0.15);
+            border-left: 4px solid #ec5b13;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- SideNavBar -->
+<aside class="w-64 flex flex-col bg-slate-900 dark:bg-black text-white shrink-0">
+<div class="p-6 flex flex-col h-full">
+<!-- Brand -->
+<div class="flex items-center gap-3 mb-10">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white">shield_with_heart</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold leading-none">SeguroGestão</h1>
+<p class="text-slate-400 text-xs font-medium uppercase tracking-wider">Insurance Pro</p>
+</div>
+</div>
+<!-- Nav Items -->
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-white active-nav-item rounded-r-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-primary">group</span>
+<span class="text-sm font-semibold">Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Propostas</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-sm font-medium">Financeiro</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">bolt</span>
+<span class="text-sm font-medium">Automação</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors mt-auto" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Ajustes</span>
+</a>
+</nav>
+<!-- Profile Footer -->
+<div class="pt-6 border-t border-slate-800 mt-6">
+<div class="flex items-center gap-3 px-2">
+<div class="size-10 rounded-full bg-slate-700 overflow-hidden border-2 border-primary/50">
+<img alt="Ricardo Mendes Profile" data-alt="Portrait of a smiling professional man" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAguzy7gBt4Hs3BH4Lnbk6SHFh9Iz905iN45qk3eM_6yZxIW7QBtViKsMSsEeD_m9fZaY9mRpAdTPVbf69wiZmX3UKNytUOz3gz6BfsN4wJ9ruACxxt6sUZLUx5pqgyf7VTGAwSkW9lPgo_ePTLAJ7XKxK1oMJRc1ygG7snrtVL-sOyy2zdhnkEXfp6un0EKD1ATIR6KPNADJGgqo3jZZX_pKzSWLbVGvTiZOsSzlI2aNu8PCqH413GUwsDAkGHXcRwpqBBpo3Fue0"/>
+</div>
+<div class="flex flex-col min-w-0">
+<p class="text-sm font-semibold truncate text-white">Ricardo Mendes</p>
+<p class="text-xs text-slate-400 truncate">Administrador</p>
+</div>
+<button class="ml-auto text-slate-500 hover:text-white">
+<span class="material-symbols-outlined text-lg">logout</span>
+</button>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- Header -->
+<header class="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 px-8 py-6 sticky top-0 z-10">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Lista de Clientes</h2>
+<button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-xl">add</span>
+<span>Novo Cliente</span>
+</button>
+</div>
+</header>
+<!-- Filters Section -->
+<section class="p-8 pb-4">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+<div class="lg:col-span-6">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600" placeholder="Buscar por nome, CPF ou e-mail..." type="text"/>
+</div>
+</div>
+<div class="lg:col-span-6 flex flex-wrap gap-3 items-center lg:justify-end">
+<div class="relative">
+<select class="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pl-4 pr-10 py-3 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
+<option>Status: Ativo</option>
+<option>Inativo</option>
+<option>Pendente</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">expand_more</span>
+</div>
+<div class="relative">
+<select class="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pl-4 pr-10 py-3 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
+<option>Tipo: PF / PJ</option>
+<option>Pessoa Física</option>
+<option>Pessoa Jurídica</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">expand_more</span>
+</div>
+<div class="relative">
+<select class="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pl-4 pr-10 py-3 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
+<option>Últimos 30 dias</option>
+<option>Últimos 90 dias</option>
+<option>Este ano</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">calendar_month</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Table Section -->
+<section class="p-8 pt-0 flex-1">
+<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50">
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nome</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CPF/CNPJ</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">E-mail</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Telefone</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Apólices Ativas</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">AS</div>
+<span class="font-semibold text-slate-900 dark:text-slate-100">Ana Beatriz Silva</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">123.456.789-00</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">ana.silva@email.com</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">(11) 98765-4321</td>
+<td class="px-6 py-5 text-center">
+<span class="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">3</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:text-primary/80 font-bold text-sm flex items-center gap-1 ml-auto transition-all group-hover:translate-x-[-4px]">
+                                            Visualizar <span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">CN</div>
+<span class="font-semibold text-slate-900 dark:text-slate-100">Construtora Norte</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">12.345.678/0001-99</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">contato@norte.com.br</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">(11) 3344-5566</td>
+<td class="px-6 py-5 text-center">
+<span class="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">12</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:text-primary/80 font-bold text-sm flex items-center gap-1 ml-auto transition-all group-hover:translate-x-[-4px]">
+                                            Visualizar <span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">CE</div>
+<span class="font-semibold text-slate-900 dark:text-slate-100">Carlos Eduardo</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">987.654.321-11</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">carlos.edu@email.com</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">(21) 99888-7766</td>
+<td class="px-6 py-5 text-center">
+<span class="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">1</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:text-primary/80 font-bold text-sm flex items-center gap-1 ml-auto transition-all group-hover:translate-x-[-4px]">
+                                            Visualizar <span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">MO</div>
+<span class="font-semibold text-slate-900 dark:text-slate-100">Mariana Oliveira</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">456.789.123-22</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">mari.oli@email.com</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">(31) 97766-5544</td>
+<td class="px-6 py-5 text-center">
+<span class="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">2</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:text-primary/80 font-bold text-sm flex items-center gap-1 ml-auto transition-all group-hover:translate-x-[-4px]">
+                                            Visualizar <span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">TS</div>
+<span class="font-semibold text-slate-900 dark:text-slate-100">Tech Solutions</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">98.765.432/0001-11</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">admin@techsol.com</td>
+<td class="px-6 py-5 text-slate-600 dark:text-slate-400 text-sm">(11) 4002-8922</td>
+<td class="px-6 py-5 text-center">
+<span class="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">8</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:text-primary/80 font-bold text-sm flex items-center gap-1 ml-auto transition-all group-hover:translate-x-[-4px]">
+                                            Visualizar <span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
+<p class="text-sm text-slate-500">Mostrando <span class="font-bold text-slate-900 dark:text-slate-200">1</span> até <span class="font-bold text-slate-900 dark:text-slate-200">5</span> de <span class="font-bold text-slate-900 dark:text-slate-200">42</span> resultados</p>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-primary text-white font-bold text-sm">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm transition-colors">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm transition-colors">3</button>
+<span class="text-slate-400">...</span>
+<button class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-sm transition-colors">9</button>
+<button class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

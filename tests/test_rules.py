@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from rpa_corretora.config import RenewalSettings
-from rpa_corretora.domain.models import CashflowEntry, EmailMessage, FollowupRecord, PolicyRecord, TodoTask
+from rpa_corretora.domain.models import CalendarCommitment, CashflowEntry, EmailMessage, FollowupRecord, PolicyRecord, TodoTask
 from rpa_corretora.domain.rules import (
     build_commission_pending_alert,
     build_followup_alerts,
@@ -10,6 +10,11 @@ from rpa_corretora.domain.rules import (
     build_renewal_alerts,
     build_todo_pending_alert,
     business_day_with_anticipation,
+    extract_overdue_due_date,
+    extract_renewal_vig_date,
+    should_send_bank_release_message,
+    should_send_overdue_message,
+    should_send_renewal_message,
 )
 
 
@@ -175,3 +180,44 @@ def test_build_nubank_email_alert_registers_context() -> None:
     assert "Nubank" in alert.message
     assert alert.context["email_id"] == "msg-nu-1"
     assert alert.context["value"] == "149.90"
+
+
+def test_should_send_renewal_message_only_d10_with_vig_from_card() -> None:
+    commitment = CalendarCommitment(
+        id="ag-ren-1",
+        title="RENOVACAO - ANA SILVA",
+        color="VERDE",
+        due_date=date(2026, 4, 1),
+        description="Cliente: Ana Silva\nVIG: 15/04/2026",
+    )
+
+    assert extract_renewal_vig_date(commitment) == date(2026, 4, 15)
+    assert should_send_renewal_message(commitment, date(2026, 4, 5)) is True
+    assert should_send_renewal_message(commitment, date(2026, 4, 4)) is False
+
+
+def test_should_send_overdue_message_only_tangerine_and_gt_5_days() -> None:
+    commitment = CalendarCommitment(
+        id="ag-atraso-1",
+        title="BOLETO VENCIDO - JOAO",
+        color="TANGERINA",
+        due_date=date(2026, 4, 1),
+        description="Parcela em atraso\nVENCIMENTO: 27/03/2026",
+    )
+
+    assert extract_overdue_due_date(commitment) == date(2026, 3, 27)
+    assert should_send_overdue_message(commitment, date(2026, 4, 1)) is False
+    assert should_send_overdue_message(commitment, date(2026, 4, 3)) is True
+
+
+def test_should_send_bank_release_message_exactly_d2() -> None:
+    commitment = CalendarCommitment(
+        id="ag-banco-1",
+        title="LIBERACAO COBRANCA EM CONTA",
+        color="AMARELO",
+        due_date=date(2026, 4, 10),
+        description="Banco: X\nLiberacao de cobranca em conta corrente",
+    )
+
+    assert should_send_bank_release_message(commitment, date(2026, 4, 8)) is True
+    assert should_send_bank_release_message(commitment, date(2026, 4, 7)) is False

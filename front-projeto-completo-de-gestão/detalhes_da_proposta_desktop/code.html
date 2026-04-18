@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#ec5b13",
+              "background-light": "#f8f6f6",
+              "background-dark": "#221610",
+              "neutral-subtle": "#e5e1e0",
+              "neutral-dark": "#3d2b24",
+            },
+            fontFamily: {
+              "display": ["Public Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 bg-background-dark flex flex-col border-r border-primary/10">
+<div class="p-6 flex items-center gap-3">
+<div class="size-10 bg-primary rounded-xl flex items-center justify-center text-white">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-none">SeguroSys</h1>
+<p class="text-primary text-xs font-medium">Insurance Manager</p>
+</div>
+</div>
+<nav class="flex-1 px-4 py-4 space-y-2">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-primary/10 hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-primary/10 hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Propostas</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-primary/10 hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-sm font-medium">Financeiro</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-primary/10 hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="text-sm font-medium">Automação</span>
+</a>
+<div class="pt-4 mt-4 border-t border-slate-700/50">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:bg-primary/10 hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Ajustes</span>
+</a>
+</div>
+</nav>
+<div class="p-4 mt-auto border-t border-slate-700/50">
+<div class="flex items-center gap-3 px-2">
+<div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-white">Ricardo Silva</span>
+<span class="text-[10px] text-slate-400">Corretor Master</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-y-auto bg-background-light dark:bg-background-dark">
+<!-- Header -->
+<header class="flex items-center justify-between px-8 py-4 border-b border-neutral-subtle dark:border-slate-800 bg-white dark:bg-background-dark/50">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+<span>Home</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span>Propostas</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary font-medium">Detalhes</span>
+</div>
+<h2 class="text-xl font-bold dark:text-white">Proposta #12345</h2>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center size-10 rounded-xl bg-neutral-subtle dark:bg-neutral-dark text-slate-700 dark:text-slate-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="h-8 w-[1px] bg-neutral-subtle dark:bg-slate-800 mx-2"></div>
+<button class="bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">edit</span>
+                        Editar Proposta
+                    </button>
+</div>
+</header>
+<!-- Content Area -->
+<div class="p-8 space-y-6">
+<!-- Status Bar -->
+<div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<div class="flex flex-col">
+<p class="text-lg font-bold text-primary">Pendente de Assinatura</p>
+<p class="text-sm text-slate-600 dark:text-slate-400">Aguardando a assinatura digital do segurado para prosseguir com a emissão.</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-neutral-dark border border-neutral-subtle dark:border-slate-700 text-sm font-medium hover:bg-slate-50">
+<span class="material-symbols-outlined text-base">picture_as_pdf</span>
+                            Visualizar PDF
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-neutral-dark border border-neutral-subtle dark:border-slate-700 text-sm font-medium hover:bg-slate-50">
+<span class="material-symbols-outlined text-base">call</span>
+                            Contatar
+                        </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column: Primary Details -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Dados do Segurado -->
+<section class="bg-white dark:bg-neutral-dark rounded-xl border border-neutral-subtle dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center gap-2 mb-6 border-b border-neutral-subtle dark:border-slate-800 pb-4">
+<span class="material-symbols-outlined text-primary">person</span>
+<h3 class="text-lg font-bold">Dados do Segurado</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Nome Completo</p>
+<p class="text-sm font-medium">João Paulo Fernandes de Oliveira</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">CPF / CNPJ</p>
+<p class="text-sm font-medium">123.456.789-00</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">E-mail</p>
+<p class="text-sm font-medium text-primary underline decoration-primary/30">joao.paulo@email.com</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Telefone</p>
+<p class="text-sm font-medium">(11) 98765-4321</p>
+</div>
+</div>
+</section>
+<!-- Detalhes do Seguro -->
+<section class="bg-white dark:bg-neutral-dark rounded-xl border border-neutral-subtle dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center gap-2 mb-6 border-b border-neutral-subtle dark:border-slate-800 pb-4">
+<span class="material-symbols-outlined text-primary">directions_car</span>
+<h3 class="text-lg font-bold">Detalhes do Seguro</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Ramo/Tipo</p>
+<p class="text-sm font-medium">Automóvel Passeio</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Seguradora</p>
+<p class="text-sm font-medium">Porto Seguro Seguros</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Nº Apólice</p>
+<p class="text-sm font-medium">Pending</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Valor do Prêmio</p>
+<p class="text-sm font-bold text-primary">R$ 2.450,80</p>
+</div>
+<div class="md:col-span-2 space-y-1">
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Vigência</p>
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium">15/05/2024</p>
+<span class="material-symbols-outlined text-xs text-slate-400">arrow_forward</span>
+<p class="text-sm font-medium">15/05/2025</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Anexos -->
+<section class="bg-white dark:bg-neutral-dark rounded-xl border border-neutral-subtle dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6 border-b border-neutral-subtle dark:border-slate-800 pb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">attach_file</span>
+<h3 class="text-lg font-bold">Anexos</h3>
+</div>
+<button class="text-primary text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add</span> Adicionar
+                                </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="flex items-center justify-between p-3 bg-neutral-subtle/30 dark:bg-background-dark/30 rounded-lg border border-neutral-subtle/50 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
+<div class="flex flex-col">
+<span class="text-sm font-medium truncate max-w-[150px]">CNH_Segurado.pdf</span>
+<span class="text-[10px] text-slate-400 uppercase font-bold">1.2 MB</span>
+</div>
+</div>
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-slate-500 hover:text-primary">
+<span class="material-symbols-outlined text-base">download</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-neutral-subtle/30 dark:bg-background-dark/30 rounded-lg border border-neutral-subtle/50 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500">image</span>
+<div class="flex flex-col">
+<span class="text-sm font-medium truncate max-w-[150px]">Frente_Veiculo.jpg</span>
+<span class="text-[10px] text-slate-400 uppercase font-bold">3.4 MB</span>
+</div>
+</div>
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-slate-500 hover:text-primary">
+<span class="material-symbols-outlined text-base">download</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-neutral-subtle/30 dark:bg-background-dark/30 rounded-lg border border-neutral-subtle/50 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
+<div class="flex flex-col">
+<span class="text-sm font-medium truncate max-w-[150px]">CRLV_2023.pdf</span>
+<span class="text-[10px] text-slate-400 uppercase font-bold">0.8 MB</span>
+</div>
+</div>
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-slate-500 hover:text-primary">
+<span class="material-symbols-outlined text-base">download</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Timeline & Side Info -->
+<div class="space-y-6">
+<!-- Timeline Section -->
+<section class="bg-white dark:bg-neutral-dark rounded-xl border border-neutral-subtle dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center gap-2 mb-6 border-b border-neutral-subtle dark:border-slate-800 pb-4">
+<span class="material-symbols-outlined text-primary">history</span>
+<h3 class="text-lg font-bold">Histórico da Proposta</h3>
+</div>
+<div class="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-neutral-subtle dark:before:bg-slate-800">
+<!-- Timeline Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full bg-primary border-2 border-white dark:border-neutral-dark ring-4 ring-primary/20"></div>
+<div class="flex flex-col">
+<p class="text-xs text-slate-500 font-bold mb-1">HOJE, 14:20</p>
+<p class="text-sm font-bold">E-mail de assinatura enviado</p>
+<p class="text-xs text-slate-600 dark:text-slate-400">Sistema automático enviou link para o cliente.</p>
+</div>
+</div>
+<!-- Timeline Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full bg-neutral-subtle dark:bg-slate-700 border-2 border-white dark:border-neutral-dark"></div>
+<div class="flex flex-col">
+<p class="text-xs text-slate-500 font-bold mb-1">ONTEM, 10:45</p>
+<p class="text-sm font-medium">Proposta aprovada pela Seguradora</p>
+<p class="text-xs text-slate-600 dark:text-slate-400">Status atualizado pela API Porto Seguro.</p>
+</div>
+</div>
+<!-- Timeline Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full bg-neutral-subtle dark:bg-slate-700 border-2 border-white dark:border-neutral-dark"></div>
+<div class="flex flex-col">
+<p class="text-xs text-slate-500 font-bold mb-1">14 MAI, 16:30</p>
+<p class="text-sm font-medium">Proposta criada</p>
+<p class="text-xs text-slate-600 dark:text-slate-400">Criada manualmente por Ricardo Silva.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Call to Action Card -->
+<div class="bg-primary/10 rounded-xl border-2 border-dashed border-primary/40 p-6 text-center">
+<span class="material-symbols-outlined text-4xl text-primary mb-3">speed</span>
+<h4 class="font-bold mb-2">Acelerar Emissão?</h4>
+<p class="text-xs text-slate-600 dark:text-slate-400 mb-4">Você pode enviar um lembrete via WhatsApp para o cliente assinar o documento.</p>
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2 rounded-lg text-sm transition-all">
+                                Enviar WhatsApp
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

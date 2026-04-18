@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SeguroGestão - Clientes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<!-- Wrapper for Mobile View -->
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-xl overflow-x-hidden">
+<!-- Header -->
+<header class="sticky top-0 z-20 flex items-center justify-between px-4 py-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<button class="flex items-center justify-center p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300">menu</span>
+</button>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Clientes</h1>
+<button class="flex items-center justify-center p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300">search</span>
+</button>
+</header>
+<!-- Search & Action Section -->
+<div class="px-4 pb-4 space-y-4">
+<!-- Search Bar -->
+<div class="relative flex items-center group">
+<div class="absolute left-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50 placeholder-slate-500 dark:placeholder-slate-400" placeholder="Buscar por nome ou CPF..." type="text"/>
+</div>
+<!-- New Client Button -->
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-[0.98]">
+<span class="material-symbols-outlined">add_circle</span>
+                Novo Cliente
+            </button>
+</div>
+<!-- Client List -->
+<main class="flex-1 px-4 pb-24 space-y-3">
+<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-1">Recentes</p>
+<!-- Client Card 1 -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                        JS
+                    </div>
+<div>
+<h3 class="font-semibold text-slate-900 dark:text-slate-100">João Silva</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">(11) 98765-4321</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold uppercase tracking-wide">Ativo</span>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700">chevron_right</span>
+</div>
+</div>
+<!-- Client Card 2 -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Female profile picture portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEQZByw7KMGnnThP6DwHwg1PK3pwuisMz7CeYSVY97H7KmXZOVPu_UoGfTaqx79NhYivX9FhX_E3uKgs_qdtaXSlosYYpKPzb58eZHPGkD5mi1rHuGYytPz1LFLfQ83vGAiB5IEujIkO_cfAsBVk9iqVecXU7V2SP5ovpkYR-A9G_ZqST0TraTwzk1LAXHaqqe3ZTp2wiKjbylSMTlHrSRmBt5HJNLkasTfbAStwZzJ-wRvFWsY3wsBC0eTHC3EO3iE48ExE98VG8"/>
+</div>
+<div>
+<h3 class="font-semibold text-slate-900 dark:text-slate-100">Maria Oliveira</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">(21) 99887-7665</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold uppercase tracking-wide">Ativo</span>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700">chevron_right</span>
+</div>
+</div>
+<!-- Client Card 3 -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between opacity-80">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                        RC
+                    </div>
+<div>
+<h3 class="font-semibold text-slate-900 dark:text-slate-100">Ricardo Costa</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">(31) 97766-5544</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide">Pendente</span>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700">chevron_right</span>
+</div>
+</div>
+<!-- Client Card 4 -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Male profile picture portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD94qXx4qzmyxuF-5TkTRfkQNTCjobM6l62nishgN3R6PjaqOH-lLMHgdHsQWTh-laA-zLKsSOjixDxYZ8NyYPxc9K704Y5UsTgOX0OrTUbWAt3sjXhshcfDQa-4nnbbUOY20K4mx4zb4BW-fXhHw9LxYbye0U8DxAfPJ6RfaGYbBh6oYp4UVMTeuK7cU5xrd2UuU_huKMIrSwzja_hJd5k-pW-DuRwZ4H6GHh6b51GZOmqod4fSZhv8gN--nSLOe4RaSNvJZVFXFw"/>
+</div>
+<div>
+<h3 class="font-semibold text-slate-900 dark:text-slate-100">André Santos</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">(11) 91234-5678</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold uppercase tracking-wide">Ativo</span>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700">chevron_right</span>
+</div>
+</div>
+<!-- Client Card 5 -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                        AL
+                    </div>
+<div>
+<h3 class="font-semibold text-slate-900 dark:text-slate-100">Ana Lúcia</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">(41) 98877-0099</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-[10px] font-bold uppercase tracking-wide">Vencendo</span>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700">chevron_right</span>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 pb-6 pt-2 z-30">
+<div class="flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 flex-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Início</span>
+</a>
+<a class="flex flex-col items-center gap-1 flex-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-[10px] font-medium">Propostas</span>
+</a>
+<a class="flex flex-col items-center gap-1 flex-1 text-primary active-tab" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-[10px] font-bold">Clientes</span>
+</a>
+<a class="flex flex-col items-center gap-1 flex-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="text-[10px] font-medium">Mais</span>
+</a>
+</div>
+</nav>
+<!-- FAB for mobile - Alternate placement if button above is not used -->
+<!-- <button class="fixed bottom-24 right-4 bg-primary text-white p-4 rounded-full shadow-lg z-40">
+            <span class="material-symbols-outlined">person_add</span>
+        </button> -->
+</div>
+</body></html>

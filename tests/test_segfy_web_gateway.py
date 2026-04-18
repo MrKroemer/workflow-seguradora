@@ -93,3 +93,51 @@ def test_segfy_web_gateway_persists_last_execution_state(tmp_path: Path) -> None
 
     loaded = gateway._load_last_execution_utc()
     assert loaded == marker
+
+
+def test_segfy_web_gateway_register_payment_disabled_returns_false() -> None:
+    gateway = SegfyWebGateway(
+        username="u",
+        password="p",
+        base_url="https://app.segfy.com",
+        payment_enabled=False,
+    )
+    assert gateway.register_payment(commitment_id="abc", description="desc") is False
+
+
+def test_segfy_web_gateway_register_payment_without_web_automation_returns_false(monkeypatch) -> None:
+    monkeypatch.setattr("rpa_corretora.integrations.segfy_web_gateway.segfy_web_automation_available", lambda: False)
+    gateway = SegfyWebGateway(
+        username="u",
+        password="p",
+        base_url="https://app.segfy.com",
+    )
+    assert gateway.register_payment(commitment_id="abc", description="desc") is False
+
+
+def test_segfy_web_gateway_payment_urls_include_financeiro_parcelas() -> None:
+    gateway = SegfyWebGateway(
+        username="u",
+        password="p",
+        base_url="https://app.segfy.com",
+    )
+
+    urls = gateway._payment_urls()
+    assert "https://app.segfy.com/financeiro/parcelas" in urls
+    assert "https://app.segfy.com/financeiro/recebimentos" in urls
+
+
+def test_segfy_web_gateway_build_payment_queries_extracts_compact_tokens() -> None:
+    gateway = SegfyWebGateway(
+        username="u",
+        password="p",
+        base_url="https://app.segfy.com",
+    )
+
+    queries = gateway._build_payment_queries(
+        commitment_id="AZUL-2026-001",
+        description="JOSE DA SILVA - APOLICE 316120260426687 - BAIXA",
+    )
+    assert "AZUL-2026-001" in queries
+    assert "JOSE DA SILVA - APOLICE 316120260426687 - BAIXA" in queries
+    assert any(item.startswith("JOSE") for item in queries)

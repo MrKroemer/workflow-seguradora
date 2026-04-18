@@ -1,5 +1,6 @@
 from datetime import date
 
+from rpa_corretora.config import MicrosoftTodoSettings
 from rpa_corretora.integrations import microsoft_todo_desktop
 
 
@@ -81,3 +82,56 @@ def test_parse_tasks_from_blocks_desktop_extracts_contact_fields() -> None:
     assert task.contact_phone == "+5583999897477"
     assert task.contact_email == "ana.silva@pbseg.com"
     assert "Rua das Flores" in (task.contact_address or "")
+
+
+class _FakeElementInfo:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class _FakeEdit:
+    def __init__(self, label: str) -> None:
+        self._label = label
+        self.element_info = _FakeElementInfo(label)
+        self.cleared_to: str | None = None
+        self.clicked = False
+
+    def window_text(self) -> str:
+        return self._label
+
+    def click_input(self) -> None:
+        self.clicked = True
+
+    def set_edit_text(self, value: str) -> None:
+        self.cleared_to = value
+
+
+class _FakeWindow:
+    def __init__(self, edits: list[_FakeEdit]) -> None:
+        self._edits = edits
+        self.focused = False
+
+    def set_focus(self) -> None:
+        self.focused = True
+
+    def descendants(self, control_type: str):
+        if control_type == "Edit":
+            return list(self._edits)
+        return []
+
+
+def test_clear_search_filter_prefers_search_editor_cleanup() -> None:
+    gateway = microsoft_todo_desktop.MicrosoftTodoDesktopGateway(
+        settings=MicrosoftTodoSettings(username="user@example.com", password="Senha@123")
+    )
+    search_edit = _FakeEdit("Pesquisar")
+    add_task_edit = _FakeEdit("Adicionar uma tarefa")
+    window = _FakeWindow([search_edit, add_task_edit])
+
+    gateway._clear_search_filter(window)
+
+    assert window.focused is True
+    assert search_edit.clicked is True
+    assert search_edit.cleared_to == ""
+    # Quick add should not be manipulated while clearing filters.
+    assert add_task_edit.cleared_to is None

@@ -1,0 +1,305 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 1955 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(RELATORIO DE EXECUCAO - RPA CORRETORA) Tj
+T*
+(========================================================================) Tj
+T*
+(Run ID: RUN-20260417-005) Tj
+T*
+(Versao do bot: 0.1.0) Tj
+T*
+(Inicio do ciclo: 2026-04-17 15:35:33) Tj
+T*
+(Fim do ciclo: 2026-04-17 15:35:33) Tj
+T*
+() Tj
+T*
+(RESUMO EXECUTIVO) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Total previsto: 8) Tj
+T*
+(Total com sucesso: 0) Tj
+T*
+(Falha ou nao executadas: 8) Tj
+T*
+(Status geral: FALHA CRITICA) Tj
+T*
+() Tj
+T*
+(DETALHAMENTO POR ETAPA) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Etapa: Google Calendar) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(Etapa: Microsoft To Do) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(Etapa: Gmail) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(Etapa: Segfy CRM) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(Etapa: Portais das seguradoras) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(Etapa: Planilhas operacionais) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 3424 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(Etapa: Notificacoes via WhatsApp) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(Etapa: Dashboard consolidado) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-17 15:35:33) Tj
+T*
+(Fim: 2026-04-17 15:35:33) Tj
+T*
+(Resultado: Etapa nao executada devido a interrupcao antecipada do ciclo.) Tj
+T*
+() Tj
+T*
+(ITENS NAO EXECUTADOS) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(1. Item: Envio de relatorio por e-mail) Tj
+T*
+(   Motivo: EXECUTION_REPORT_EMAIL_TO nao configurado.) Tj
+T*
+(   Acao recomendada: Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor.) Tj
+T*
+(2. Item: Google Calendar) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(3. Item: Microsoft To Do) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(4. Item: Gmail) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(5. Item: Segfy CRM) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(6. Item: Portais das seguradoras) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(7. Item: Planilhas operacionais) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(8. Item: Notificacoes via WhatsApp) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+(9. Item: Dashboard consolidado) Tj
+T*
+(   Motivo: Fluxo interrompido antes desta etapa.) Tj
+T*
+(   Acao recomendada: Reprocessar o ciclo apos corrigir a falha anterior.) Tj
+T*
+() Tj
+T*
+(LOG DE ERROS) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(1. [2026-04-17 15:35:33] Main) Tj
+T*
+(   RuntimeError: Execucao bloqueada pelo modo --strict-production.
+Corrija os itens abaixo para rodar sem fallback:
+1. Google Agenda precisa estar em GOOGLE_API \(sem NOOP\).
+2. Gmail precisa estar em GMAIL_IMAP \(sem NOOP\).
+3. Microsoft To Do precisa operar via aplicativo desktop \(DESKTOP_APP\).
+4. Segfy em producao estrita precisa estar em API_ONLY ou WEB_AUTOMATION_ONLY \(sem QUEUE/EXPORT/STUB/fallback\).
+5. Portais precisam estar em WEB_MULTI_ONLY \(sem STUB\).
+6. WhatsApp precisa estar em HTTP_API \(sem OUTBOX_FILE\).
+7. E-mail precisa estar em SMTP \(sem OUTBOX_FILE\).
+8. EXECUTION_REPORT_EMAIL_TO e obrigatorio para entrega automatica em producao estrita.) Tj
+T*
+(   Contexto: {'fase': 'top_level'}) Tj
+T*
+(   Traceback:) Tj
+T*
+(     Traceback \(most recent call last\):) Tj
+T*
+(       File "/home/sculpt0r/Documents/projeto_dani/robot/src/rpa_corretora/main.py", line 853, in main) Tj
+T*
+(         _enforce_strict_production_or_fail\() Tj
+T*
+(       File "/home/sculpt0r/Documents/projeto_dani/robot/src/rpa_corretora/main.py", line 291, in _enforce_strict_production_or_fail) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 874 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(         raise RuntimeError\() Tj
+T*
+(     RuntimeError: Execucao bloqueada pelo modo --strict-production.) Tj
+T*
+(     Corrija os itens abaixo para rodar sem fallback:) Tj
+T*
+(     1. Google Agenda precisa estar em GOOGLE_API \(sem NOOP\).) Tj
+T*
+(     2. Gmail precisa estar em GMAIL_IMAP \(sem NOOP\).) Tj
+T*
+(     3. Microsoft To Do precisa operar via aplicativo desktop \(DESKTOP_APP\).) Tj
+T*
+(     4. Segfy em producao estrita precisa estar em API_ONLY ou WEB_AUTOMATION_ONLY \(sem QUEUE/EXPORT/STUB/fallback\).) Tj
+T*
+(     5. Portais precisam estar em WEB_MULTI_ONLY \(sem STUB\).) Tj
+T*
+(     6. WhatsApp precisa estar em HTTP_API \(sem OUTBOX_FILE\).) Tj
+T*
+(     7. E-mail precisa estar em SMTP \(sem OUTBOX_FILE\).) Tj
+T*
+(     8. EXECUTION_REPORT_EMAIL_TO e obrigatorio para entrega automatica em producao estrita.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000203 00000 n 
+0000000329 00000 n 
+0000002336 00000 n 
+0000002462 00000 n 
+0000005938 00000 n 
+0000006064 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+6989
+%%EOF

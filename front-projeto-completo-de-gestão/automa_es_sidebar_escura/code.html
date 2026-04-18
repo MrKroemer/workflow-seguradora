@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SeguroGestão - Configurações de Automação</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="w-72 border-r flex flex-col shrink-0 border-white/10" style="background-color: #111827;">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="bg-primary rounded-xl p-2 text-white flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl">shield_person</span>
+</div>
+<div>
+<h1 class="text-lg font-bold leading-tight text-white">SeguroGestão</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Administrador</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-slate-400 hover:bg-white/10 hover:text-white" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-slate-400 hover:bg-white/10 hover:text-white" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-slate-400 hover:bg-white/10 hover:text-white" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Apólices</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary/10 text-primary rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">auto_fix</span>
+<span class="text-sm font-semibold">Automações</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-slate-400 hover:bg-white/10 hover:text-white" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configurações</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 border-t border-white/10">
+<div class="p-4 rounded-xl flex items-center gap-3 bg-transparent">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate text-white">Marcos Silva</p>
+<p class="text-[10px] dark:text-slate-400 truncate">Corretor Senior</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-8">
+<header class="max-w-5xl mx-auto mb-8">
+<div class="flex justify-between items-end gap-4">
+<div>
+<h2 class="text-3xl font-black text-slate-900 dark:text-slate-100 leading-tight">Configurações de Automação</h2>
+<p class="text-slate-500 dark:text-slate-400 mt-1">Gerencie suas integrações e mensagens automáticas para otimizar seu atendimento.</p>
+</div>
+<button class="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-xl">save</span>
+                        Salvar Alterações
+                    </button>
+</div>
+</header>
+<div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Settings -->
+<div class="lg:col-span-2 space-y-8">
+<!-- WhatsApp Business Section -->
+<section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/50">
+<span class="material-symbols-outlined text-green-500 font-bold">chat</span>
+<h3 class="font-bold text-lg">Integração WhatsApp Business</h3>
+</div>
+<div class="p-6 space-y-6">
+<!-- Toggle 1 -->
+<div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-colors">
+<div class="flex-1">
+<p class="font-bold text-slate-900 dark:text-slate-100">Lembrete de Vencimentos</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Enviar alerta automático 7 dias antes do vencimento da apólice.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Toggle 2 -->
+<div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-colors">
+<div class="flex-1">
+<p class="font-bold text-slate-900 dark:text-slate-100">Mensagem de Aniversário</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Parabenizar clientes automaticamente na data de nascimento.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Toggle 3 -->
+<div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-colors">
+<div class="flex-1">
+<p class="font-bold text-slate-900 dark:text-slate-100">Renovação de Contrato</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Notificar corretor e cliente quando a renovação estiver disponível.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Instagram API Section -->
+<section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/50">
+<span class="material-symbols-outlined text-pink-500 font-bold">photo_camera</span>
+<h3 class="font-bold text-lg">Integração Instagram API</h3>
+</div>
+<div class="p-6 space-y-6">
+<div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-colors">
+<div class="flex-1">
+<p class="font-bold text-slate-900 dark:text-slate-100">Calendário de Postagens</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Publicação automática de dicas de seguros e novidades da corretora.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-colors opacity-60">
+<div class="flex-1">
+<p class="font-bold text-slate-900 dark:text-slate-100">Auto-Resposta de DMs (BETA)</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Responder automaticamente dúvidas frequentes via Direct Message.</p>
+</div>
+<span class="bg-slate-100 dark:bg-slate-800 text-slate-400 px-3 py-1 rounded-lg text-xs font-bold">EM BREVE</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Info & Tips -->
+<div class="space-y-6">
+<!-- Performance Tip Box -->
+<div class="bg-primary/5 dark:bg-primary/10 border border-primary/20 p-6 rounded-2xl relative overflow-hidden">
+<div class="absolute -right-4 -top-4 text-primary/10 transform rotate-12">
+<span class="material-symbols-outlined text-8xl">lightbulb</span>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 text-primary mb-3">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-bold uppercase tracking-wider text-xs">Dica de Performance</span>
+</div>
+<h4 class="font-bold text-lg mb-2 leading-tight">Aumente sua retenção em até 30%</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                                Manter o "Lembrete de Vencimentos" ativo reduz significativamente a inadimplência e a perda de clientes por esquecimento.
+                            </p>
+<hr class="my-4 border-primary/10"/>
+<p class="text-xs text-primary font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">bolt</span>
+                                85% dos usuários ativos usam esta função.
+                            </p>
+</div>
+</div>
+<!-- Usage Stats Card -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+<h4 class="font-bold mb-4">Uso de API (Mensal)</h4>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-500">WhatsApp Messages</span>
+<span class="font-bold">1,240 / 5,000</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 25%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-500">Instagram Posts</span>
+<span class="font-bold">12 / 30</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 40%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Automation Image Placeholder -->
+<div class="rounded-2xl overflow-hidden h-48 bg-slate-200 dark:bg-slate-800 relative group">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Data visualization dashboard for business automation metrics" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDstJklALIB18kcgeoXviqRF-TLEqmH75a_k8swZzp9FD3hzKe3k9GsiqMsHEBn2Odvkd62iUu5Y-9M86EswjQ4Q9L4kIDZeVyeVaOpY6d4ChLdCYyHAlJvYCMq3TYRjhBOGp6DO9QJufiIyXz4vydgXfHMAvKqyDfyBqcmoVuccWlqcK-pShTzaB9eSjjAMEvYoNXyKLAP8Q5HEnDbIB3odNHPIQUtfHkeJssN5CGMbW3wEC7kl-g_yqaT1Qh-pz3OoWxH58ekP6I"/>
+<div class="absolute bottom-4 left-4 right-4 text-white">
+<p class="text-[10px] uppercase font-bold tracking-widest opacity-80 mb-1">Analíticos</p>
+<p class="text-sm font-medium leading-snug">Veja o impacto real das automações em seus números.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

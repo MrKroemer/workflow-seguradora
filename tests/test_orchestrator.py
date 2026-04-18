@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from rpa_corretora.config import AppSettings, MicrosoftTodoSettings, RenewalSettings
 from rpa_corretora.domain.models import (
     CalendarCommitment,
     DashboardSnapshot,
+    EmailMessage,
     PolicyRecord,
     TodoTask,
 )
@@ -72,6 +73,43 @@ class _CalendarGatewayWithWriter(_CalendarGateway):
     def upsert_todo_task_event(self, *, task: TodoTask) -> str | None:
         self.upserted_task_ids.append(task.id)
         return f"evt-{len(self.upserted_task_ids)}"
+
+
+class _CalendarGatewayMessageRules:
+    def fetch_daily_commitments(self, day: date) -> list[CalendarCommitment]:
+        _ = day
+        return [
+            CalendarCommitment(
+                id="renovacao-1",
+                title="RENOVACAO - ANA SILVA",
+                color="VERDE",
+                due_date=date(2026, 4, 3),
+                description="Cliente: Ana Silva\nVIG: 13/04/2026",
+                resolved=False,
+                client_name="Ana Silva",
+                whatsapp_number="+5583999991111",
+            ),
+            CalendarCommitment(
+                id="atraso-1",
+                title="Parcela vencida",
+                color="TANGERINA",
+                due_date=date(2026, 3, 27),
+                description="Boleto em atraso\nVENCIMENTO: 27/03/2026",
+                resolved=False,
+                client_name="Bruno Costa",
+                whatsapp_number="+5583999992222",
+            ),
+            CalendarCommitment(
+                id="banco-1",
+                title="Liberacao cobranca em conta",
+                color="AMARELO",
+                due_date=date(2026, 4, 5),
+                description="Liberacao de cobranca em conta corrente",
+                resolved=False,
+                client_name="Carla Souza",
+                whatsapp_number="+5583999993333",
+            ),
+        ]
 
 
 class _TodoGateway:
@@ -146,6 +184,19 @@ class _TodoGatewayWithContacts(_TodoGateway):
 class _GmailGateway:
     def fetch_unread_messages(self):
         return []
+
+
+class _GmailGatewayWithNubank:
+    def fetch_unread_messages(self):
+        return [
+            EmailMessage(
+                id="nubank-1",
+                sender="noreply@nubank.com.br",
+                subject="Recebimento de pagamento",
+                body="Recebemos um pagamento no valor de R$ 120,50 em 03/04/2026",
+                received_at=datetime(2026, 4, 3, 9, 30, 0),
+            )
+        ]
 
 
 class _SheetsGateway:
@@ -254,7 +305,7 @@ def _settings() -> AppSettings:
     )
 
 
-def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch) -> None:
+def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch, tmp_path) -> None:
     segfy = _SegfyGateway()
     portals = _PortalGateway()
     whatsapp = _WhatsAppGateway()
@@ -275,6 +326,7 @@ def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch) -> None:
     )
 
     monkeypatch.setenv("INSURED_NOTIFY_EMAIL_TO", "operacional@pbseg.com")
+    monkeypatch.setenv("MESSAGE_DISPATCH_STATE_PATH", str(tmp_path / "dispatch_state.json"))
     processor.run(today=date(2026, 3, 30), dry_run=False)
 
     assert len(whatsapp.sent) == 1
@@ -297,9 +349,10 @@ def test_dispatch_notifications_executes_all_agenda_colors(monkeypatch) -> None:
     assert any(title.startswith("VERMELHO | ") for title in todo.created)
     assert all("RPA-AGENDA:" not in title for title in todo.created)
     assert any("AG:" in title for title in todo.created)
+    assert any("| Ana Silva |" in title for title in todo.created)
 
 
-def test_sync_todo_keeps_compatibility_with_legacy_agenda_marker(monkeypatch) -> None:
+def test_sync_todo_keeps_compatibility_with_legacy_agenda_marker(monkeypatch, tmp_path) -> None:
     segfy = _SegfyGateway()
     portals = _PortalGateway()
     whatsapp = _WhatsAppGateway()
@@ -320,6 +373,7 @@ def test_sync_todo_keeps_compatibility_with_legacy_agenda_marker(monkeypatch) ->
     )
 
     monkeypatch.setenv("INSURED_NOTIFY_EMAIL_TO", "operacional@pbseg.com")
+    monkeypatch.setenv("MESSAGE_DISPATCH_STATE_PATH", str(tmp_path / "dispatch_state.json"))
     processor.run(today=date(2026, 3, 30), dry_run=False)
 
     # agenda-red already existed as legacy format, so it should be updated instead of re-created.
@@ -328,7 +382,7 @@ def test_sync_todo_keeps_compatibility_with_legacy_agenda_marker(monkeypatch) ->
     assert len(todo.created) == 3
 
 
-def test_orchestrator_uses_todo_contacts_and_writes_calendar(monkeypatch) -> None:
+def test_orchestrator_uses_todo_contacts_and_writes_calendar(monkeypatch, tmp_path) -> None:
     segfy = _SegfyGateway()
     portals = _PortalGateway()
     whatsapp = _WhatsAppGateway()
@@ -350,6 +404,7 @@ def test_orchestrator_uses_todo_contacts_and_writes_calendar(monkeypatch) -> Non
     )
 
     monkeypatch.setenv("INSURED_NOTIFY_EMAIL_TO", "operacional@pbseg.com")
+    monkeypatch.setenv("MESSAGE_DISPATCH_STATE_PATH", str(tmp_path / "dispatch_state.json"))
     processor.run(today=date(2026, 3, 30), dry_run=False)
 
     # WhatsApp number was absent in calendar and recovered from Microsoft To Do details.
@@ -358,3 +413,37 @@ def test_orchestrator_uses_todo_contacts_and_writes_calendar(monkeypatch) -> Non
 
     # Only non-mirrored To Do tasks are upserted into Google Calendar.
     assert calendar.upserted_task_ids == ["todo-contact-ana"]
+
+
+def test_operational_message_rules_and_nubank_notification_are_dispatched_once(monkeypatch, tmp_path) -> None:
+    segfy = _SegfyGateway()
+    portals = _PortalGateway()
+    whatsapp = _WhatsAppGateway()
+    email_sender = _EmailGateway()
+    todo = _TodoGateway()
+
+    processor = DailyProcessor(
+        settings=_settings(),
+        calendar=_CalendarGatewayMessageRules(),
+        todo=todo,
+        gmail=_GmailGatewayWithNubank(),
+        sheets=_SheetsGateway(),
+        segfy=segfy,
+        portals=portals,
+        whatsapp=whatsapp,
+        email_sender=email_sender,
+        dashboard_builder=_DashboardBuilder(),
+    )
+
+    monkeypatch.setenv("MESSAGE_DISPATCH_STATE_PATH", str(tmp_path / "dispatch_state.json"))
+    monkeypatch.setenv("CORRETORA_NOTIFY_EMAIL_TO", "corretora@pbseg.com")
+
+    processor.run(today=date(2026, 4, 3), dry_run=False)
+    assert len(whatsapp.sent) == 3
+    assert len(email_sender.sent) == 1
+    assert "Aviso Nubank" in email_sender.sent[0][1]
+
+    # Segundo ciclo igual nao deve reenviar mensagens ja disparadas.
+    processor.run(today=date(2026, 4, 3), dry_run=False)
+    assert len(whatsapp.sent) == 3
+    assert len(email_sender.sent) == 1

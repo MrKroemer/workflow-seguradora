@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-CommitmentColor = Literal["VERMELHO", "AZUL", "CINZA", "VERDE"]
+CommitmentColor = Literal["VERMELHO", "AZUL", "CINZA", "VERDE", "AMARELO", "TANGERINA"]
 Severity = Literal["BAIXA", "MEDIA", "ALTA", "CRITICA"]
 
 
@@ -15,6 +15,7 @@ class CalendarCommitment:
     title: str
     color: CommitmentColor
     due_date: date
+    description: str = ""
     resolved: bool = False
     client_name: str | None = None
     whatsapp_number: str | None = None

@@ -395,6 +395,100 @@ def is_renewal_report_email(message: EmailMessage) -> bool:
     return "RELATORIO DE RENOVACAO" in normalized_subject
 
 
+def _commitment_text(commitment: CalendarCommitment) -> str:
+    return f"{commitment.title}\n{commitment.description or ''}"
+
+
+def _extract_labeled_date(text: str, labels: tuple[str, ...]) -> date | None:
+    labels_pattern = "|".join(re.escape(label) for label in labels)
+    pattern = re.compile(
+        rf"(?:{labels_pattern})\s*[:=\-]?\s*(\d{{2}}/\d{{2}}/\d{{4}}|\d{{4}}-\d{{2}}-\d{{2}})",
+        re.IGNORECASE,
+    )
+    match = pattern.search(text)
+    if match is None:
+        return None
+    raw = match.group(1).strip()
+    if "/" in raw:
+        try:
+            return date.fromisoformat("-".join(reversed(raw.split("/"))))
+        except ValueError:
+            return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def is_renewal_commitment(commitment: CalendarCommitment) -> bool:
+    normalized = _normalize(_commitment_text(commitment))
+    return "RENOVACAO" in normalized
+
+
+def extract_renewal_vig_date(commitment: CalendarCommitment) -> date | None:
+    text = _commitment_text(commitment)
+    labeled = _extract_labeled_date(text, ("VIG", "VIGENCIA", "VIGENCIA FINAL", "DATA VIGENCIA"))
+    if labeled is not None:
+        return labeled
+    return None
+
+
+def should_send_renewal_message(commitment: CalendarCommitment, today: date) -> bool:
+    if not is_renewal_commitment(commitment):
+        return False
+    vig_date = extract_renewal_vig_date(commitment)
+    if vig_date is None:
+        return False
+    return today == (vig_date - timedelta(days=10))
+
+
+def is_tangerine_overdue_commitment(commitment: CalendarCommitment) -> bool:
+    if commitment.color != "TANGERINA":
+        return False
+    normalized = _normalize(_commitment_text(commitment))
+    has_billing = "BOLETO" in normalized or "PARCELA" in normalized
+    has_overdue_context = "VENC" in normalized or "ATRAS" in normalized
+    return has_billing and has_overdue_context
+
+
+def extract_overdue_due_date(commitment: CalendarCommitment) -> date | None:
+    text = _commitment_text(commitment)
+    labeled = _extract_labeled_date(
+        text,
+        ("VENCIMENTO", "VENC", "VCTO", "DATA VENCIMENTO", "VENCE"),
+    )
+    if labeled is not None:
+        return labeled
+    normalized = _normalize(text)
+    if "VENC" in normalized:
+        return commitment.due_date
+    return None
+
+
+def should_send_overdue_message(commitment: CalendarCommitment, today: date) -> bool:
+    if not is_tangerine_overdue_commitment(commitment):
+        return False
+    due_date = extract_overdue_due_date(commitment)
+    if due_date is None:
+        return False
+    return (today - due_date).days > 5
+
+
+def is_bank_release_commitment(commitment: CalendarCommitment) -> bool:
+    if commitment.color != "AMARELO":
+        return False
+    normalized = _normalize(_commitment_text(commitment))
+    has_release = "LIBERACAO" in normalized or "LIBERAR" in normalized
+    has_bank_context = "COBRANCA" in normalized or "CONTA CORRENTE" in normalized or "BANCO" in normalized
+    return has_release and has_bank_context
+
+
+def should_send_bank_release_message(commitment: CalendarCommitment, today: date) -> bool:
+    if not is_bank_release_commitment(commitment):
+        return False
+    return today == (commitment.due_date - timedelta(days=2))
+
+
 def build_renewal_report_alert(message: EmailMessage, today: date) -> Alert | None:
     if today.day != 20 or not is_renewal_report_email(message):
         return None
