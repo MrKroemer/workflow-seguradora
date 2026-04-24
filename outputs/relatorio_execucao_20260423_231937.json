@@ -1,0 +1,135 @@
+{
+  "cabecalho": {
+    "inicio_ciclo": "2026-04-23T23:19:37.002006",
+    "fim_ciclo": "2026-04-23T23:19:38.424333",
+    "identificador_execucao": "RUN-20260423-001",
+    "versao_bot": "0.1.0"
+  },
+  "resumo_executivo": {
+    "tarefas_previstas": 8,
+    "tarefas_sucesso": 7,
+    "tarefas_falha_ou_nao_executadas": 1,
+    "status_geral": "SUCESSO PARCIAL"
+  },
+  "detalhamento_por_etapa": [
+    {
+      "nome_etapa": "Google Calendar",
+      "status": "EXECUTADO",
+      "resultado": "0 compromissos lidos (0 pendentes); 0 com cliente identificado.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:37.006061",
+      "fim": "2026-04-23T23:19:37.022104"
+    },
+    {
+      "nome_etapa": "Microsoft To Do",
+      "status": "EXECUTADO",
+      "resultado": "0 tarefas abertas lidas (sincronizacao pendente).",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:37.022119",
+      "fim": "2026-04-23T23:19:38.423054"
+    },
+    {
+      "nome_etapa": "Gmail",
+      "status": "EXECUTADO",
+      "resultado": "0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:37.022124",
+      "fim": "2026-04-23T23:19:37.855654"
+    },
+    {
+      "nome_etapa": "Segfy CRM",
+      "status": "EXECUTADO",
+      "resultado": "0 registros consultados; 0 baixas registradas; 0 falhas de baixa; 0 documentos importados.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:38.423068",
+      "fim": "2026-04-23T23:19:38.423109"
+    },
+    {
+      "nome_etapa": "Portais das seguradoras",
+      "status": "EXECUTADO",
+      "resultado": "0 registros de apolices retornados; 0 consultas de sinistro por agenda; 0 falhas de consulta.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:38.423075",
+      "fim": "2026-04-23T23:19:38.423113"
+    },
+    {
+      "nome_etapa": "Planilhas operacionais",
+      "status": "EXECUTADO",
+      "resultado": "442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:37.022127",
+      "fim": "2026-04-23T23:19:38.065402"
+    },
+    {
+      "nome_etapa": "Notificacoes via WhatsApp",
+      "status": "IGNORADO",
+      "resultado": "Notificacoes nao enviadas por modo dry-run.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:38.423100",
+      "fim": "2026-04-23T23:19:38.423100"
+    },
+    {
+      "nome_etapa": "Dashboard consolidado",
+      "status": "EXECUTADO",
+      "resultado": "Dashboard publicado em /home/sculpt0r/Documents/projeto_dani/robot/outputs/dashboard_latest.html",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-23T23:19:38.423739",
+      "fim": "2026-04-23T23:19:38.424317"
+    }
+  ],
+  "itens_nao_executados": [
+    {
+      "item_id": "Microsoft To Do - sincronizacao agenda",
+      "motivo": "Dry-run ativo, criacao/atualizacao/conclusao de tarefas nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar o Microsoft To Do."
+    },
+    {
+      "item_id": "Segfy - importacao de documentos",
+      "motivo": "Dry-run ativo, importacao documental foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para importar arquivos no Segfy."
+    },
+    {
+      "item_id": "Notificacoes via WhatsApp",
+      "motivo": "Dry-run ativo, notificacoes externas foram puladas.",
+      "acao_recomendada": "Executar sem --dry-run para enviar notificacoes."
+    },
+    {
+      "item_id": "Envio de relatorio por e-mail",
+      "motivo": "EXECUTION_REPORT_EMAIL_TO nao configurado.",
+      "acao_recomendada": "Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor."
+    }
+  ],
+  "log_de_erros": []
+}
