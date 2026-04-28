@@ -4,12 +4,15 @@ import os
 from pathlib import Path
 
 
-def load_env_file(path: str | Path = ".env") -> None:
+def load_env_file(path: str | Path = ".env", *, override: bool = True) -> None:
     env_file = Path(path)
     if not env_file.exists():
         return
 
-    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+    for line_no, raw_line in enumerate(env_file.read_text(encoding="utf-8").splitlines(), start=1):
+        # Remove BOM acidental no inicio do arquivo
+        if line_no == 1:
+            raw_line = raw_line.lstrip("\ufeff")
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -21,9 +24,16 @@ def load_env_file(path: str | Path = ".env") -> None:
         if value.startswith(('"', "'")) and value.endswith(('"', "'")) and len(value) >= 2:
             value = value[1:-1]
 
-        # Permite preencher variaveis ja existentes, mas vazias.
-        # Isso evita cenarios no Windows em que o shell exporta chave sem valor,
-        # bloqueando a leitura efetiva do .env.
-        existing = os.environ.get(key) if key else None
-        if key and (existing is None or existing.strip() == ""):
+        # Em ambiente operacional preferimos determinismo:
+        # o .env informado no comando deve prevalecer sobre variaveis ja herdadas
+        # da sessao do terminal/sistema.
+        if not key:
+            continue
+
+        if override:
+            os.environ[key] = value
+            continue
+
+        existing = os.environ.get(key)
+        if existing is None or existing.strip() == "":
             os.environ[key] = value

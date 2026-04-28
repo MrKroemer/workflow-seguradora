@@ -96,6 +96,7 @@ class SegfyWebGateway:
             return 0
         if not segfy_web_automation_available():
             return 0
+        print(f"[Segfy] Importacao web iniciada (headless={'ON' if self.headless else 'OFF'}).")
         scan_started_at = datetime.now(timezone.utc)
         last_execution = self._load_last_execution_utc()
         files = self._collect_import_files(modified_after=last_execution)
@@ -135,6 +136,7 @@ class SegfyWebGateway:
             return []
         if not segfy_web_automation_available():
             return []
+        print(f"[Segfy] Leitura web iniciada (headless={'ON' if self.headless else 'OFF'}).")
 
         try:
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -150,6 +152,10 @@ class SegfyWebGateway:
                         self._login(page)
                         exported = self._try_export_policies(page)
                         if exported is None:
+                            print(
+                                "[Segfy] Exportacao web nao encontrada/baixada nesta execucao. "
+                                "Se houver fallback configurado, sera utilizado."
+                            )
                             return []
 
                         parser = SegfyGateway(export_xlsx_path=exported)
@@ -172,6 +178,10 @@ class SegfyWebGateway:
             return False
         if not segfy_web_automation_available():
             return False
+        print(
+            f"[Segfy] Baixa web iniciada ({commitment_id}) "
+            f"(headless={'ON' if self.headless else 'OFF'})."
+        )
 
         try:
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 from datetime import date, datetime
+import imaplib
 import os
 from pathlib import Path
+import smtplib
 
 from rpa_corretora import __version__
 from rpa_corretora.config import load_settings
@@ -215,6 +217,40 @@ def _build_google_color_map_from_env() -> dict[str, str]:
         for color_id in _env_csv(env_key, defaults):
             color_map[color_id] = semantic
     return color_map
+
+
+def _probe_gmail_imap_auth(*, username: str, password: str, host: str) -> tuple[bool, str]:
+    if not username or not password:
+        return False, "credenciais Gmail IMAP ausentes."
+    try:
+        with imaplib.IMAP4_SSL(host) as client:
+            client.login(username, password)
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _probe_smtp_auth(
+    *,
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    use_tls: bool,
+) -> tuple[bool, str]:
+    if not host or port <= 0:
+        return False, "host/porta SMTP ausentes."
+    try:
+        with smtplib.SMTP(host=host, port=port, timeout=20) as client:
+            client.ehlo()
+            if use_tls:
+                client.starttls()
+                client.ehlo()
+            if username:
+                client.login(username, password)
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)
 
 
 def _resolve_portal_credentials(
@@ -864,11 +900,46 @@ def main() -> None:
             require_todo_desktop=require_todo_desktop,
         )
 
+        if strict_production and gmail_mode == "GMAIL_IMAP":
+            gmail_ok, gmail_error = _probe_gmail_imap_auth(
+                username=gmail_user,
+                password=gmail_password,
+                host=gmail_host,
+            )
+            if not gmail_ok:
+                raise RuntimeError(
+                    "Execucao bloqueada pelo modo --strict-production.\n"
+                    "Falha de autenticacao Gmail IMAP em tempo real.\n"
+                    f"Detalhe: {gmail_error}"
+                )
+            print("[Preflight] Gmail IMAP autenticado com sucesso.")
+
+        if strict_production and email_mode == "SMTP":
+            smtp_ok, smtp_error = _probe_smtp_auth(
+                host=smtp_host,
+                port=smtp_port,
+                username=(os.getenv("SMTP_USER") or "").strip(),
+                password=(os.getenv("SMTP_PASSWORD") or "").strip(),
+                use_tls=_env_flag("SMTP_USE_TLS", default=True),
+            )
+            if not smtp_ok:
+                raise RuntimeError(
+                    "Execucao bloqueada pelo modo --strict-production.\n"
+                    "Falha de autenticacao/conexao SMTP em tempo real.\n"
+                    f"Detalhe: {smtp_error}"
+                )
+            print("[Preflight] SMTP autenticado/conectado com sucesso.")
+
         if args.windows_audit_only:
             return
 
         if args.scan_credentials and not args.dry_run:
             print("Scan de credenciais ativa dry-run automaticamente para evitar envios externos.")
+        if effective_dry_run and segfy_mode.startswith("WEB_AUTOMATION"):
+            print(
+                "[Segfy] Aviso: em --dry-run o bot consulta dados, "
+                "mas bloqueia importacao de documentos e baixa de pagamentos."
+            )
 
         processor = DailyProcessor(
             settings=settings,
