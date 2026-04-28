@@ -554,6 +554,7 @@ def main() -> None:
                     import_state_path=(os.getenv("SEGFY_IMPORT_STATE_PATH") or "outputs/segfy_import_state.json").strip(),
                     payment_enabled=_env_flag("SEGFY_WEB_PAYMENT_ENABLED", default=True),
                     payment_page_url=(os.getenv("SEGFY_WEB_PAYMENT_URL") or "").strip() or None,
+                    allow_channel_fallback=_env_flag("SEGFY_WEB_ALLOW_CHANNEL_FALLBACK", default=False),
                 )
                 segfy_mode = "WEB_AUTOMATION_ONLY"
                 segfy_hint = (
@@ -587,6 +588,7 @@ def main() -> None:
                         ).strip(),
                         payment_enabled=_env_flag("SEGFY_WEB_PAYMENT_ENABLED", default=True),
                         payment_page_url=(os.getenv("SEGFY_WEB_PAYMENT_URL") or "").strip() or None,
+                        allow_channel_fallback=_env_flag("SEGFY_WEB_ALLOW_CHANNEL_FALLBACK", default=True),
                     ),
                     fallback=segfy_api_gateway,
                 )

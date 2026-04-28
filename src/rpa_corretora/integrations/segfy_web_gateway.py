@@ -73,6 +73,7 @@ class SegfyWebGateway:
         import_state_path: str | Path = "outputs/segfy_import_state.json",
         payment_enabled: bool = True,
         payment_page_url: str | None = None,
+        allow_channel_fallback: bool = True,
     ) -> None:
         self.username = username.strip()
         self.password = password.strip()
@@ -88,6 +89,7 @@ class SegfyWebGateway:
         self.import_state_path = Path(import_state_path)
         self.payment_enabled = payment_enabled
         self.payment_page_url = (payment_page_url or "").strip()
+        self.allow_channel_fallback = allow_channel_fallback
 
     def import_documents(self) -> int:
         if not self.import_enabled:
@@ -213,6 +215,8 @@ class SegfyWebGateway:
 
     def _launch_browser(self, playwright: Playwright):
         channels = [self.browser_channel, "chrome", "msedge"]
+        if not self.allow_channel_fallback:
+            channels = [self.browser_channel]
         seen: set[str] = set()
         for channel in channels:
             channel_name = channel.strip().lower()
@@ -225,6 +229,11 @@ class SegfyWebGateway:
                 return browser
             except Exception:
                 continue
+        if not self.allow_channel_fallback:
+            raise RuntimeError(
+                "Falha ao iniciar o navegador no canal solicitado para o Segfy: "
+                f"{self.browser_channel or 'indefinido'}."
+            )
         browser = playwright.chromium.launch(headless=self.headless)
         print("[Segfy] Navegador Playwright iniciado com Chromium padrao (fallback).")
         return browser
@@ -272,10 +281,16 @@ class SegfyWebGateway:
             value=self.password,
         )
 
-        if not user_filled:
-            print("[Segfy] Aviso: campo de usuario/e-mail nao identificado para preenchimento.")
-        if not password_filled:
-            print("[Segfy] Aviso: campo de senha nao identificado para preenchimento.")
+        if user_filled != password_filled:
+            raise RuntimeError(
+                "Formulario de login do Segfy inconsistente: um dos campos (usuario/senha) "
+                "nao foi identificado corretamente."
+            )
+        if not user_filled and not password_filled:
+            print(
+                "[Segfy] Aviso: campos de login nao encontrados; mantendo fluxo "
+                "(sessao previa pode ja estar autenticada)."
+            )
 
         self._click_first(
             page,
