@@ -220,40 +220,62 @@ class SegfyWebGateway:
                 continue
             seen.add(channel_name)
             try:
-                return playwright.chromium.launch(channel=channel_name, headless=self.headless)
+                browser = playwright.chromium.launch(channel=channel_name, headless=self.headless)
+                print(f"[Segfy] Navegador Playwright iniciado com canal: {channel_name}.")
+                return browser
             except Exception:
                 continue
-        return playwright.chromium.launch(headless=self.headless)
+        browser = playwright.chromium.launch(headless=self.headless)
+        print("[Segfy] Navegador Playwright iniciado com Chromium padrao (fallback).")
+        return browser
 
     def _login(self, page: Page) -> None:
         page.goto(self.base_url, wait_until="domcontentloaded")
         page.wait_for_timeout(1200)
 
-        self._fill_first(
+        user_filled = self._fill_first(
             page,
             selectors=[
                 "input[type='email']",
                 "input[name='email']",
+                "input[name*='email' i]",
+                "input[id*='email' i]",
                 "input[name='login']",
+                "input[name*='login' i]",
+                "input[id*='login' i]",
                 "input[name='username']",
+                "input[name*='user' i]",
+                "input[id*='user' i]",
+                "input[name='usuario']",
+                "input[name*='usuario' i]",
+                "input[id*='usuario' i]",
                 "input[id*='email' i]",
                 "input[placeholder*='e-mail' i]",
                 "input[placeholder*='usuario' i]",
+                "input[type='text']",
             ],
             value=self.username,
         )
 
-        self._fill_first(
+        password_filled = self._fill_first(
             page,
             selectors=[
                 "input[type='password']",
                 "input[name='password']",
+                "input[name*='password' i]",
+                "input[id*='password' i]",
                 "input[name='senha']",
+                "input[name*='senha' i]",
                 "input[id*='senha' i]",
                 "input[placeholder*='senha' i]",
             ],
             value=self.password,
         )
+
+        if not user_filled:
+            print("[Segfy] Aviso: campo de usuario/e-mail nao identificado para preenchimento.")
+        if not password_filled:
+            print("[Segfy] Aviso: campo de senha nao identificado para preenchimento.")
 
         self._click_first(
             page,
@@ -404,28 +426,43 @@ class SegfyWebGateway:
         return len(file_paths)
 
     def _fill_first(self, page: Page, *, selectors: list[str], value: str) -> bool:
-        for selector in selectors:
-            locator = page.locator(selector)
-            if locator.count() == 0:
-                continue
-            try:
-                locator.first.fill(value, timeout=2500)
-                return True
-            except Exception:
-                continue
+        for context in self._iter_locator_contexts(page):
+            for selector in selectors:
+                locator = context.locator(selector)
+                if locator.count() == 0:
+                    continue
+                try:
+                    locator.first.fill(value, timeout=2500)
+                    return True
+                except Exception:
+                    continue
         return False
 
     def _click_first(self, page: Page, *, selectors: list[str], timeout_ms: int = 3500) -> bool:
-        for selector in selectors:
-            locator = page.locator(selector)
-            if locator.count() == 0:
-                continue
-            try:
-                locator.first.click(timeout=timeout_ms)
-                return True
-            except Exception:
-                continue
+        for context in self._iter_locator_contexts(page):
+            for selector in selectors:
+                locator = context.locator(selector)
+                if locator.count() == 0:
+                    continue
+                try:
+                    locator.first.click(timeout=timeout_ms)
+                    return True
+                except Exception:
+                    continue
         return False
+
+    def _iter_locator_contexts(self, page: Page):
+        # Alguns layouts do Segfy colocam o formulario de login dentro de iframe.
+        # Percorremos pagina principal + frames para tornar o login robusto.
+        contexts: list[object] = [page]
+        try:
+            for frame in page.frames:
+                if frame == page.main_frame:
+                    continue
+                contexts.append(frame)
+        except Exception:
+            return contexts
+        return contexts
 
     def _register_payment_on_page(self, *, page: Page, commitment_id: str, description: str) -> bool:
         candidates = self._build_payment_queries(commitment_id=commitment_id, description=description)
