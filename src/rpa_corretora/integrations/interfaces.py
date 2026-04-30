@@ -15,6 +15,7 @@ from rpa_corretora.domain.models import (
     SegfyPolicyData,
     TodoTask,
 )
+# NOTE: CashflowEntry and FollowupRecord already imported above for SegfyGateway sync methods.
 
 
 class CalendarGateway(Protocol):
@@ -79,6 +80,27 @@ class SegfyGateway(Protocol):
         ...
 
     def register_payment(self, *, commitment_id: str, description: str) -> bool:
+        ...
+
+    def sync_policies(self, policies: list[PolicyRecord]) -> int:
+        ...
+
+    def sync_followups(self, followups: list[FollowupRecord]) -> int:
+        ...
+
+    def sync_cashflow(self, entries: list[CashflowEntry]) -> int:
+        ...
+
+    def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
+        ...
+
+    def update_commission_status(self, *, policy_id: str, status: str) -> bool:
+        ...
+
+    def register_renewal(self, *, policy_id: str, phase: str, status: str) -> bool:
+        ...
+
+    def import_documents(self) -> int:
         ...
 
 

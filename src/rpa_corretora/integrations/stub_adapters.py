@@ -15,7 +15,6 @@ from rpa_corretora.domain.models import (
     TodoTask,
 )
 
-
 class StubCalendarGateway:
     def fetch_daily_commitments(self, day: date) -> list[CalendarCommitment]:
         return [
@@ -281,6 +280,33 @@ class StubSegfyGateway:
         self.registered_payments.append({"commitment_id": commitment_id, "description": description})
         print(f"[Segfy] Baixa registrada (stub): {commitment_id} -> {description}")
         return True
+
+    def sync_policies(self, policies: list[PolicyRecord]) -> int:
+        print(f"[Segfy] Sincronizacao de {len(policies)} apolices (stub).")
+        return len(policies)
+
+    def sync_followups(self, followups: list[FollowupRecord]) -> int:
+        print(f"[Segfy] Sincronizacao de {len(followups)} acompanhamentos (stub).")
+        return len(followups)
+
+    def sync_cashflow(self, entries: list[CashflowEntry]) -> int:
+        print(f"[Segfy] Sincronizacao de {len(entries)} lancamentos (stub).")
+        return len(entries)
+
+    def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
+        print(f"[Segfy] Incidente registrado (stub): {policy_id} {incident_type}")
+        return True
+
+    def update_commission_status(self, *, policy_id: str, status: str) -> bool:
+        print(f"[Segfy] Comissao atualizada (stub): {policy_id} -> {status}")
+        return True
+
+    def register_renewal(self, *, policy_id: str, phase: str, status: str) -> bool:
+        print(f"[Segfy] Renovacao registrada (stub): {policy_id} fase={phase} status={status}")
+        return True
+
+    def import_documents(self) -> int:
+        return 0
 
 
 class StubInsurerPortalGateway:

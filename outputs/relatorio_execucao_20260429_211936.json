@@ -1,0 +1,185 @@
+{
+  "cabecalho": {
+    "inicio_ciclo": "2026-04-29T21:19:36.637469",
+    "fim_ciclo": "2026-04-29T21:19:39.263250",
+    "identificador_execucao": "RUN-20260429-002",
+    "versao_bot": "0.1.0"
+  },
+  "resumo_executivo": {
+    "tarefas_previstas": 8,
+    "tarefas_sucesso": 7,
+    "tarefas_falha_ou_nao_executadas": 1,
+    "status_geral": "SUCESSO PARCIAL"
+  },
+  "detalhamento_por_etapa": [
+    {
+      "nome_etapa": "Google Calendar",
+      "status": "EXECUTADO",
+      "resultado": "15 compromissos lidos (15 pendentes); 13 com cliente identificado.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:36.639803",
+      "fim": "2026-04-29T21:19:38.093397"
+    },
+    {
+      "nome_etapa": "Microsoft To Do",
+      "status": "EXECUTADO",
+      "resultado": "0 tarefas abertas lidas (sincronizacao pendente).",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:38.093435",
+      "fim": "2026-04-29T21:19:39.260165"
+    },
+    {
+      "nome_etapa": "Gmail",
+      "status": "EXECUTADO",
+      "resultado": "0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:38.093491",
+      "fim": "2026-04-29T21:19:38.833222"
+    },
+    {
+      "nome_etapa": "Segfy CRM",
+      "status": "EXECUTADO",
+      "resultado": "0 registros consultados; 0 baixas registradas; 0 falhas de baixa; 0 documentos importados; 0 apolices sincronizadas; 0 acompanhamentos sincronizados; 0 lancamentos financeiros sincronizados; 0 incidentes registrados; 0 comissoes atualizadas; 0 renovacoes registradas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:39.260177",
+      "fim": "2026-04-29T21:19:39.261925"
+    },
+    {
+      "nome_etapa": "Portais das seguradoras",
+      "status": "EXECUTADO",
+      "resultado": "0 registros de apolices retornados; 0 consultas de sinistro por agenda; 0 falhas de consulta.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:39.260186",
+      "fim": "2026-04-29T21:19:39.261939"
+    },
+    {
+      "nome_etapa": "Planilhas operacionais",
+      "status": "EXECUTADO",
+      "resultado": "442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:38.093497",
+      "fim": "2026-04-29T21:19:38.993954"
+    },
+    {
+      "nome_etapa": "Notificacoes via WhatsApp",
+      "status": "IGNORADO",
+      "resultado": "Notificacoes nao enviadas por modo dry-run.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:39.260209",
+      "fim": "2026-04-29T21:19:39.260209"
+    },
+    {
+      "nome_etapa": "Dashboard consolidado",
+      "status": "EXECUTADO",
+      "resultado": "Dashboard publicado em /home/sculpt0r/Documents/projeto_dani/robot/outputs/dashboard_latest.html",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-29T21:19:39.262665",
+      "fim": "2026-04-29T21:19:39.263218"
+    }
+  ],
+  "itens_nao_executados": [
+    {
+      "item_id": "Microsoft To Do - sincronizacao agenda",
+      "motivo": "Dry-run ativo, criacao/atualizacao/conclusao de tarefas nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar o Microsoft To Do."
+    },
+    {
+      "item_id": "Segfy - importacao de documentos",
+      "motivo": "Dry-run ativo, importacao documental foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para importar arquivos no Segfy."
+    },
+    {
+      "item_id": "Segfy - sincronizacao de apolices",
+      "motivo": "Dry-run ativo, sincronizacao de apolices com Segfy foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar apolices."
+    },
+    {
+      "item_id": "Segfy - sincronizacao de acompanhamentos",
+      "motivo": "Dry-run ativo, sincronizacao de acompanhamentos com Segfy foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar acompanhamentos."
+    },
+    {
+      "item_id": "Notificacoes via WhatsApp",
+      "motivo": "Dry-run ativo, notificacoes externas foram puladas.",
+      "acao_recomendada": "Executar sem --dry-run para enviar notificacoes."
+    },
+    {
+      "item_id": "Segfy pagamento 4rr79pviop2nmmabfnumn0g1h9",
+      "motivo": "Dry-run ativo, baixa de parcela nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para registrar baixa no Segfy."
+    },
+    {
+      "item_id": "Portal sinistro 130h27s1p53c1k9ctktre9844v",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Portal sinistro 6p6gsosecgtk136l6uifna8t5g",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Portal sinistro 06ppi6eboa6ee1auvc6a76u696",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Portal sinistro 7sf35sqmqipgfo91jcc0f4t3m0",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Portal sinistro 451cool5122g2bl69du3psoh85",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Portal sinistro 7eg1utjojkcq38s30mpc5rtd0l",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Portal sinistro 10qm4uco5cd1no9b97ies4o0cl",
+      "motivo": "Dry-run ativo, consulta de sinistro nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para consultar status no portal."
+    },
+    {
+      "item_id": "Envio de relatorio por e-mail",
+      "motivo": "EXECUTION_REPORT_EMAIL_TO nao configurado.",
+      "acao_recomendada": "Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor."
+    }
+  ],
+  "log_de_erros": []
+}

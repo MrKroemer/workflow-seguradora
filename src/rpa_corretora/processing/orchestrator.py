@@ -587,11 +587,73 @@ class DailyProcessor:
         if trace is not None:
             trace.start_stage("segfy")
         imported_documents = 0
+        segfy_sync_policies = 0
+        segfy_sync_followups = 0
+        segfy_sync_cashflow = 0
+        segfy_incidents = 0
+        segfy_commissions = 0
+        segfy_renewals = 0
         try:
             if not dry_run:
                 import_func = getattr(self.segfy, "import_documents", None)
                 if callable(import_func):
                     imported_documents = int(import_func() or 0)
+
+                # --- Sincronizacao completa com o Segfy ---
+                sync_policies_func = getattr(self.segfy, "sync_policies", None)
+                if callable(sync_policies_func) and policies:
+                    segfy_sync_policies = int(sync_policies_func(policies) or 0)
+
+                sync_followups_func = getattr(self.segfy, "sync_followups", None)
+                if callable(sync_followups_func) and followups:
+                    segfy_sync_followups = int(sync_followups_func(followups) or 0)
+
+                sync_cashflow_func = getattr(self.segfy, "sync_cashflow", None)
+                if callable(sync_cashflow_func) and cashflow_entries:
+                    segfy_sync_cashflow = int(sync_cashflow_func(cashflow_entries) or 0)
+
+                register_incident_func = getattr(self.segfy, "register_incident", None)
+                if callable(register_incident_func):
+                    for policy in policies:
+                        if policy.sinistro_open:
+                            ok = register_incident_func(
+                                policy_id=policy.policy_id,
+                                incident_type="SINISTRO",
+                                description=f"Sinistro em aberto - {policy.insured_name}",
+                            )
+                            if ok:
+                                segfy_incidents += 1
+                        if policy.endosso_open:
+                            ok = register_incident_func(
+                                policy_id=policy.policy_id,
+                                incident_type="ENDOSSO",
+                                description=f"Endosso em aberto - {policy.insured_name}",
+                            )
+                            if ok:
+                                segfy_incidents += 1
+
+                update_commission_func = getattr(self.segfy, "update_commission_status", None)
+                if callable(update_commission_func):
+                    for policy in policies:
+                        if policy.status_pgto.strip():
+                            ok = update_commission_func(
+                                policy_id=policy.policy_id,
+                                status=policy.status_pgto.strip(),
+                            )
+                            if ok:
+                                segfy_commissions += 1
+
+                register_renewal_func = getattr(self.segfy, "register_renewal", None)
+                if callable(register_renewal_func):
+                    for followup in followups:
+                        if followup.fase.strip() or followup.status.strip():
+                            ok = register_renewal_func(
+                                policy_id=followup.insured_name,
+                                phase=followup.fase.strip() or "SEM FASE",
+                                status=followup.status.strip() or "SEM STATUS",
+                            )
+                            if ok:
+                                segfy_renewals += 1
             else:
                 if trace is not None:
                     trace.add_non_executed_item(
@@ -599,6 +661,22 @@ class DailyProcessor:
                         reason="Dry-run ativo, importacao documental foi bloqueada.",
                         recommended_action="Executar sem --dry-run para importar arquivos no Segfy.",
                     )
+                    trace.add_non_executed_item(
+                        item_id="Segfy - sincronizacao de apolices",
+                        reason="Dry-run ativo, sincronizacao de apolices com Segfy foi bloqueada.",
+                        recommended_action="Executar sem --dry-run para sincronizar apolices.",
+                    )
+                    trace.add_non_executed_item(
+                        item_id="Segfy - sincronizacao de acompanhamentos",
+                        reason="Dry-run ativo, sincronizacao de acompanhamentos com Segfy foi bloqueada.",
+                        recommended_action="Executar sem --dry-run para sincronizar acompanhamentos.",
+                    )
+                    if cashflow_entries:
+                        trace.add_non_executed_item(
+                            item_id="Segfy - sincronizacao financeira",
+                            reason="Dry-run ativo, lancamentos financeiros nao enviados ao Segfy.",
+                            recommended_action="Executar sem --dry-run para sincronizar fluxo de caixa.",
+                        )
             segfy_data = self.segfy.fetch_policy_data()
         except Exception as exc:
             if trace is not None:
@@ -742,7 +820,13 @@ class DailyProcessor:
                     f"{len(segfy_data)} registros consultados; "
                     f"{notification_summary.segfy_payments} baixas registradas; "
                     f"{notification_summary.segfy_payment_failures} falhas de baixa; "
-                    f"{imported_documents} documentos importados."
+                    f"{imported_documents} documentos importados; "
+                    f"{segfy_sync_policies} apolices sincronizadas; "
+                    f"{segfy_sync_followups} acompanhamentos sincronizados; "
+                    f"{segfy_sync_cashflow} lancamentos financeiros sincronizados; "
+                    f"{segfy_incidents} incidentes registrados; "
+                    f"{segfy_commissions} comissoes atualizadas; "
+                    f"{segfy_renewals} renovacoes registradas."
                 ),
             )
             trace.complete_stage(

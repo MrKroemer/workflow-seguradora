@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from difflib import SequenceMatcher
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 import re
+from typing import Literal
 import unicodedata
 
 from rpa_corretora.config import RenewalSettings
@@ -25,6 +27,12 @@ CONCLUSIVE_STATUSES = {"CONCLUIDO", "CONCLUIDA", "RENOVADO", "FINALIZADO"}
 AMOUNT_PATTERN = re.compile(r"R\$\s*([0-9\.,]+)")
 DATE_PATTERN = re.compile(r"(\d{2}/\d{2}/\d{4})")
 INSURER_PATTERN = re.compile(r"seguradora\s*:\s*([a-zA-Z\s]+)", re.IGNORECASE)
+PARCELA_PATTERN = re.compile(r"(?:parcela|parc\.?)\s*(\d+)\s*(?:/|de)\s*(\d+)", re.IGNORECASE)
+VEHICLE_PATTERN = re.compile(
+    r"(?:veiculo|veículo|carro|auto|modelo)\s*[:=\-]?\s*([A-Za-zÀ-ÿ0-9 /]+)",
+    re.IGNORECASE,
+)
+PLATE_PATTERN = re.compile(r"\b([A-Z]{3}[0-9][A-Z0-9][0-9]{2})\b")
 NON_ALNUM_PATTERN = re.compile(r"[^A-Z0-9 ]+")
 NAME_STOPWORDS = {"DA", "DE", "DO", "DAS", "DOS", "E"}
 
@@ -421,6 +429,10 @@ def _extract_labeled_date(text: str, labels: tuple[str, ...]) -> date | None:
 
 
 def is_renewal_commitment(commitment: CalendarCommitment) -> bool:
+    # Classificacao primaria por conteudo textual completo.
+    if is_renewal_commitment_by_content(commitment):
+        return True
+    # Fallback legado por palavra-chave direta.
     normalized = _normalize(_commitment_text(commitment))
     return "RENOVACAO" in normalized
 
@@ -443,26 +455,33 @@ def should_send_renewal_message(commitment: CalendarCommitment, today: date) -> 
 
 
 def is_tangerine_overdue_commitment(commitment: CalendarCommitment) -> bool:
+    # A cor tangerina e o indicador primario de roteamento para o fluxo de atraso.
+    # O classificador de conteudo valida e enriquece, mas nao substitui a cor
+    # como roteador de acao no orquestrador (VERMELHO tem fluxo proprio).
     if commitment.color != "TANGERINA":
         return False
+    # Qualquer card tangerina com conteudo minimo e tratado como cobranca.
     normalized = _normalize(_commitment_text(commitment))
-    has_billing = "BOLETO" in normalized or "PARCELA" in normalized
-    has_overdue_context = "VENC" in normalized or "ATRAS" in normalized
-    return has_billing and has_overdue_context
+    return len(normalized.strip()) >= 4
 
 
 def extract_overdue_due_date(commitment: CalendarCommitment) -> date | None:
     text = _commitment_text(commitment)
     labeled = _extract_labeled_date(
         text,
-        ("VENCIMENTO", "VENC", "VCTO", "DATA VENCIMENTO", "VENCE"),
+        ("VENCIMENTO", "VENC", "VCTO", "DATA VENCIMENTO", "VENCE", "DATA", "DT"),
     )
     if labeled is not None:
         return labeled
-    normalized = _normalize(text)
-    if "VENC" in normalized:
-        return commitment.due_date
-    return None
+    # Tenta extrair qualquer data no texto do compromisso.
+    date_match = DATE_PATTERN.search(text)
+    if date_match is not None:
+        try:
+            return date.fromisoformat("-".join(reversed(date_match.group(1).split("/"))))
+        except ValueError:
+            pass
+    # Fallback: usa a data do proprio compromisso na agenda.
+    return commitment.due_date
 
 
 def should_send_overdue_message(commitment: CalendarCommitment, today: date) -> bool:
@@ -471,7 +490,8 @@ def should_send_overdue_message(commitment: CalendarCommitment, today: date) -> 
     due_date = extract_overdue_due_date(commitment)
     if due_date is None:
         return False
-    return (today - due_date).days > 5
+    days_overdue = (today - due_date).days
+    return days_overdue > 5
 
 
 def is_bank_release_commitment(commitment: CalendarCommitment) -> bool:
@@ -499,6 +519,231 @@ def build_renewal_report_alert(message: EmailMessage, today: date) -> Alert | No
         message="Relatorio de renovacao do dia 20 recebido e pronto para processamento.",
         context={"email_id": message.id, "sender": message.sender},
     )
+
+
+@dataclass(slots=True)
+class CommitmentDetails:
+    client_name: str = ""
+    insurer: str = ""
+    vehicle: str = ""
+    plate: str = ""
+    amount: Decimal | None = None
+    parcela_current: int | None = None
+    parcela_total: int | None = None
+    due_date: date | None = None
+    vig_date: date | None = None
+
+
+def extract_commitment_details(commitment: CalendarCommitment) -> CommitmentDetails:
+    text = _commitment_text(commitment)
+    normalized = _normalize(text)
+    details = CommitmentDetails()
+    details.client_name = commitment.client_name or ""
+
+    insurer_match = INSURER_PATTERN.search(text)
+    if insurer_match:
+        details.insurer = insurer_match.group(1).strip()
+    else:
+        known_insurers = (
+            "YELUM", "PORTO", "MAPFRE", "BRADESCO", "ALLIANZ", "SUHAI",
+            "TOKIO", "HDI", "AZUL", "ITAU", "JUSTOS", "ALIRO",
+        )
+        for ins in known_insurers:
+            if ins in normalized:
+                details.insurer = ins
+                break
+
+    amount_match = AMOUNT_PATTERN.search(text)
+    if amount_match:
+        details.amount = parse_brazilian_amount(amount_match.group(1))
+
+    parcela_match = PARCELA_PATTERN.search(text)
+    if parcela_match:
+        details.parcela_current = int(parcela_match.group(1))
+        details.parcela_total = int(parcela_match.group(2))
+
+    vehicle_match = VEHICLE_PATTERN.search(text)
+    if vehicle_match:
+        details.vehicle = vehicle_match.group(1).strip()
+
+    plate_match = PLATE_PATTERN.search(normalized)
+    if plate_match:
+        details.plate = plate_match.group(1)
+
+    details.due_date = extract_overdue_due_date(commitment)
+    details.vig_date = extract_renewal_vig_date(commitment)
+    return details
+
+
+def enrich_renewal_context(
+    commitment: CalendarCommitment,
+    policies: list[PolicyRecord],
+) -> dict[str, str]:
+    details = extract_commitment_details(commitment)
+    context: dict[str, str] = {"commitment_id": commitment.id}
+    if details.client_name:
+        context["client_name"] = details.client_name
+    if details.vig_date:
+        context["vig_date"] = details.vig_date.isoformat()
+    if details.insurer:
+        context["insurer"] = details.insurer
+    if details.vehicle:
+        context["vehicle"] = details.vehicle
+    if details.plate:
+        context["plate"] = details.plate
+
+    target = _normalize_name(details.client_name)
+    if target:
+        for policy in policies:
+            if _normalize_name(policy.insured_name) == target:
+                context["policy_id"] = policy.policy_id
+                context["insurer"] = context.get("insurer") or policy.insurer
+                context["vehicle"] = context.get("vehicle") or policy.vehicle_model or policy.vehicle_item
+                context["plate"] = context.get("plate") or policy.vehicle_plate
+                context["premio_total"] = str(policy.premio_total)
+                break
+    return context
+
+
+def enrich_overdue_context(commitment: CalendarCommitment) -> dict[str, str]:
+    details = extract_commitment_details(commitment)
+    context: dict[str, str] = {"commitment_id": commitment.id}
+    if details.client_name:
+        context["client_name"] = details.client_name
+    if details.insurer:
+        context["insurer"] = details.insurer
+    if details.amount is not None:
+        context["amount"] = f"R$ {details.amount:.2f}".replace(".", ",")
+    if details.parcela_current is not None and details.parcela_total is not None:
+        context["parcela"] = f"{details.parcela_current}/{details.parcela_total}"
+    if details.due_date:
+        context["due_date"] = details.due_date.isoformat()
+    if details.vehicle:
+        context["vehicle"] = details.vehicle
+    if details.plate:
+        context["plate"] = details.plate
+    return context
+
+
+# ---------------------------------------------------------------------------
+# Classificacao inteligente de eventos por conteudo textual
+# ---------------------------------------------------------------------------
+# O robo nao se limita a cores ou marcacoes visuais. Ele le e interpreta o
+# conteudo completo de cada card (titulo, descricao, datas, metadados) e
+# classifica automaticamente o tipo de evento. Opera com tolerancia a
+# variacoes de escrita para garantir robustez com dados manuais.
+# ---------------------------------------------------------------------------
+
+CommitmentType = Literal[
+    "RENOVACAO",
+    "COBRANCA_BOLETO",
+    "COBRANCA_PARCELA",
+    "SINISTRO",
+    "ENDOSSO",
+    "LIBERACAO_BANCO",
+    "TRATATIVA_GERAL",
+    "DESCONHECIDO",
+]
+
+_RENEWAL_TOKENS = (
+    "RENOVACAO", "RENOVAR", "RENOV", "VIGENCIA", "VIG",
+    "PERIODO DE RENOVACAO", "COTACAO DE RENOVACAO",
+)
+_BILLING_TOKENS = (
+    "BOLETO", "PARCELA", "FATURA", "COBRANCA", "PAGAMENTO",
+    "DEBITO", "PIX", "PAGAR", "VENCIMENTO", "VENC", "VCTO",
+    "ATRAS", "PEND", "DEVEDOR", "INADIMPL", "TITULO",
+    "CONTA", "RECEBER", "COBRAR",
+)
+_SINISTRO_TOKENS = (
+    "SINISTRO", "ACIDENTE", "COLISAO", "ROUBO", "FURTO",
+    "PERDA TOTAL", "INDENIZACAO", "REGULACAO",
+)
+_ENDOSSO_TOKENS = (
+    "ENDOSSO", "ALTERACAO", "INCLUSAO", "EXCLUSAO",
+    "MUDANCA", "TRANSFERENCIA",
+)
+_BANK_RELEASE_TOKENS = (
+    "LIBERACAO", "LIBERAR", "BANCO", "CONTA CORRENTE",
+    "INTERNET BANKING", "DEBITO AUTOMATICO",
+)
+
+
+def classify_commitment_type(commitment: CalendarCommitment) -> CommitmentType:
+    text = _commitment_text(commitment)
+    normalized = _normalize(text)
+    if not normalized.strip():
+        return "DESCONHECIDO"
+
+    scores: dict[CommitmentType, int] = {
+        "RENOVACAO": 0,
+        "COBRANCA_BOLETO": 0,
+        "COBRANCA_PARCELA": 0,
+        "SINISTRO": 0,
+        "ENDOSSO": 0,
+        "LIBERACAO_BANCO": 0,
+    }
+
+    for token in _RENEWAL_TOKENS:
+        if token in normalized:
+            scores["RENOVACAO"] += 2
+
+    for token in _BILLING_TOKENS:
+        if token in normalized:
+            if "BOLETO" in normalized or "FATURA" in normalized:
+                scores["COBRANCA_BOLETO"] += 2
+            else:
+                scores["COBRANCA_PARCELA"] += 2
+
+    for token in _SINISTRO_TOKENS:
+        if token in normalized:
+            scores["SINISTRO"] += 2
+
+    for token in _ENDOSSO_TOKENS:
+        if token in normalized:
+            scores["ENDOSSO"] += 2
+
+    for token in _BANK_RELEASE_TOKENS:
+        if token in normalized:
+            scores["LIBERACAO_BANCO"] += 2
+
+    # Cor como sinal secundario (nao determinante, mas reforco)
+    color_hints: dict[str, CommitmentType] = {
+        "TANGERINA": "COBRANCA_BOLETO",
+        "CINZA": "SINISTRO",
+        "AMARELO": "LIBERACAO_BANCO",
+    }
+    hint = color_hints.get(commitment.color)
+    if hint and hint in scores:
+        scores[hint] += 1
+
+    best_type: CommitmentType = "DESCONHECIDO"
+    best_score = 0
+    for event_type, score in scores.items():
+        if score > best_score:
+            best_score = score
+            best_type = event_type
+
+    if best_score == 0:
+        return "TRATATIVA_GERAL"
+    return best_type
+
+
+def is_billing_commitment_by_content(commitment: CalendarCommitment) -> bool:
+    event_type = classify_commitment_type(commitment)
+    return event_type in ("COBRANCA_BOLETO", "COBRANCA_PARCELA")
+
+
+def is_renewal_commitment_by_content(commitment: CalendarCommitment) -> bool:
+    return classify_commitment_type(commitment) == "RENOVACAO"
+
+
+def is_sinistro_commitment_by_content(commitment: CalendarCommitment) -> bool:
+    return classify_commitment_type(commitment) == "SINISTRO"
+
+
+def is_endosso_commitment_by_content(commitment: CalendarCommitment) -> bool:
+    return classify_commitment_type(commitment) == "ENDOSSO"
 
 
 def build_segfy_portal_alerts(

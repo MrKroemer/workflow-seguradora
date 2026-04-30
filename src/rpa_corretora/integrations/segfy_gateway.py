@@ -10,7 +10,7 @@ import unicodedata
 
 from openpyxl import load_workbook
 
-from rpa_corretora.domain.models import SegfyPolicyData
+from rpa_corretora.domain.models import CashflowEntry, FollowupRecord, PolicyRecord, SegfyPolicyData
 
 
 def _normalize(value: object) -> str:
@@ -74,7 +74,95 @@ class SegfyGateway:
         return self._fetch_policy_data_from_export()
 
     def import_documents(self) -> int:
-        # Gateway API/export nao possui rotina de importacao documental por navegador.
+        return 0
+
+    def sync_policies(self, policies: list[PolicyRecord]) -> int:
+        if not self.api_base_url:
+            return self._queue_bulk("sync_policies", [{"policy_id": p.policy_id, "insured_name": p.insured_name, "insurer": p.insurer, "vig": p.vig.isoformat(), "premio_total": str(p.premio_total), "comissao": str(p.comissao), "status_pgto": p.status_pgto, "vehicle_item": p.vehicle_item} for p in policies])
+        token = self._auth_token()
+        if token is None:
+            return self._queue_bulk("sync_policies", [{"policy_id": p.policy_id} for p in policies])
+        synced = 0
+        for policy in policies:
+            payload = {"policy_id": policy.policy_id, "insured_name": policy.insured_name, "insurer": policy.insurer, "vig": policy.vig.isoformat(), "premio_total": str(policy.premio_total), "comissao": str(policy.comissao), "status_pgto": policy.status_pgto, "vehicle_item": policy.vehicle_item, "sinistro_open": policy.sinistro_open, "endosso_open": policy.endosso_open}
+            result = self._request_json(method="POST", path="/policies/sync", body=payload, token=token)
+            if result is not None:
+                synced += 1
+        return synced
+
+    def sync_followups(self, followups: list[FollowupRecord]) -> int:
+        if not self.api_base_url:
+            return self._queue_bulk("sync_followups", [{"insured_name": f.insured_name, "month": f.month, "fase": f.fase, "status": f.status, "renewal_kind": f.renewal_kind} for f in followups])
+        token = self._auth_token()
+        if token is None:
+            return self._queue_bulk("sync_followups", [{"insured_name": f.insured_name} for f in followups])
+        synced = 0
+        for followup in followups:
+            payload = {"insured_name": followup.insured_name, "month": followup.month, "fase": followup.fase, "status": followup.status, "renewal_kind": followup.renewal_kind}
+            result = self._request_json(method="POST", path="/followups/sync", body=payload, token=token)
+            if result is not None:
+                synced += 1
+        return synced
+
+    def sync_cashflow(self, entries: list[CashflowEntry]) -> int:
+        if not self.api_base_url:
+            return self._queue_bulk("sync_cashflow", [{"date": e.date.isoformat(), "value": str(e.value), "insurer": e.insurer, "specification": e.specification} for e in entries])
+        token = self._auth_token()
+        if token is None:
+            return self._queue_bulk("sync_cashflow", [{"date": e.date.isoformat()} for e in entries])
+        synced = 0
+        for entry in entries:
+            payload = {"date": entry.date.isoformat(), "value": str(entry.value), "insurer": entry.insurer, "specification": entry.specification, "source": entry.source}
+            result = self._request_json(method="POST", path="/cashflow/sync", body=payload, token=token)
+            if result is not None:
+                synced += 1
+        return synced
+
+    def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
+        payload = {"policy_id": policy_id, "incident_type": incident_type, "description": description}
+        if not self.api_base_url:
+            return self._queue_single("register_incident", payload)
+        token = self._auth_token()
+        if token is None:
+            return self._queue_single("register_incident", payload)
+        result = self._request_json(method="POST", path="/incidents/register", body=payload, token=token)
+        return result is not None
+
+    def update_commission_status(self, *, policy_id: str, status: str) -> bool:
+        payload = {"policy_id": policy_id, "status": status}
+        if not self.api_base_url:
+            return self._queue_single("update_commission", payload)
+        token = self._auth_token()
+        if token is None:
+            return self._queue_single("update_commission", payload)
+        result = self._request_json(method="POST", path="/commissions/update", body=payload, token=token)
+        return result is not None
+
+    def register_renewal(self, *, policy_id: str, phase: str, status: str) -> bool:
+        payload = {"policy_id": policy_id, "phase": phase, "status": status}
+        if not self.api_base_url:
+            return self._queue_single("register_renewal", payload)
+        token = self._auth_token()
+        if token is None:
+            return self._queue_single("register_renewal", payload)
+        result = self._request_json(method="POST", path="/renewals/register", body=payload, token=token)
+        return result is not None
+
+    def _queue_single(self, action: str, payload: dict[str, str]) -> bool:
+        if not self.allow_queue_fallback:
+            return False
+        self.queue_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.queue_path.open("a", encoding="utf-8") as file:
+            file.write(json.dumps({"action": action, **payload}) + "\n")
+        return False
+
+    def _queue_bulk(self, action: str, items: list[dict[str, object]]) -> int:
+        if not self.allow_queue_fallback:
+            return 0
+        self.queue_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.queue_path.open("a", encoding="utf-8") as file:
+            for item in items:
+                file.write(json.dumps({"action": action, **item}) + "\n")
         return 0
 
     def register_payment(self, *, commitment_id: str, description: str) -> bool:
