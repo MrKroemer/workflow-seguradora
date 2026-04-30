@@ -591,6 +591,21 @@ class SegfyWebGateway:
             page.goto(login_url, wait_until="domcontentloaded")
             page.wait_for_timeout(1200)
 
+        # Aceitar cookies antes de qualquer interacao (banner pode bloquear cliques).
+        self._click_first(
+            page,
+            selectors=[
+                "button:has-text('Aceitar')",
+                "button:has-text('Aceito')",
+                "button:has-text('Concordo')",
+                "button:has-text('OK')",
+                "a:has-text('Aceitar')",
+                "text=Aceitar",
+            ],
+            timeout_ms=2000,
+        )
+        page.wait_for_timeout(400)
+
         # Alguns layouts exibem "Entrar com e-mail"/"Usar conta local".
         self._click_first(
             page,
@@ -607,9 +622,16 @@ class SegfyWebGateway:
         )
         page.wait_for_timeout(500)
 
+        # Campo de e-mail/usuario — seletores ordenados do mais especifico ao generico.
         user_filled = self._fill_first(
             page,
             selectors=[
+                "input[placeholder='E-mail']",
+                "input[placeholder='e-mail']",
+                "input[placeholder*='E-mail' i]",
+                "input[placeholder*='email' i]",
+                "input[aria-label*='E-mail' i]",
+                "input[aria-label*='email' i]",
                 "input[type='email']",
                 "input[name='email']",
                 "input[name*='email' i]",
@@ -624,8 +646,6 @@ class SegfyWebGateway:
                 "input[name='usuario']",
                 "input[name*='usuario' i]",
                 "input[id*='usuario' i]",
-                "input[id*='email' i]",
-                "input[placeholder*='e-mail' i]",
                 "input[placeholder*='usuario' i]",
                 "input[type='text']",
             ],
