@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -170,18 +171,25 @@ class SegfyWebGateway:
             from playwright.sync_api import sync_playwright
 
             with sync_playwright() as playwright:
-                browser = self._launch_browser(playwright)
+                browser_or_context = self._launch_browser(playwright)
+                is_persistent = getattr(browser_or_context, "_rpa_persistent", False)
                 try:
-                    context = browser.new_context(locale="pt-BR", accept_downloads=True)
-                    try:
-                        page = context.new_page()
+                    if is_persistent:
+                        page = browser_or_context.new_page()
                         page.set_default_timeout(self.timeout_seconds * 1000)
                         self._login(page)
                         imported = self._upload_documents(page, files)
-                    finally:
-                        context.close()
+                    else:
+                        context = browser_or_context.new_context(locale="pt-BR", accept_downloads=True)
+                        try:
+                            page = context.new_page()
+                            page.set_default_timeout(self.timeout_seconds * 1000)
+                            self._login(page)
+                            imported = self._upload_documents(page, files)
+                        finally:
+                            context.close()
                 finally:
-                    browser.close()
+                    browser_or_context.close()
         except PlaywrightTimeoutError:
             self._capture_debug_snapshot(page=page, label="import_timeout")
             print("[Segfy] Timeout durante importacao web de documentos.")
@@ -205,11 +213,11 @@ class SegfyWebGateway:
             from playwright.sync_api import sync_playwright
 
             with sync_playwright() as playwright:
-                browser = self._launch_browser(playwright)
+                browser_or_context = self._launch_browser(playwright)
+                is_persistent = getattr(browser_or_context, "_rpa_persistent", False)
                 try:
-                    context = browser.new_context(locale="pt-BR", accept_downloads=True)
-                    try:
-                        page = context.new_page()
+                    if is_persistent:
+                        page = browser_or_context.new_page()
                         page.set_default_timeout(self.timeout_seconds * 1000)
                         self._login(page)
                         exported = self._try_export_policies(page)
@@ -219,13 +227,27 @@ class SegfyWebGateway:
                                 "Se houver fallback configurado, sera utilizado."
                             )
                             return []
-
                         parser = SegfyGateway(export_xlsx_path=exported)
                         return parser.fetch_policy_data()
-                    finally:
-                        context.close()
+                    else:
+                        context = browser_or_context.new_context(locale="pt-BR", accept_downloads=True)
+                        try:
+                            page = context.new_page()
+                            page.set_default_timeout(self.timeout_seconds * 1000)
+                            self._login(page)
+                            exported = self._try_export_policies(page)
+                            if exported is None:
+                                print(
+                                    "[Segfy] Exportacao web nao encontrada/baixada nesta execucao. "
+                                    "Se houver fallback configurado, sera utilizado."
+                                )
+                                return []
+                            parser = SegfyGateway(export_xlsx_path=exported)
+                            return parser.fetch_policy_data()
+                        finally:
+                            context.close()
                 finally:
-                    browser.close()
+                    browser_or_context.close()
         except PlaywrightTimeoutError:
             self._capture_debug_snapshot(page=page, label="fetch_timeout")
             print("[Segfy] Timeout durante automacao web.")
@@ -330,18 +352,27 @@ class SegfyWebGateway:
             from playwright.sync_api import sync_playwright
 
             with sync_playwright() as playwright:
-                browser = self._launch_browser(playwright)
+                browser_or_context = self._launch_browser(playwright)
+                is_persistent = getattr(browser_or_context, "_rpa_persistent", False)
                 try:
-                    context = browser.new_context(locale="pt-BR")
-                    try:
+                    if is_persistent:
+                        # launch_persistent_context retorna o contexto diretamente.
+                        context = browser_or_context
                         page = context.new_page()
                         page.set_default_timeout(self.timeout_seconds * 1000)
                         self._login(page)
                         return action(page)
-                    finally:
-                        context.close()
+                    else:
+                        context = browser_or_context.new_context(locale="pt-BR")
+                        try:
+                            page = context.new_page()
+                            page.set_default_timeout(self.timeout_seconds * 1000)
+                            self._login(page)
+                            return action(page)
+                        finally:
+                            context.close()
                 finally:
-                    browser.close()
+                    browser_or_context.close()
         except Exception as exc:
             self._capture_debug_snapshot(page=page, label="web_session_error")
             print(f"[Segfy] Falha na sessao web: {exc}")
@@ -557,6 +588,38 @@ class SegfyWebGateway:
         return self._submit_form(page)
 
     def _launch_browser(self, playwright: Playwright):
+        # Tenta usar perfil persistente do Chrome (mantem extensoes, cookies, sessoes).
+        user_data_dir = (
+            os.getenv("SEGFY_CHROME_USER_DATA_DIR")
+            or os.getenv("CHROME_USER_DATA_DIR")
+            or ""
+        ).strip()
+
+        # Auto-detecta o perfil padrao do Chrome no Windows.
+        if not user_data_dir and sys.platform.startswith("win"):
+            default_path = Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data"
+            if default_path.exists():
+                user_data_dir = str(default_path)
+
+        if user_data_dir and Path(user_data_dir).exists():
+            # Perfil persistente: retorna o contexto diretamente (nao um Browser).
+            # O chamador deve tratar isso como contexto.
+            try:
+                context = playwright.chromium.launch_persistent_context(
+                    user_data_dir=user_data_dir,
+                    channel=self.browser_channel if self.browser_channel not in ("chromium", "") else "chrome",
+                    headless=self.headless,
+                    locale="pt-BR",
+                    accept_downloads=True,
+                    args=["--disable-blink-features=AutomationControlled"],
+                )
+                print(f"[Segfy] Chrome com perfil persistente: {user_data_dir}")
+                # Marca como contexto persistente para o chamador saber.
+                context._rpa_persistent = True  # type: ignore[attr-defined]
+                return context
+            except Exception as exc:
+                print(f"[Segfy] Falha ao usar perfil persistente ({exc}); tentando modo normal.")
+
         channels = [self.browser_channel, "chrome", "msedge"]
         if not self.allow_channel_fallback:
             channels = [self.browser_channel]
@@ -583,15 +646,22 @@ class SegfyWebGateway:
 
     def _login(self, page: Page) -> None:
         page.goto(self.base_url, wait_until="domcontentloaded")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2000)
+
+        # Verifica se ja esta autenticado (perfil persistente com sessao ativa).
+        if self._is_already_logged_in(page):
+            print("[Segfy] Sessao ativa detectada, login nao necessario.")
+            self._dismiss_segfy_overlays(page)
+            return
+
+        # Se nao esta logado, executa fluxo de login.
         current_url = (page.url or "").strip()
         if current_url.startswith("about:blank") or current_url.startswith("data:"):
             login_url = f"{self.base_url}/login"
-            print(f"[Segfy] Pagina inicial em branco; tentando rota de login: {login_url}")
             page.goto(login_url, wait_until="domcontentloaded")
             page.wait_for_timeout(1500)
 
-        # 1. Aceitar cookies (banner bloqueia interacao).
+        # 1. Aceitar cookies.
         self._click_first(
             page,
             selectors=[
@@ -604,7 +674,7 @@ class SegfyWebGateway:
             ],
             timeout_ms=2500,
         )
-        page.wait_for_timeout(600)
+        page.wait_for_timeout(400)
 
         # 2. Botao "Entrar com e-mail" (se existir).
         self._click_first(
@@ -619,12 +689,9 @@ class SegfyWebGateway:
             ],
             timeout_ms=1500,
         )
-        page.wait_for_timeout(600)
+        page.wait_for_timeout(500)
 
-        # 3. Preencher e-mail via JavaScript (abordagem definitiva).
-        # O Segfy usa Material Design com label flutuante — o input nao tem
-        # placeholder/name/type identificavel. Usamos JS para localizar pela
-        # label visivel ou pela posicao (primeiro input nao-password).
+        # 3. Preencher e-mail.
         user_filled = self._segfy_fill_email_field(page, self.username)
 
         # 4. Preencher senha.
@@ -646,7 +713,6 @@ class SegfyWebGateway:
             self._capture_debug_snapshot(page=page, label="login_fields_not_found")
         elif not user_filled:
             print("[Segfy] Aviso: usuario nao encontrado no formulario; seguindo com senha preenchida.")
-            self._capture_debug_snapshot(page=page, label="login_user_not_found")
 
         # 5. Clicar em Entrar.
         self._click_first(
@@ -664,6 +730,119 @@ class SegfyWebGateway:
             ],
         )
         page.wait_for_timeout(2500)
+
+        # 6. Dispensar modais pos-login.
+        self._dismiss_segfy_overlays(page)
+
+    def _is_already_logged_in(self, page: Page) -> bool:
+        """Detecta se o Segfy ja esta com sessao ativa (nao precisa login)."""
+        try:
+            url = (page.url or "").lower()
+            # Se a URL nao contem /login e tem conteudo do dashboard, esta logado.
+            if "/login" in url or url.endswith(self.base_url.lower().rstrip("/")):
+                # Pode ser a pagina de login ou redirect. Verifica conteudo.
+                pass
+            # Indicadores de sessao ativa: menu lateral, nome do usuario, dashboard.
+            indicators = [
+                "text=Home",
+                "text=Segurados",
+                "text=Propostas",
+                "text=Financeiro",
+                "text=HFy",
+                "nav",
+                ".sidebar",
+                "[class*='sidebar']",
+                "[class*='menu']",
+            ]
+            for selector in indicators:
+                locator = page.locator(selector)
+                if locator.count() > 0:
+                    return True
+            # Verifica se NAO tem formulario de login visivel.
+            login_form = page.locator("input[type='password']:visible")
+            if login_form.count() == 0:
+                # Sem campo de senha visivel = provavelmente ja logado.
+                body_text = ""
+                try:
+                    body_text = (page.locator("body").inner_text(timeout=2000) or "")[:500].upper()
+                except Exception:
+                    pass
+                if any(kw in body_text for kw in ("SEGURADOS", "FINANCEIRO", "PROPOSTAS", "DASHBOARD", "HFY")):
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def _dismiss_segfy_overlays(self, page: Page) -> None:
+        """Fecha modais/banners que aparecem apos login no Segfy."""
+        for _ in range(5):
+            dismissed = self._click_first(
+                page,
+                selectors=[
+                    # Modal "Instalar extensao" -> adiar
+                    "text=Adiar instalação",
+                    "text=Adiar instalacao",
+                    "select:has-text('Adiar')",
+                    # Botao X de fechar modal
+                    "button[aria-label*='fechar' i]",
+                    "button[aria-label*='close' i]",
+                    "button:has-text('×')",
+                    "button:has-text('X')",
+                    ".close",
+                    "[data-dismiss='modal']",
+                    # Fechar banner de oferta
+                    "button:has-text('Fechar')",
+                    "button:has-text('FECHAR')",
+                    "text=Fechar",
+                    # Outros modais genericos
+                    "button:has-text('Entendi')",
+                    "button:has-text('OK')",
+                    "button:has-text('Pular')",
+                    "button:has-text('Depois')",
+                    "button:has-text('Agora não')",
+                    "button:has-text('Agora nao')",
+                ],
+                timeout_ms=1500,
+            )
+            if not dismissed:
+                # Tenta fechar via Escape
+                try:
+                    page.keyboard.press("Escape")
+                except Exception:
+                    pass
+                break
+            page.wait_for_timeout(400)
+
+        # Clicar no dropdown "Adiar instalacao" se for um select
+        try:
+            select_locator = page.locator("select")
+            if select_locator.count() > 0:
+                for i in range(select_locator.count()):
+                    sel = select_locator.nth(i)
+                    try:
+                        text = (sel.inner_text(timeout=500) or "").lower()
+                        if "adiar" in text:
+                            sel.select_option(index=0, timeout=1500)
+                            page.wait_for_timeout(300)
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        # Fechar o X do modal de extensao (icone no canto superior)
+        self._click_first(
+            page,
+            selectors=[
+                "button.close",
+                ".modal button[aria-label*='close' i]",
+                ".modal-header button",
+                "div[role='dialog'] button:has-text('×')",
+                "div[role='dialog'] button:has-text('X')",
+            ],
+            timeout_ms=1000,
+        )
+        page.wait_for_timeout(500)
 
     def _segfy_fill_email_field(self, page: Page, email: str) -> bool:
         """Preenche o campo de e-mail do Segfy usando multiplas estrategias."""
