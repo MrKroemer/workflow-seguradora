@@ -583,15 +583,15 @@ class SegfyWebGateway:
 
     def _login(self, page: Page) -> None:
         page.goto(self.base_url, wait_until="domcontentloaded")
-        page.wait_for_timeout(1200)
+        page.wait_for_timeout(1500)
         current_url = (page.url or "").strip()
         if current_url.startswith("about:blank") or current_url.startswith("data:"):
             login_url = f"{self.base_url}/login"
             print(f"[Segfy] Pagina inicial em branco; tentando rota de login: {login_url}")
             page.goto(login_url, wait_until="domcontentloaded")
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(1500)
 
-        # Aceitar cookies antes de qualquer interacao (banner pode bloquear cliques).
+        # 1. Aceitar cookies (banner bloqueia interacao).
         self._click_first(
             page,
             selectors=[
@@ -602,116 +602,53 @@ class SegfyWebGateway:
                 "a:has-text('Aceitar')",
                 "text=Aceitar",
             ],
-            timeout_ms=2000,
+            timeout_ms=2500,
         )
-        page.wait_for_timeout(400)
+        page.wait_for_timeout(600)
 
-        # Alguns layouts exibem "Entrar com e-mail"/"Usar conta local".
+        # 2. Botao "Entrar com e-mail" (se existir).
         self._click_first(
             page,
             selectors=[
                 "button:has-text('Entrar com e-mail')",
                 "button:has-text('Entrar com email')",
                 "button:has-text('Usar e-mail')",
-                "button:has-text('Usar email')",
                 "button:has-text('Usar conta local')",
                 "text=Entrar com e-mail",
                 "text=Usar conta local",
             ],
-            timeout_ms=1400,
+            timeout_ms=1500,
         )
-        page.wait_for_timeout(500)
+        page.wait_for_timeout(600)
 
-        # Campo de e-mail/usuario — seletores ordenados do mais especifico ao generico.
-        user_filled = self._fill_first(
-            page,
-            selectors=[
-                "input[placeholder='E-mail']",
-                "input[placeholder='e-mail']",
-                "input[placeholder*='E-mail' i]",
-                "input[placeholder*='email' i]",
-                "input[aria-label*='E-mail' i]",
-                "input[aria-label*='email' i]",
-                "input[type='email']",
-                "input[name='email']",
-                "input[name*='email' i]",
-                "input[id*='email' i]",
-                "input[autocomplete='username']",
-                "input[name='login']",
-                "input[name*='login' i]",
-                "input[id*='login' i]",
-                "input[name='username']",
-                "input[name*='user' i]",
-                "input[id*='user' i]",
-                "input[name='usuario']",
-                "input[name*='usuario' i]",
-                "input[id*='usuario' i]",
-                "input[placeholder*='usuario' i]",
-                "input[type='text']",
-            ],
-            value=self.username,
-        )
+        # 3. Preencher e-mail via JavaScript (abordagem definitiva).
+        # O Segfy usa Material Design com label flutuante — o input nao tem
+        # placeholder/name/type identificavel. Usamos JS para localizar pela
+        # label visivel ou pela posicao (primeiro input nao-password).
+        user_filled = self._segfy_fill_email_field(page, self.username)
 
-        password_selectors = [
-            "input[type='password']",
-            "input[name='password']",
-            "input[name*='password' i]",
-            "input[id*='password' i]",
-            "input[autocomplete='current-password']",
-            "input[name='senha']",
-            "input[name*='senha' i]",
-            "input[id*='senha' i]",
-            "input[placeholder*='senha' i]",
-        ]
+        # 4. Preencher senha.
         password_filled = self._fill_first(
             page,
-            selectors=password_selectors,
+            selectors=[
+                "input[type='password']",
+                "input[name='password']",
+                "input[name*='senha' i]",
+                "input[id*='senha' i]",
+                "input[placeholder*='Senha' i]",
+                "input[placeholder*='senha' i]",
+            ],
             value=self.password,
         )
 
-        # Alguns fluxos de login exibem e-mail e senha em etapas separadas.
-        if user_filled and not password_filled:
-            stepped = self._click_first(
-                page,
-                selectors=[
-                    "button:has-text('Proximo')",
-                    "button:has-text('Próximo')",
-                    "button:has-text('Continuar')",
-                    "button:has-text('Avancar')",
-                    "button:has-text('Avançar')",
-                    "input[type='submit']",
-                    "button[type='submit']",
-                    "text=Proximo",
-                    "text=Próximo",
-                    "text=Continuar",
-                ],
-                timeout_ms=2000,
-            )
-            if stepped:
-                page.wait_for_timeout(1200)
-                password_filled = self._fill_first(
-                    page,
-                    selectors=password_selectors,
-                    value=self.password,
-                )
-
-        if not user_filled and password_filled:
-            # Cenário comum quando o site já mantém o usuário em sessão/parcialmente preenchido.
-            print("[Segfy] Aviso: usuario nao encontrado no formulario; seguindo com senha preenchida.")
-
         if not user_filled and not password_filled:
-            print(
-                "[Segfy] Aviso: campos de login nao encontrados; mantendo fluxo "
-                "(sessao previa pode ja estar autenticada)."
-            )
+            print("[Segfy] ERRO: campos de login nao encontrados.")
             self._capture_debug_snapshot(page=page, label="login_fields_not_found")
-        elif user_filled and not password_filled:
-            print(
-                "[Segfy] Aviso: senha nao encontrada apos tentativa em etapas; "
-                "seguindo fluxo para verificar se a sessao ja esta autenticada."
-            )
-            self._capture_debug_snapshot(page=page, label="login_password_not_found")
+        elif not user_filled:
+            print("[Segfy] Aviso: usuario nao encontrado no formulario; seguindo com senha preenchida.")
+            self._capture_debug_snapshot(page=page, label="login_user_not_found")
 
+        # 5. Clicar em Entrar.
         self._click_first(
             page,
             selectors=[
@@ -721,15 +658,110 @@ class SegfyWebGateway:
                 "button:has-text('Acessar')",
                 "button:has-text('Login')",
                 "button:has-text('Continuar')",
-                "button:has-text('Proximo')",
-                "button:has-text('Próximo')",
                 "text=Entrar",
                 "text=Acessar",
                 "text=Login",
-                "text=Continuar",
             ],
         )
-        page.wait_for_timeout(2200)
+        page.wait_for_timeout(2500)
+
+    def _segfy_fill_email_field(self, page: Page, email: str) -> bool:
+        """Preenche o campo de e-mail do Segfy usando multiplas estrategias."""
+        # Estrategia 1: seletores CSS tradicionais.
+        traditional_selectors = [
+            "input[placeholder='E-mail']",
+            "input[placeholder='e-mail']",
+            "input[placeholder*='E-mail' i]",
+            "input[placeholder*='email' i]",
+            "input[aria-label*='E-mail' i]",
+            "input[aria-label*='email' i]",
+            "input[type='email']",
+            "input[name='email']",
+            "input[name*='email' i]",
+            "input[id*='email' i]",
+            "input[autocomplete='username']",
+            "input[name='login']",
+            "input[name*='login' i]",
+            "input[name='username']",
+            "input[placeholder*='usuario' i]",
+        ]
+        if self._fill_first(page, selectors=traditional_selectors, value=email):
+            print("[Segfy] E-mail preenchido via seletor CSS.")
+            return True
+
+        # Estrategia 2: localizar input pela label visivel "E-mail" via JS.
+        try:
+            found = page.evaluate("""
+                (email) => {
+                    // Busca labels com texto "E-mail" ou "Email"
+                    const labels = Array.from(document.querySelectorAll('label'));
+                    for (const label of labels) {
+                        const text = (label.textContent || '').trim().toLowerCase();
+                        if (text === 'e-mail' || text === 'email' || text === 'e-mail *') {
+                            // Label com for="id"
+                            if (label.htmlFor) {
+                                const input = document.getElementById(label.htmlFor);
+                                if (input) {
+                                    input.focus();
+                                    input.value = email;
+                                    input.dispatchEvent(new Event('input', {bubbles: true}));
+                                    input.dispatchEvent(new Event('change', {bubbles: true}));
+                                    return true;
+                                }
+                            }
+                            // Label envolvendo o input
+                            const input = label.querySelector('input');
+                            if (input) {
+                                input.focus();
+                                input.value = email;
+                                input.dispatchEvent(new Event('input', {bubbles: true}));
+                                input.dispatchEvent(new Event('change', {bubbles: true}));
+                                return true;
+                            }
+                            // Input irmao (proximo elemento)
+                            const sibling = label.nextElementSibling;
+                            if (sibling && sibling.tagName === 'INPUT') {
+                                sibling.focus();
+                                sibling.value = email;
+                                sibling.dispatchEvent(new Event('input', {bubbles: true}));
+                                sibling.dispatchEvent(new Event('change', {bubbles: true}));
+                                return true;
+                            }
+                        }
+                    }
+                    // Busca por mat-label ou span com texto E-mail (Angular Material)
+                    const matLabels = Array.from(document.querySelectorAll('mat-label, span, div'));
+                    for (const el of matLabels) {
+                        const text = (el.textContent || '').trim().toLowerCase();
+                        if (text === 'e-mail' || text === 'email') {
+                            const container = el.closest('mat-form-field, .form-group, .field, div');
+                            if (container) {
+                                const input = container.querySelector('input:not([type="password"])');
+                                if (input) {
+                                    input.focus();
+                                    input.value = email;
+                                    input.dispatchEvent(new Event('input', {bubbles: true}));
+                                    input.dispatchEvent(new Event('change', {bubbles: true}));
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                }
+            """, email)
+            if found:
+                print("[Segfy] E-mail preenchido via JS (label/mat-label).")
+                return True
+        except Exception:
+            pass
+
+        # Estrategia 3: primeiro input visivel que nao seja password.
+        if self._fill_first_visible_non_password_input(page, email):
+            print("[Segfy] E-mail preenchido via fallback (primeiro input visivel).")
+            return True
+
+        return False
 
     def _try_export_policies(self, page: Page) -> Path | None:
         # Tenta abrir area de apolices/relatorios antes de exportar.
@@ -875,6 +907,29 @@ class SegfyWebGateway:
                     return True
                 except Exception:
                     continue
+        return False
+
+    def _fill_first_visible_non_password_input(self, page: Page, value: str) -> bool:
+        """Fallback: preenche o primeiro input visivel que nao seja password."""
+        for context in self._iter_locator_contexts(page):
+            try:
+                all_inputs = context.locator("input:visible")
+                count = all_inputs.count()
+                for i in range(count):
+                    inp = all_inputs.nth(i)
+                    try:
+                        input_type = (inp.get_attribute("type", timeout=500) or "").lower()
+                    except Exception:
+                        input_type = ""
+                    if input_type == "password" or input_type == "hidden" or input_type == "submit":
+                        continue
+                    try:
+                        inp.fill(value, timeout=2500)
+                        return True
+                    except Exception:
+                        continue
+            except Exception:
+                continue
         return False
 
     def _click_first(self, page: Page, *, selectors: list[str], timeout_ms: int = 3500) -> bool:
