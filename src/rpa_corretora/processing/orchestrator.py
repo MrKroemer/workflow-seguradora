@@ -11,6 +11,7 @@ import unicodedata
 from pathlib import Path
 
 from rpa_corretora.config import AppSettings
+from rpa_corretora.core import OperationalDatabase
 from rpa_corretora.domain.models import (
     Alert,
     CalendarCommitment,
@@ -462,12 +463,25 @@ class DailyProcessor:
             if renewal_report_alert is not None:
                 alerts.append(renewal_report_alert)
 
+        # Salvar anexos de e-mails de seguradoras para importacao no Segfy.
+        saved_attachments: list[str] = []
+        if insurer_emails and not dry_run:
+            save_func = getattr(self.gmail, "save_insurer_attachments", None)
+            if callable(save_func):
+                saved_attachments = save_func(
+                    insurer_emails,
+                    self.settings.insurer_domains,
+                )
+                if saved_attachments:
+                    print(f"[Gmail] {len(saved_attachments)} anexos de seguradoras salvos para importacao.")
+
         if trace is not None:
             trace.complete_stage(
                 "gmail",
                 (
                     f"{len(messages)} e-mails lidos; {len(insurer_emails)} classificados como seguradora; "
-                    f"{len(cashflow_entries)} entradas e {len(expense_entries)} despesas extraidas."
+                    f"{len(cashflow_entries)} entradas e {len(expense_entries)} despesas extraidas; "
+                    f"{len(saved_attachments)} anexos salvos para importacao."
                 ),
             )
 
@@ -685,9 +699,69 @@ class DailyProcessor:
 
         if trace is not None:
             trace.start_stage("insurer_portals")
+        portal_synced_to_segfy = 0
+        portal_synced_to_sheets = 0
         try:
             portal_data = self.portals.fetch_policy_data([item.policy_id for item in segfy_data])
             alerts.extend(build_segfy_portal_alerts(segfy_data, portal_data))
+
+            # Alimentar Segfy e planilhas com dados reais dos portais.
+            if portal_data and not dry_run:
+                portal_map = {item.policy_id: item for item in portal_data}
+                for policy in policies:
+                    portal_item = portal_map.get(policy.policy_id)
+                    if portal_item is None:
+                        continue
+                    if portal_item.premio_total > 0:
+                        policy.premio_total = portal_item.premio_total
+                    if portal_item.comissao > 0:
+                        policy.comissao = portal_item.comissao
+                    # Atualiza flags de sinistro/endosso com dados reais do portal.
+                    if portal_item.sinistro_status:
+                        policy.sinistro_open = portal_item.sinistro_status.upper() not in (
+                            "FINALIZADO", "ENCERRADO", "CONCLUIDO",
+                        )
+                    if portal_item.endosso_status:
+                        policy.endosso_open = portal_item.endosso_status.upper() not in (
+                            "FINALIZADO", "CONCLUIDO", "EMITIDO",
+                        )
+                    portal_synced_to_sheets += 1
+
+                # Registrar sinistros/endossos dos portais no Segfy.
+                register_incident_func = getattr(self.segfy, "register_incident", None)
+                if callable(register_incident_func):
+                    for item in portal_data:
+                        if item.sinistro_status and item.sinistro_status.upper() not in ("FINALIZADO", "ENCERRADO"):
+                            register_incident_func(
+                                policy_id=item.policy_id,
+                                incident_type="SINISTRO",
+                                description=f"Status portal: {item.sinistro_status} ({item.insurer})",
+                            )
+                        if item.endosso_status and item.endosso_status.upper() not in ("FINALIZADO", "CONCLUIDO", "EMITIDO"):
+                            register_incident_func(
+                                policy_id=item.policy_id,
+                                incident_type="ENDOSSO",
+                                description=f"Status portal: {item.endosso_status} ({item.insurer})",
+                            )
+
+                # Registrar renovacoes detectadas nos portais.
+                register_renewal_func = getattr(self.segfy, "register_renewal", None)
+                if callable(register_renewal_func):
+                    for item in portal_data:
+                        if item.renewal_status:
+                            register_renewal_func(
+                                policy_id=item.policy_id,
+                                phase=item.renewal_status,
+                                status=f"Portal {item.insurer}",
+                            )
+
+                # Sincronizar politicas atualizadas para o Segfy.
+                sync_func = getattr(self.segfy, "sync_policies", None)
+                if callable(sync_func):
+                    updated_policies = [p for p in policies if p.policy_id in portal_map]
+                    if updated_policies:
+                        portal_synced_to_segfy = int(sync_func(updated_policies) or 0)
+
         except Exception as exc:
             if trace is not None:
                 trace.fail_stage(
@@ -833,6 +907,8 @@ class DailyProcessor:
                 "insurer_portals",
                 (
                     f"{len(portal_data)} registros de apolices retornados; "
+                    f"{portal_synced_to_sheets} apolices atualizadas com dados do portal; "
+                    f"{portal_synced_to_segfy} apolices reenviadas ao Segfy com dados reais; "
                     f"{notification_summary.portal_claim_checks} consultas de sinistro por agenda; "
                     f"{notification_summary.portal_claim_failures} falhas de consulta."
                 ),
@@ -851,6 +927,36 @@ class DailyProcessor:
             expenses=expenses,
             followups=followups,
         )
+
+        # Persistir todos os dados no banco operacional centralizado.
+        try:
+            db = OperationalDatabase()
+            run_id = db.start_run(today)
+            db.upsert_policies(policies, source="PLANILHA+PORTAL")
+            db.upsert_followups(followups, source="PLANILHA")
+            if cashflow_entries:
+                db.insert_cashflow(cashflow_entries)
+            if expense_entries:
+                db.insert_expenses(expense_entries)
+            if portal_data:
+                db.insert_portal_data(portal_data)
+            db.insert_alerts(alerts, today)
+            db.insert_commitments(commitments, today)
+            insurer_email_ids = {m.id for m in insurer_emails}
+            db.insert_emails(messages, today, insurer_ids=insurer_email_ids)
+            db.complete_run(
+                run_id,
+                total_policies=len(policies),
+                total_alerts=len(alerts),
+                total_emails=len(messages),
+                total_cashflow=float(sum(e.value for e in cashflow_entries)) if cashflow_entries else 0.0,
+                segfy_synced=segfy_sync_policies,
+                portal_synced=portal_synced_to_segfy,
+            )
+            db.close()
+            print(f"[DB] Banco operacional atualizado: {db.db_path}")
+        except Exception as exc:
+            print(f"[DB] Aviso: falha ao persistir no banco ({exc}). Fluxo continua normalmente.")
 
         return RunResult(
             run_date=today,

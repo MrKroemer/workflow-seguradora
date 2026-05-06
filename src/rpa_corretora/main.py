@@ -1013,6 +1013,15 @@ def main() -> None:
                     output_path=args.dashboard_html_output,
                 )
                 print(f"Dashboard HTML: {dashboard_path.resolve()}")
+
+                # Gerar dashboard inteligente com graficos e exportacao.
+                try:
+                    from rpa_corretora.processing.dashboard_intelligent import generate_intelligent_dashboard
+                    intel_path = generate_intelligent_dashboard()
+                    print(f"Dashboard Inteligente: {intel_path.resolve()}")
+                except Exception as intel_exc:
+                    print(f"[Dashboard] Aviso: falha ao gerar dashboard inteligente ({intel_exc}).")
+
                 if trace is not None:
                     trace.complete_stage("dashboard", f"Dashboard publicado em {dashboard_path.resolve()}")
             except Exception as exc:

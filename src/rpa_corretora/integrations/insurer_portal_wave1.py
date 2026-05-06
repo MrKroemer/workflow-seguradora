@@ -65,6 +65,23 @@ def _find_money_near_labels(text: str, labels: tuple[str, ...]) -> Decimal | Non
     return None
 
 
+def _extract_status_near_labels(text: str, labels: tuple[str, ...]) -> str:
+    """Extrai status textual proximo a labels no texto da pagina."""
+    folded = _ascii_fold(text).lower()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    folded_lines = [_ascii_fold(line).lower() for line in lines]
+    for index, fl in enumerate(folded_lines):
+        if not any(label in fl for label in labels):
+            continue
+        # Tenta extrair status da mesma linha ou proxima.
+        for candidate_line in lines[index:index+2]:
+            candidate_upper = _ascii_fold(candidate_line).upper()
+            for status in ("EM ANDAMENTO", "EM ANALISE", "PENDENTE", "FINALIZADO", "ENCERRADO", "CONCLUIDO", "ABERTO", "EMITIDO", "CANCELADO", "RENOVADO", "NAO RENOVADO"):
+                if status in candidate_upper:
+                    return status
+    return ""
+
+
 def parse_policy_data_from_text_generic(
     *,
     policy_id: str,
@@ -78,11 +95,24 @@ def parse_policy_data_from_text_generic(
     if premio is None or comissao is None:
         return None
 
+    sinistro_status = _extract_status_near_labels(
+        text, ("sinistro", "acidente", "indenizacao", "regulacao")
+    )
+    endosso_status = _extract_status_near_labels(
+        text, ("endosso", "alteracao", "inclusao", "exclusao")
+    )
+    renewal_status = _extract_status_near_labels(
+        text, ("renovacao", "renovar", "vigencia", "renov")
+    )
+
     return PortalPolicyData(
         policy_id=policy_id,
         insurer=insurer,
         premio_total=premio,
         comissao=comissao,
+        sinistro_status=sinistro_status,
+        endosso_status=endosso_status,
+        renewal_status=renewal_status,
     )
 
 

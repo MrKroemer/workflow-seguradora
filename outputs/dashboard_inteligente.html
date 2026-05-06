@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Inteligente - PBSeg Corretora</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+    --bg: #0f1419; --surface: #1a2332; --surface2: #243447;
+    --accent: #0ea5e9; --accent2: #06b6d4; --success: #10b981;
+    --warning: #f59e0b; --danger: #ef4444; --text: #e2e8f0;
+    --text-muted: #94a3b8; --border: #334155; --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.header h1 { font-size: 1.8rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .meta { color: var(--text-muted); font-size: 0.85rem; }
+.export-btns { display: flex; gap: 0.5rem; }
+.export-btns button { padding: 0.5rem 1rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+.export-btns button:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.grid { display: grid; gap: 1rem; }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; }
+.card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 0.5rem; }
+.kpi { font-size: 2rem; font-weight: 700; }
+.kpi-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; }
+.kpi-accent { color: var(--accent); }
+.kpi-success { color: var(--success); }
+.kpi-warning { color: var(--warning); }
+.kpi-danger { color: var(--danger); }
+.chart-container { position: relative; height: 280px; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.table th, .table td { padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border); }
+.table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+.table tr:hover { background: var(--surface2); }
+.badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+.badge-danger { background: rgba(239,68,68,0.2); color: #fca5a5; }
+.badge-warning { background: rgba(245,158,11,0.2); color: #fcd34d; }
+.badge-success { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+.section-title { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+.prediction { background: linear-gradient(135deg, rgba(14,165,233,0.1), rgba(6,182,212,0.1)); border: 1px solid rgba(14,165,233,0.3); border-radius: var(--radius); padding: 1rem; margin-top: 0.5rem; }
+.prediction-title { font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-bottom: 0.3rem; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>PBSeg - Dashboard Inteligente</h1>
+            <p class="meta">Atualizado em 05/05/2026 23:23 | Dados cruzados de planilhas, portais, Gmail e Segfy</p>
+        </div>
+        <div class="export-btns">
+            <button onclick="exportXLSX()">📊 Exportar XLSX</button>
+            <button onclick="exportPDF()">📄 Exportar PDF</button>
+        </div>
+    </div>
+
+    <div class="grid grid-4" id="kpis"></div>
+    <h2 class="section-title">Distribuição da Carteira</h2>
+    <div class="grid grid-2">
+        <div class="card"><div class="card-title">Apólices por Seguradora</div><div class="chart-container"><canvas id="chartInsurers"></canvas></div></div>
+        <div class="card"><div class="card-title">Comissões: Pagas vs Pendentes</div><div class="chart-container"><canvas id="chartCommissions"></canvas></div></div>
+    </div>
+    <h2 class="section-title">Renovações e Acompanhamento</h2>
+    <div class="grid grid-2">
+        <div class="card"><div class="card-title">Renovações por Mês</div><div class="chart-container"><canvas id="chartRenewals"></canvas></div></div>
+        <div class="card"><div class="card-title">Alertas por Severidade</div><div class="chart-container"><canvas id="chartAlerts"></canvas></div></div>
+    </div>
+    <h2 class="section-title">Financeiro</h2>
+    <div class="grid grid-3">
+        <div class="card"><div class="card-title">Fluxo de Caixa Mensal</div><div class="chart-container"><canvas id="chartCashflow"></canvas></div></div>
+        <div class="card"><div class="card-title">Despesas por Categoria</div><div class="chart-container"><canvas id="chartExpenses"></canvas></div></div>
+        <div class="card"><div class="card-title">Tendência de Receita</div><div class="chart-container"><canvas id="chartTrend"></canvas></div></div>
+    </div>
+    <h2 class="section-title">Predições e Inteligência</h2>
+    <div class="grid grid-2">
+        <div class="card">
+            <div class="card-title">Apólices Vencendo nos Próximos 30 Dias</div>
+            <div id="expiringTable"></div>
+            <div class="prediction">
+                <div class="prediction-title">⚡ Predição</div>
+                <span id="predictionText"></span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Top 15 Segurados por Prêmio</div>
+            <div id="topInsuredTable"></div>
+        </div>
+    </div>
+    <h2 class="section-title">Divergências Portal × Planilha</h2>
+    <div class="card"><div id="divergencesTable"></div></div>
+    <h2 class="section-title">Histórico de Execuções</h2>
+    <div class="card"><div id="runHistoryTable"></div></div>
+</div>
+
+<script>
+const D = {"policies_by_insurer": [{"insurer": "AZUL", "total": 63, "premio": 122375.12, "comissao": 17303.99495}, {"insurer": "YELUM", "total": 63, "premio": 179562.04, "comissao": 25784.5959}, {"insurer": "PORTO", "total": 60, "premio": 55471.04, "comissao": 10041.5772}, {"insurer": "MAPFRE", "total": 57, "premio": 130344.04, "comissao": 16539.52375}, {"insurer": "ALLIANZ", "total": 43, "premio": 80862.59, "comissao": 11653.9068}, {"insurer": "SUHAI", "total": 42, "premio": 31494.17, "comissao": 6311.4966}, {"insurer": "ITAU", "total": 32, "premio": 41689.31, "comissao": 6127.3172}, {"insurer": "TOKIO", "total": 24, "premio": 74175.12, "comissao": 8094.004}, {"insurer": "BRADESCO", "total": 21, "premio": 70225.1, "comissao": 13162.7316}, {"insurer": "ALIRO", "total": 16, "premio": 34360.35, "comissao": 4177.0845}, {"insurer": "HDI", "total": 7, "premio": 18001.760000000002, "comissao": 2605.3969}, {"insurer": "SUL AMERICA", "total": 7, "premio": 5926.6900000000005, "comissao": 2773.549}, {"insurer": "MAPRE", "total": 3, "premio": 4059.9, "comissao": 555.9848}, {"insurer": "BP", "total": 1, "premio": 0.0, "comissao": 0.0}, {"insurer": "BP SEGUROS", "total": 1, "premio": 652.26, "comissao": 652.26}, {"insurer": "JUSTOS", "total": 1, "premio": 107.81, "comissao": 15.06}, {"insurer": "Porto Seguro", "total": 1, "premio": 1000.0, "comissao": 100.0}, {"insurer": "ZURICH", "total": 1, "premio": 2838.33, "comissao": 264.323}], "totals": {"policies": 443, "premio": 853145.63, "comissao": 126162.8062}, "commissions": {"paid": 317, "pending": 126}, "incidents": {"sinistros": 5, "endossos": 46}, "renewals_by_month": [{"month": "JANEIRO", "concluded": 23, "open": 10}, {"month": "FEVEREIRO", "concluded": 34, "open": 11}, {"month": "MARCO", "concluded": 32, "open": 33}, {"month": "ABRIL", "concluded": 0, "open": 29}], "cashflow_monthly": [{"month": "2026-04", "total": 482.0}], "expenses_by_category": [{"category": "CORRETORA", "total": 482.0}], "alerts_by_severity": [{"severity": "ALTA", "total": 252}, {"severity": "MEDIA", "total": 190}], "run_history": [{"run_date": "2026-05-05", "status": "SUCESSO", "total_policies": 442, "total_alerts": 221, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-04-03", "status": "SUCESSO", "total_policies": 1, "total_alerts": 3, "total_emails": 1, "total_cashflow": 120.5, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-04-03", "status": "SUCESSO", "total_policies": 1, "total_alerts": 3, "total_emails": 1, "total_cashflow": 120.5, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-03-30", "status": "SUCESSO", "total_policies": 1, "total_alerts": 4, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-03-30", "status": "SUCESSO", "total_policies": 1, "total_alerts": 5, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-03-30", "status": "SUCESSO", "total_policies": 1, "total_alerts": 4, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-05-05", "status": "SUCESSO", "total_policies": 442, "total_alerts": 221, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-04-03", "status": "SUCESSO", "total_policies": 1, "total_alerts": 3, "total_emails": 1, "total_cashflow": 120.5, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-04-03", "status": "SUCESSO", "total_policies": 1, "total_alerts": 3, "total_emails": 1, "total_cashflow": 120.5, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-03-30", "status": "SUCESSO", "total_policies": 1, "total_alerts": 4, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-03-30", "status": "SUCESSO", "total_policies": 1, "total_alerts": 5, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}, {"run_date": "2026-03-30", "status": "SUCESSO", "total_policies": 1, "total_alerts": 4, "total_emails": 0, "total_cashflow": 0.0, "segfy_synced": 0, "portal_synced": 0}], "expiring_soon": [], "commission_trend": [{"month": "2026-04", "total": 482.0}], "top_insured": [{"insured_name": "DAVID SANTOS DA SILVA", "insurer": "TOKIO", "premio_total": 17807.49, "comissao": 1658.362, "vehicle_item": "HILUX"}, {"insured_name": "ROBERTO CARLOS DOS SANTOS", "insurer": "YELUM", "premio_total": 6926.19, "comissao": 645.017, "vehicle_item": "FRONTIER"}, {"insured_name": "LUCIANA RAMOS NEIVA", "insurer": "AZUL", "premio_total": 6839.53, "comissao": 636.943, "vehicle_item": "QS LINE"}, {"insured_name": "PAULO VICTOR HENRIQUES DA SILVA", "insurer": "TOKIO", "premio_total": 6808.29, "comissao": 945.6585, "vehicle_item": "HILUX"}, {"insured_name": "CONDOMINIO RESIDENCIAL TOM JOBIM", "insurer": "BRADESCO", "premio_total": 6424.08, "comissao": 2393.028, "vehicle_item": "CONDOMINIO"}, {"insured_name": "JOSE COUTINHO DE OLIVEIRA NETO", "insurer": "TOKIO", "premio_total": 6385.9, "comissao": 892.0515, "vehicle_item": "HILUX"}, {"insured_name": "CONDOMINIO RESIDENCIAL TOM JOBIM", "insurer": "BRADESCO", "premio_total": 6118.2, "comissao": 2278.884, "vehicle_item": "EMPRESA"}, {"insured_name": "JOSE HIGINO DE AMORIM", "insurer": "YELUM", "premio_total": 6108.52, "comissao": 853.3035, "vehicle_item": "DELIVERY"}, {"insured_name": "JOSIVANDO DA SILVA AVELINO", "insurer": "YELUM", "premio_total": 6029.77, "comissao": 561.536, "vehicle_item": "FRONTIER"}, {"insured_name": "CAMILA DECANINI CASAGRANDE", "insurer": "SUHAI", "premio_total": 5941.41, "comissao": 1106.614, "vehicle_item": "HILUX"}, {"insured_name": "DIEGO NUNES BARROS", "insurer": "BRADESCO", "premio_total": 5842.61, "comissao": 544.106, "vehicle_item": "HILUX"}, {"insured_name": "JOSE HIGINO DE AMORIM", "insurer": "YELUM", "premio_total": 5778.42, "comissao": 807.192, "vehicle_item": "DELIVERY"}, {"insured_name": "VALDEMIR MOREIRA PALITOT", "insurer": "ALLIANZ", "premio_total": 5722.49, "comissao": 1065.84, "vehicle_item": "HILUX"}, {"insured_name": "EUCLECIO SANTOS DE MORAIS", "insurer": "AZUL", "premio_total": 5542.03, "comissao": 516.114, "vehicle_item": "AION"}, {"insured_name": "JOSE GOMES FERREIRA", "insurer": "ALLIANZ", "premio_total": 5505.67, "comissao": 512.729, "vehicle_item": "F-4000"}], "divergences": []};
+const colors = ['#0ea5e9','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1'];
+
+// KPIs
+document.getElementById('kpis').innerHTML = `
+    <div class="card"><div class="card-title">Total Apólices</div><div class="kpi kpi-accent">${D.totals.policies}</div><div class="kpi-sub">${D.policies_by_insurer.length} seguradoras</div></div>
+    <div class="card"><div class="card-title">Prêmio Total</div><div class="kpi kpi-success">R$ ${(D.totals.premio/1000).toFixed(0)}k</div><div class="kpi-sub">Comissão: R$ ${(D.totals.comissao/1000).toFixed(0)}k</div></div>
+    <div class="card"><div class="card-title">Comissões Pendentes</div><div class="kpi kpi-warning">${D.commissions.pending}</div><div class="kpi-sub">${D.commissions.paid} pagas</div></div>
+    <div class="card"><div class="card-title">Incidentes Abertos</div><div class="kpi kpi-danger">${D.incidents.sinistros + D.incidents.endossos}</div><div class="kpi-sub">${D.incidents.sinistros} sinistros | ${D.incidents.endossos} endossos</div></div>
+`;
+
+// Charts
+new Chart('chartInsurers', {type:'bar',data:{labels:D.policies_by_insurer.map(i=>i.insurer),datasets:[{label:'Apólices',data:D.policies_by_insurer.map(i=>i.total),backgroundColor:colors}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'#334155'}},y:{grid:{display:false}}}}});
+
+new Chart('chartCommissions', {type:'doughnut',data:{labels:['Pagas','Pendentes'],datasets:[{data:[D.commissions.paid,D.commissions.pending],backgroundColor:['#10b981','#f59e0b']}]},options:{plugins:{legend:{position:'bottom',labels:{color:'#94a3b8'}}}}});
+
+if(D.renewals_by_month.length){
+    new Chart('chartRenewals', {type:'bar',data:{labels:D.renewals_by_month.map(r=>r.month),datasets:[{label:'Concluídas',data:D.renewals_by_month.map(r=>r.concluded),backgroundColor:'#10b981'},{label:'Em Aberto',data:D.renewals_by_month.map(r=>r.open),backgroundColor:'#f59e0b'}]},options:{scales:{x:{grid:{color:'#334155'}},y:{grid:{color:'#334155'}}}}});
+}
+
+if(D.alerts_by_severity.length){
+    new Chart('chartAlerts', {type:'polarArea',data:{labels:D.alerts_by_severity.map(a=>a.severity),datasets:[{data:D.alerts_by_severity.map(a=>a.total),backgroundColor:['#ef4444','#f59e0b','#0ea5e9','#10b981']}]},options:{plugins:{legend:{position:'bottom',labels:{color:'#94a3b8'}}}}});
+}
+
+if(D.cashflow_monthly.length){
+    new Chart('chartCashflow', {type:'line',data:{labels:D.cashflow_monthly.map(c=>c.month),datasets:[{label:'Receita',data:D.cashflow_monthly.map(c=>c.total),borderColor:'#10b981',tension:0.3,fill:true,backgroundColor:'rgba(16,185,129,0.1)'}]},options:{scales:{x:{grid:{color:'#334155'}},y:{grid:{color:'#334155'}}}}});
+}
+
+if(D.expenses_by_category.length){
+    new Chart('chartExpenses', {type:'pie',data:{labels:D.expenses_by_category.map(e=>e.category),datasets:[{data:D.expenses_by_category.map(e=>e.total),backgroundColor:colors}]},options:{plugins:{legend:{position:'bottom',labels:{color:'#94a3b8'}}}}});
+}
+
+if(D.commission_trend.length){
+    new Chart('chartTrend', {type:'line',data:{labels:D.commission_trend.map(c=>c.month).reverse(),datasets:[{label:'Receita Mensal',data:D.commission_trend.map(c=>c.total).reverse(),borderColor:'#0ea5e9',tension:0.4,fill:true,backgroundColor:'rgba(14,165,233,0.1)'}]},options:{scales:{x:{grid:{color:'#334155'}},y:{grid:{color:'#334155'}}}}});
+}
+
+// Tables
+function renderTable(id, headers, rows) {
+    let html = '<table class="table"><thead><tr>' + headers.map(h=>`<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+    rows.forEach(r => { html += '<tr>' + r.map(c=>`<td>${c}</td>`).join('') + '</tr>'; });
+    html += '</tbody></table>';
+    document.getElementById(id).innerHTML = html;
+}
+
+renderTable('expiringTable', ['Segurado','Seguradora','Vigência','Prêmio'],
+    D.expiring_soon.map(p=>[p.insured_name, p.insurer, p.vig, 'R$ '+(p.premio_total||0).toFixed(2)]));
+
+renderTable('topInsuredTable', ['Segurado','Seguradora','Prêmio','Comissão','Veículo'],
+    D.top_insured.map(p=>[p.insured_name, p.insurer, 'R$ '+(p.premio_total||0).toFixed(2), 'R$ '+(p.comissao||0).toFixed(2), p.vehicle_item||'-']));
+
+renderTable('divergencesTable', ['Apólice','Segurado','Seguradora','Prêmio Planilha','Prêmio Portal','Comissão Planilha','Comissão Portal'],
+    D.divergences.map(d=>[d.policy_id, d.insured_name, d.insurer, 'R$ '+(d.planilha_premio||0).toFixed(2), 'R$ '+(d.portal_premio||0).toFixed(2), 'R$ '+(d.planilha_comissao||0).toFixed(2), 'R$ '+(d.portal_comissao||0).toFixed(2)]));
+
+renderTable('runHistoryTable', ['Data','Status','Apólices','Alertas','E-mails','Segfy Sync','Portal Sync'],
+    D.run_history.map(r=>[r.run_date, `<span class="badge ${r.status==='SUCESSO'?'badge-success':'badge-warning'}">${r.status}</span>`, r.total_policies, r.total_alerts, r.total_emails, r.segfy_synced, r.portal_synced]));
+
+// Prediction
+const expCount = D.expiring_soon.length;
+const predText = expCount > 0
+    ? `${expCount} apólice(s) vencem nos próximos 30 dias. Receita em risco: R$ ${D.expiring_soon.reduce((s,p)=>s+(p.premio_total||0),0).toFixed(2)}. Inicie contato de renovação imediatamente.`
+    : 'Nenhuma apólice vencendo nos próximos 30 dias. Carteira estável.';
+document.getElementById('predictionText').textContent = predText;
+
+// Export XLSX
+function exportXLSX() {
+    const wb = XLSX.utils.book_new();
+    const policies = D.policies_by_insurer.map(p=>({Seguradora:p.insurer,Apolices:p.total,Premio:p.premio,Comissao:p.comissao}));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(policies), 'Carteira');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(D.expiring_soon), 'Vencendo 30d');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(D.top_insured), 'Top Segurados');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(D.divergences), 'Divergencias');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(D.run_history), 'Historico');
+    XLSX.writeFile(wb, 'dashboard_pbseg_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// Export PDF
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('PBSeg - Relatório Operacional', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+    let y = 40;
+    doc.setFontSize(12);
+    doc.text(`Total de Apólices: ${D.totals.policies}`, 14, y); y+=8;
+    doc.text(`Prêmio Total: R$ ${(D.totals.premio||0).toFixed(2)}`, 14, y); y+=8;
+    doc.text(`Comissão Total: R$ ${(D.totals.comissao||0).toFixed(2)}`, 14, y); y+=8;
+    doc.text(`Comissões Pendentes: ${D.commissions.pending}`, 14, y); y+=8;
+    doc.text(`Sinistros Abertos: ${D.incidents.sinistros}`, 14, y); y+=8;
+    doc.text(`Endossos Abertos: ${D.incidents.endossos}`, 14, y); y+=8;
+    doc.text(`Apólices Vencendo (30d): ${D.expiring_soon.length}`, 14, y); y+=12;
+    doc.setFontSize(11);
+    doc.text('Carteira por Seguradora:', 14, y); y+=7;
+    doc.setFontSize(9);
+    D.policies_by_insurer.forEach(p => {
+        doc.text(`  ${p.insurer}: ${p.total} apólices | R$ ${(p.premio||0).toFixed(2)}`, 14, y); y+=6;
+        if(y > 270) { doc.addPage(); y = 20; }
+    });
+    doc.save('relatorio_pbseg_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+</script>
+</body>
+</html>

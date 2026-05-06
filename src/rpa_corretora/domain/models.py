@@ -101,6 +101,11 @@ class PortalPolicyData:
     insurer: str
     premio_total: Decimal
     comissao: Decimal
+    sinistro_status: str = ""
+    endosso_status: str = ""
+    renewal_status: str = ""
+    parcelas_pendentes: int = 0
+    documento_url: str = ""
 
 
 @dataclass(slots=True)

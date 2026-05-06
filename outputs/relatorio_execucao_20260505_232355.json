@@ -1,0 +1,145 @@
+{
+  "cabecalho": {
+    "inicio_ciclo": "2026-05-05T23:23:55.522041",
+    "fim_ciclo": "2026-05-05T23:23:57.949048",
+    "identificador_execucao": "RUN-20260505-002",
+    "versao_bot": "0.1.0"
+  },
+  "resumo_executivo": {
+    "tarefas_previstas": 8,
+    "tarefas_sucesso": 7,
+    "tarefas_falha_ou_nao_executadas": 1,
+    "status_geral": "SUCESSO PARCIAL"
+  },
+  "detalhamento_por_etapa": [
+    {
+      "nome_etapa": "Google Calendar",
+      "status": "EXECUTADO",
+      "resultado": "0 compromissos lidos (0 pendentes); 0 com cliente identificado.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:55.524561",
+      "fim": "2026-05-05T23:23:56.527459"
+    },
+    {
+      "nome_etapa": "Microsoft To Do",
+      "status": "EXECUTADO",
+      "resultado": "0 tarefas abertas lidas (sincronizacao pendente).",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:56.527501",
+      "fim": "2026-05-05T23:23:57.917419"
+    },
+    {
+      "nome_etapa": "Gmail",
+      "status": "EXECUTADO",
+      "resultado": "0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas; 0 anexos salvos para importacao.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:56.527519",
+      "fim": "2026-05-05T23:23:57.456489"
+    },
+    {
+      "nome_etapa": "Segfy CRM",
+      "status": "EXECUTADO",
+      "resultado": "0 registros consultados; 0 baixas registradas; 0 falhas de baixa; 0 documentos importados; 0 apolices sincronizadas; 0 acompanhamentos sincronizados; 0 lancamentos financeiros sincronizados; 0 incidentes registrados; 0 comissoes atualizadas; 0 renovacoes registradas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:57.917432",
+      "fim": "2026-05-05T23:23:57.917479"
+    },
+    {
+      "nome_etapa": "Portais das seguradoras",
+      "status": "EXECUTADO",
+      "resultado": "0 registros de apolices retornados; 0 apolices atualizadas com dados do portal; 0 apolices reenviadas ao Segfy com dados reais; 0 consultas de sinistro por agenda; 0 falhas de consulta.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:57.917443",
+      "fim": "2026-05-05T23:23:57.917484"
+    },
+    {
+      "nome_etapa": "Planilhas operacionais",
+      "status": "EXECUTADO",
+      "resultado": "442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:56.527531",
+      "fim": "2026-05-05T23:23:57.620869"
+    },
+    {
+      "nome_etapa": "Notificacoes via WhatsApp",
+      "status": "IGNORADO",
+      "resultado": "Notificacoes nao enviadas por modo dry-run.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:57.917468",
+      "fim": "2026-05-05T23:23:57.917468"
+    },
+    {
+      "nome_etapa": "Dashboard consolidado",
+      "status": "EXECUTADO",
+      "resultado": "Dashboard publicado em /home/sculpt0r/Documents/projeto_dani/robot/outputs/dashboard_latest.html",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-05-05T23:23:57.943566",
+      "fim": "2026-05-05T23:23:57.949034"
+    }
+  ],
+  "itens_nao_executados": [
+    {
+      "item_id": "Microsoft To Do - sincronizacao agenda",
+      "motivo": "Dry-run ativo, criacao/atualizacao/conclusao de tarefas nao executada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar o Microsoft To Do."
+    },
+    {
+      "item_id": "Segfy - importacao de documentos",
+      "motivo": "Dry-run ativo, importacao documental foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para importar arquivos no Segfy."
+    },
+    {
+      "item_id": "Segfy - sincronizacao de apolices",
+      "motivo": "Dry-run ativo, sincronizacao de apolices com Segfy foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar apolices."
+    },
+    {
+      "item_id": "Segfy - sincronizacao de acompanhamentos",
+      "motivo": "Dry-run ativo, sincronizacao de acompanhamentos com Segfy foi bloqueada.",
+      "acao_recomendada": "Executar sem --dry-run para sincronizar acompanhamentos."
+    },
+    {
+      "item_id": "Notificacoes via WhatsApp",
+      "motivo": "Dry-run ativo, notificacoes externas foram puladas.",
+      "acao_recomendada": "Executar sem --dry-run para enviar notificacoes."
+    },
+    {
+      "item_id": "Envio de relatorio por e-mail",
+      "motivo": "EXECUTION_REPORT_EMAIL_TO nao configurado.",
+      "acao_recomendada": "Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor."
+    }
+  ],
+  "log_de_erros": []
+}

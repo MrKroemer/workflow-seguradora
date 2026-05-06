@@ -43,50 +43,70 @@ O ciclo diário agora sincroniza automaticamente:
 
 ---
 
-## 2. Login do Segfy — Reescrita Completa
+## 2. Login do Segfy — Reescrita Completa com Detecção de Sessão
 
 ### Problema anterior
 O campo de e-mail do Segfy não era preenchido. O formulário usa componentes de UI com label flutuante (sem `placeholder`, `type='email'` ou `name` identificável no input). Além disso, um banner de cookies bloqueava a interação.
 
 ### Solução implementada
-Login reescrito com 3 estratégias em cascata:
+
+#### Detecção de sessão ativa
+Antes de tentar login, o robô verifica se já está autenticado (perfil persistente com sessão ativa). Indicadores:
+- Presença de menu lateral (Home, Segurados, Financeiro, HFy)
+- Ausência de campo de senha visível
+- Palavras-chave do dashboard no corpo da página
+
+Se detectar sessão ativa: `[Segfy] Sessao ativa detectada, login nao necessario.`
+
+#### Login com 3 estratégias de preenchimento do e-mail
 
 1. **Seletores CSS tradicionais** — tenta `input[placeholder='E-mail']`, `input[type='email']`, etc.
 2. **JavaScript via DOM** — busca `<label>` e `<mat-label>` com texto "E-mail", localiza o input associado (por `htmlFor`, como filho, ou como irmão), preenche via `input.value` + disparo de eventos `input`/`change` para frameworks reativos (Angular/React).
 3. **Fallback posicional** — localiza o primeiro `input:visible` que não seja `type='password'` e preenche.
 
-Adicionalmente:
-- Banner de cookies é aceito automaticamente antes de qualquer interação.
-- Modais pós-login (extensão Segfy, ofertas, onboarding) são dispensados automaticamente.
+#### Submissão do formulário
+O botão "Entrar" é clicado via seletores. Se nenhum seletor encontrar o botão, o robô pressiona **Enter** no teclado como fallback (submete o formulário).
+
+#### Tratamento pós-login
+Modais pós-login (extensão Segfy, ofertas, onboarding) são dispensados automaticamente via `_dismiss_segfy_overlays`.
 
 ### Arquivo modificado
-- `src/rpa_corretora/integrations/segfy_web_gateway.py` — métodos `_login`, `_segfy_fill_email_field`, `_fill_first_visible_non_password_input`, `_dismiss_segfy_overlays`
+- `src/rpa_corretora/integrations/segfy_web_gateway.py` — métodos `_login`, `_is_already_logged_in`, `_segfy_fill_email_field`, `_fill_first_visible_non_password_input`, `_dismiss_segfy_overlays`
 
 ---
 
-## 3. Chrome com Perfil Persistente
+## 3. Chrome com Perfil Persistente e Conexão CDP
 
 ### Problema anterior
-O Playwright abria um navegador limpo a cada execução — sem extensões, sem cookies, sem sessões salvas. A extensão Segfy precisava ser instalada a cada vez (impossível via automação).
+O Playwright abria um navegador limpo a cada execução — sem extensões, sem cookies, sem sessões salvas. A extensão Segfy precisava ser instalada a cada vez (impossível via automação). Além disso, abrir o Chrome com perfil persistente falhava quando o Chrome já estava em uso.
 
 ### Solução implementada
-O método `_launch_browser` agora:
+O método `_launch_browser` agora opera com 3 estratégias em cascata:
 
-1. **Auto-detecta** o diretório de perfil do Chrome no Windows: `%LOCALAPPDATA%\Google\Chrome\User Data`
-2. Usa `launch_persistent_context` do Playwright para abrir o Chrome **com o perfil real da operadora** (Danielly Rodrigues / pbseg.seguros@gmail.com)
-3. Mantém extensão Segfy instalada, cookies, sessões de portais, favoritos — tudo intacto entre execuções
-4. Fallback para modo normal caso o perfil não esteja disponível
+1. **Conexão CDP (Chrome DevTools Protocol)** — conecta ao Chrome que já está aberto e logado na máquina da operadora. Não abre instância nova. Usa a sessão ativa com extensão Segfy, cookies, perfil Google — tudo intacto.
+2. **Perfil persistente** — se CDP não estiver disponível, abre Chrome com `User Data` real (auto-detectado no Windows).
+3. **Modo normal** — último recurso, abre Chrome limpo.
 
-### Configuração opcional no .env
+### Configuração no atalho do Chrome (barra de tarefas)
+O atalho do Chrome foi configurado com a flag de debug remoto:
 ```
-SEGFY_CHROME_USER_DATA_DIR=C:\Users\cadas\AppData\Local\Google\Chrome\User Data
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --profile-directory="Profile 1" --remote-debugging-port=9222
 ```
-Se não configurado, o código detecta automaticamente.
 
-### Requisito operacional
-O Chrome deve estar **fechado** quando o robô executar (Playwright não abre perfil em uso por outra instância).
+Isso permite que o Playwright conecte ao Chrome existente sem abrir nova instância.
 
-### Arquivos modificados
+### Configuração no .env
+```
+SEGFY_CHROME_CDP_URL=http://localhost:9222
+```
+
+### Resultado
+- O robô conecta ao Chrome que a operadora já usa no dia a dia
+- Extensão Segfy permanece instalada e ativa
+- Sessões de portais e Google mantidas
+- Não precisa fechar o Chrome para rodar o robô
+
+### Arquivo modificado
 - `src/rpa_corretora/integrations/segfy_web_gateway.py` — `_launch_browser`, `_run_web_session`, `import_documents`, `fetch_policy_data`
 
 ---
@@ -274,15 +294,210 @@ Quando a web falha, os dados são gravados em `outputs/segfy_payment_queue.jsonl
 
 ---
 
-## Validação Final
+## 12. Banco de Dados Operacional Centralizado (SQLite)
+
+### Problema anterior
+Os dados ficavam dispersos entre planilhas, Segfy, portais e relatórios JSON. Não havia cruzamento automático de informações nem histórico consolidado de execuções. Impossível gerar dashboards inteligentes sem reprocessar tudo.
+
+### Solução implementada
+Banco de dados SQLite local (`outputs/rpa_corretora.db`) alimentado automaticamente por **todas** as fontes de dados a cada ciclo de execução.
+
+### Tabelas criadas
+
+| Tabela | Conteúdo | Fonte |
+|--------|----------|-------|
+| `policies` | 443 apólices com prêmio, comissão, sinistro, endosso, veículo, placa | Planilha + Portais |
+| `followups` | 172 acompanhamentos com fase/status por mês | Planilha |
+| `cashflow` | Lançamentos financeiros (recebimentos) | Gmail (Nubank) + Planilha |
+| `expenses` | Despesas categorizadas | Gmail + Planilha |
+| `portal_data` | Dados brutos extraídos dos 9 portais (prêmio, comissão, sinistro, endosso, renovação) | Portais |
+| `alerts` | Todos os alertas gerados por execução | Regras de negócio |
+| `commitments` | Compromissos da agenda com classificação inteligente | Google Calendar |
+| `emails` | E-mails processados (seguradoras identificadas) | Gmail IMAP |
+| `run_history` | Histórico de execuções com métricas consolidadas | Orquestrador |
+
+### Queries prontas para dashboards
+
+```python
+db = OperationalDatabase()
+db.query_policies_by_insurer()       # Apólices por seguradora
+db.query_commissions_summary()       # Comissões pagas vs pendentes
+db.query_open_incidents()            # Sinistros/endossos abertos
+db.query_cashflow_month(2026, 4)     # Fluxo de caixa abril/2026
+db.query_alerts_by_severity(today)   # Alertas por severidade
+db.query_renewals_by_month()         # Renovações concluídas vs abertas
+db.query_portal_divergences()        # Divergências planilha × portal
+db.query_run_history(limit=30)       # Últimas 30 execuções
+```
+
+### Características técnicas
+- **SQLite WAL mode** — permite leitura concorrente enquanto o robô escreve
+- **UPSERT** — apólices e followups são atualizados sem duplicar
+- **Índices** — consultas otimizadas por seguradora, data, severidade
+- **Arquivo único** — `outputs/rpa_corretora.db` (portável, abrível por Power BI, Metabase, DBeaver, Excel)
+- **Não-bloqueante** — se o banco falhar, o fluxo principal continua normalmente
+
+### Integração com ferramentas de BI
+O banco pode ser conectado diretamente a:
+- **Power BI** (via conector SQLite/ODBC)
+- **Metabase** (open source, auto-hospedado)
+- **Google Data Studio** (via exportação CSV)
+- **Excel** (via ODBC ou Power Query)
+- **Qualquer aplicação Python** (import sqlite3)
+
+### Arquivo criado
+- `src/rpa_corretora/core/__init__.py` — classe `OperationalDatabase` com schema, upserts e queries
+
+### Arquivo modificado
+- `src/rpa_corretora/processing/orchestrator.py` — persistência automática ao final de cada ciclo
+
+---
+
+## 13. Extração Completa de Dados dos Portais (Sinistros, Endossos, Renovações)
+
+### Problema anterior
+Os portais das seguradoras só extraíam prêmio e comissão. Sinistros, endossos e status de renovação eram ignorados — o robô não sabia o que estava acontecendo nas seguradoras além dos valores financeiros.
+
+### Solução implementada
+O modelo `PortalPolicyData` foi expandido com campos adicionais:
+
+```python
+@dataclass
+class PortalPolicyData:
+    policy_id: str
+    insurer: str
+    premio_total: Decimal
+    comissao: Decimal
+    sinistro_status: str      # "EM ANDAMENTO", "FINALIZADO", etc.
+    endosso_status: str       # "ABERTO", "EMITIDO", etc.
+    renewal_status: str       # "RENOVADO", "NAO RENOVADO", etc.
+    parcelas_pendentes: int   # Quantidade de parcelas em aberto
+    documento_url: str        # URL do documento no portal
+```
+
+O parser genérico (`parse_policy_data_from_text_generic`) agora extrai status de sinistro, endosso e renovação do texto da página usando busca por labels:
+
+| Tipo | Labels de busca | Status detectados |
+|------|----------------|-------------------|
+| Sinistro | "sinistro", "acidente", "indenizacao" | EM ANDAMENTO, PENDENTE, FINALIZADO, ENCERRADO |
+| Endosso | "endosso", "alteracao", "inclusao" | ABERTO, EMITIDO, CONCLUIDO, CANCELADO |
+| Renovação | "renovacao", "renovar", "vigencia" | RENOVADO, NAO RENOVADO, EM ANALISE |
+
+### Fluxo de dados completo (após correção)
+
+```
+Portal da seguradora
+    → extrai prêmio, comissão, sinistro, endosso, renovação
+    → atualiza PolicyRecord (flags sinistro_open/endosso_open)
+    → registra sinistros/endossos abertos no Segfy
+    → registra renovações no Segfy
+    → sincroniza apólices atualizadas no Segfy
+    → persiste tudo no banco SQLite
+    → gera alertas de divergência Segfy × Portal
+```
+
+### Arquivos modificados
+- `src/rpa_corretora/domain/models.py` — `PortalPolicyData` expandido
+- `src/rpa_corretora/integrations/insurer_portal_wave1.py` — `_extract_status_near_labels`, `parse_policy_data_from_text_generic`
+- `src/rpa_corretora/processing/orchestrator.py` — sincronização portal → Segfy com sinistros/endossos/renovações
+
+---
+
+## 14. Importação Inteligente de Documentos (Anexos de E-mails)
+
+### Problema anterior
+A importação de documentos no Segfy monitorava apenas uma pasta fixa (`SEGFY_IMPORT_SOURCE_DIR`). Anexos de e-mails de seguradoras e apólices baixadas dos portais não eram importados automaticamente.
+
+### Solução implementada
+O `GmailImapGateway` agora salva automaticamente anexos de e-mails de seguradoras:
+
+1. Identifica e-mails de seguradoras pelo domínio do remetente
+2. Extrai anexos com extensões permitidas: `.pdf`, `.xlsx`, `.xls`, `.csv`, `.doc`, `.docx`
+3. Salva em `outputs/email_attachments/` com nome único (evita duplicatas)
+4. O Segfy importa da pasta monitorada + anexos salvos
+
+### Fluxo
+```
+Gmail IMAP
+    → lê e-mails não lidos
+    → identifica seguradoras (yelum, portoseguro, mapfre, etc.)
+    → salva anexos PDF/XLSX em outputs/email_attachments/
+    → Segfy importa automaticamente
+```
+
+### Arquivo modificado
+- `src/rpa_corretora/integrations/gmail_imap_gateway.py` — método `save_insurer_attachments`
+- `src/rpa_corretora/processing/orchestrator.py` — integração no estágio Gmail
+
+---
+
+## 15. Compatibilidade com Frameworks Reativos (Angular/React)
+
+### Problema anterior
+O Segfy utiliza Angular com componentes reativos. O Playwright preenchia campos via `fill()`, mas o framework não detectava a mudança — os formulários ficavam "preenchidos visualmente" porém sem disparar validação, busca ou submissão.
+
+### Solução implementada
+Toda interação com campos do Segfy agora dispara eventos reativos via JavaScript após o preenchimento:
+
+```javascript
+input.dispatchEvent(new Event('input', {bubbles: true}));
+input.dispatchEvent(new Event('change', {bubbles: true}));
+input.dispatchEvent(new Event('blur', {bubbles: true}));
+input.dispatchEvent(new KeyboardEvent('keyup', {bubbles: true, key: 'Enter', keyCode: 13}));
+input.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, key: 'Enter', keyCode: 13}));
+```
+
+### Arquivo modificado
+- `src/rpa_corretora/integrations/segfy_web_gateway.py` — `_search_and_open_record`, `_fill_form_field`
+ — os formulários ficavam "preenchidos visualmente" porém sem disparar validação, busca ou submissão.
+
+Sintomas observados:
+- Campo de busca preenchido mas sem executar a pesquisa
+- Formulários preenchidos mas botão "Salvar" permanecia desabilitado
+- Login com e-mail preenchido mas sem efeito no estado interno do app
+
+### Solução implementada
+Toda interação com campos do Segfy agora dispara eventos reativos via JavaScript após o preenchimento:
+
+```javascript
+input.dispatchEvent(new Event('input', {bubbles: true}));
+input.dispatchEvent(new Event('change', {bubbles: true}));
+input.dispatchEvent(new Event('blur', {bubbles: true}));
+input.dispatchEvent(new KeyboardEvent('keyup', {bubbles: true, key: 'Enter', keyCode: 13}));
+input.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, key: 'Enter', keyCode: 13}));
+```
+
+Isso garante que:
+- Angular/React detectam a mudança de valor (`input` + `change`)
+- Validações de campo são disparadas (`blur`)
+- Buscas são executadas (`keyup`/`keydown` com Enter)
+- O estado interno do framework fica sincronizado com o DOM
+
+### Métodos corrigidos
+- `_search_and_open_record` — busca de segurados/apólices
+- `_fill_form_field` — preenchimento de qualquer campo de formulário
+- `_segfy_fill_email_field` — campo de e-mail no login
+
+### Fluxo de busca completo (após correção)
+1. Preenche o campo via Playwright `fill()`
+2. Dispara eventos reativos via `page.evaluate()` (JavaScript)
+3. Pressiona Enter no teclado (fallback físico)
+4. Clica no botão "Pesquisar"/"Buscar" se existir
+5. Aguarda resultado e tenta abrir o primeiro registro encontrado
+
+### Arquivo modificado
+- `src/rpa_corretora/integrations/segfy_web_gateway.py` — `_search_and_open_record`, `_fill_form_field`
+
+---
 
 | Métrica | Resultado |
 |---------|-----------|
 | Testes automatizados | 86/86 passando |
 | Dry-run com planilhas reais | 442 apólices, 175 acompanhamentos, 15 compromissos, 236 alertas |
 | Ambiente Windows | Todos os componentes OK (Python, Chrome, Edge, Playwright, Pywinauto, To Do Desktop) |
-| Login Segfy | Funcionando (e-mail + senha preenchidos corretamente) |
-| Perfil Chrome persistente | Extensão Segfy mantida entre execuções |
+| Login Segfy | Funcionando (detecção de sessão + preenchimento + Enter) |
+| Busca no Segfy | Funcionando (eventos reativos + Enter + botão Pesquisar) |
+| Perfil Chrome persistente | Conexão CDP ao Chrome existente (extensão Segfy mantida) |
 | Modos de integração ativos | GOOGLE_API, GMAIL_IMAP, DESKTOP_APP, WEB_AUTOMATION, WEB_MULTI, HTTP_API, SMTP |
 
 ---
@@ -291,21 +506,28 @@ Quando a web falha, os dados são gravados em `outputs/segfy_payment_queue.jsonl
 
 | Arquivo | Ação |
 |---------|------|
+| `src/rpa_corretora/core/__init__.py` | **Criado** — banco de dados operacional SQLite |
 | `src/rpa_corretora/integrations/interfaces.py` | Modificado — 7 novos métodos no protocolo |
 | `src/rpa_corretora/integrations/segfy_gateway.py` | Modificado — implementação API + fila |
-| `src/rpa_corretora/integrations/segfy_web_gateway.py` | Modificado — login reescrito, perfil persistente, 7 métodos web |
+| `src/rpa_corretora/integrations/segfy_web_gateway.py` | Modificado — login, CDP, perfil persistente, 7 métodos web, eventos reativos |
 | `src/rpa_corretora/integrations/stub_adapters.py` | Modificado — stubs dos novos métodos |
-| `src/rpa_corretora/processing/orchestrator.py` | Modificado — sincronização Segfy no ciclo |
+| `src/rpa_corretora/integrations/gmail_imap_gateway.py` | Modificado — salvamento de anexos de seguradoras |
+| `src/rpa_corretora/integrations/insurer_portal_wave1.py` | Modificado — extração de sinistros/endossos/renovações |
+| `src/rpa_corretora/processing/orchestrator.py` | Modificado — sincronização Segfy, portais→Segfy, banco de dados |
+| `src/rpa_corretora/domain/models.py` | Modificado — PortalPolicyData expandido |
 | `src/rpa_corretora/domain/rules.py` | Modificado — classificador, extração, regras de disparo |
-| `.env` | Modificado — correção color ID 6 |
-| `scripts/executar_rpa.bat` | Criado — script de produção |
+| `.env` | Modificado — correção color ID 6, adição SEGFY_CHROME_CDP_URL |
+| `scripts/executar_rpa.bat` | **Criado** — script de produção |
+| `docs/registro_melhorias_v2.md` | **Criado** — este documento |
 
 ---
 
 ## Requisitos Operacionais para Produção
 
-1. Chrome deve estar **fechado** antes de executar o robô
+1. Chrome deve estar aberto com a flag `--remote-debugging-port=9222` no atalho da barra de tarefas
 2. Extensão Segfy deve estar instalada no perfil do Chrome (instalação manual única)
-3. Planilhas devem estar nos caminhos configurados no `.env`
-4. Conexão com internet ativa (APIs Google, WhatsApp, SMTP, portais)
-5. Execução via `scripts\executar_rpa.bat` ou `py -3 -m rpa_corretora.main`
+3. `.env` deve conter `SEGFY_CHROME_CDP_URL=http://localhost:9222`
+4. Planilhas devem estar nos caminhos configurados no `.env`
+5. Conexão com internet ativa (APIs Google, WhatsApp, SMTP, portais)
+6. Execução via `scripts\executar_rpa.bat` ou `py -3 -m rpa_corretora.main`
+7. O Chrome **não precisa** ser fechado — o robô conecta à instância existente via CDP
