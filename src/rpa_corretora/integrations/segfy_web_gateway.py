@@ -356,9 +356,8 @@ class SegfyWebGateway:
                 is_persistent = getattr(browser_or_context, "_rpa_persistent", False)
                 try:
                     if is_persistent:
-                        # launch_persistent_context retorna o contexto diretamente.
-                        context = browser_or_context
-                        page = context.new_page()
+                        # CDP: usar aba existente ou criar nova no contexto do perfil.
+                        page = self._get_or_create_page(browser_or_context)
                         page.set_default_timeout(self.timeout_seconds * 1000)
                         self._login(page)
                         return action(page)
@@ -372,11 +371,37 @@ class SegfyWebGateway:
                         finally:
                             context.close()
                 finally:
-                    browser_or_context.close()
+                    # Nao fechar o browser quando conectado via CDP (e o Chrome do usuario).
+                    if not is_persistent:
+                        browser_or_context.close()
         except Exception as exc:
             self._capture_debug_snapshot(page=page, label="web_session_error")
             print(f"[Segfy] Falha na sessao web: {exc}")
             return 0
+
+    def _get_or_create_page(self, browser_or_context):
+        """Obtem uma pagina existente do Chrome ou cria nova aba no contexto correto."""
+        try:
+            # CDP browser: pega o primeiro contexto e usa/cria pagina nele.
+            contexts = browser_or_context.contexts
+            if contexts:
+                pages = contexts[0].pages
+                if pages:
+                    # Usa a ultima aba aberta (mais recente).
+                    return pages[-1]
+                return contexts[0].new_page()
+        except Exception:
+            pass
+        # Fallback: tenta new_page direto.
+        try:
+            return browser_or_context.new_page()
+        except Exception:
+            pass
+        # Ultimo recurso: pega contexts[0].new_page()
+        contexts = browser_or_context.contexts
+        if contexts:
+            return contexts[0].new_page()
+        raise RuntimeError("Nao foi possivel obter uma pagina do Chrome.")
 
     def _navigate_to_section(self, page: Page, section_labels: list[str]) -> bool:
         for label in section_labels:
