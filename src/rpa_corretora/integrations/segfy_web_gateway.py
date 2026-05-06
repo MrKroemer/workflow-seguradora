@@ -588,7 +588,18 @@ class SegfyWebGateway:
         return self._submit_form(page)
 
     def _launch_browser(self, playwright: Playwright):
-        # Tenta usar perfil persistente do Chrome (mantem extensoes, cookies, sessoes).
+        # Estrategia 1: Conectar ao Chrome ja aberto via CDP (porta de debug).
+        cdp_url = (os.getenv("SEGFY_CHROME_CDP_URL") or "").strip()
+        if cdp_url:
+            try:
+                browser = playwright.chromium.connect_over_cdp(cdp_url)
+                print(f"[Segfy] Conectado ao Chrome existente via CDP: {cdp_url}")
+                browser._rpa_persistent = True  # type: ignore[attr-defined]
+                return browser
+            except Exception as exc:
+                print(f"[Segfy] Falha ao conectar via CDP ({exc}); tentando perfil persistente.")
+
+        # Estrategia 2: Abrir Chrome com perfil persistente (mantem extensoes/sessoes).
         user_data_dir = (
             os.getenv("SEGFY_CHROME_USER_DATA_DIR")
             or os.getenv("CHROME_USER_DATA_DIR")
@@ -602,24 +613,34 @@ class SegfyWebGateway:
                 user_data_dir = str(default_path)
 
         if user_data_dir and Path(user_data_dir).exists():
-            # Perfil persistente: retorna o contexto diretamente (nao um Browser).
-            # O chamador deve tratar isso como contexto.
             try:
                 context = playwright.chromium.launch_persistent_context(
                     user_data_dir=user_data_dir,
-                    channel=self.browser_channel if self.browser_channel not in ("chromium", "") else "chrome",
+                    channel="chrome",
                     headless=self.headless,
                     locale="pt-BR",
                     accept_downloads=True,
-                    args=["--disable-blink-features=AutomationControlled"],
+                    args=[
+                        "--disable-blink-features=AutomationControlled",
+                        "--no-first-run",
+                        "--no-default-browser-check",
+                    ],
                 )
                 print(f"[Segfy] Chrome com perfil persistente: {user_data_dir}")
-                # Marca como contexto persistente para o chamador saber.
                 context._rpa_persistent = True  # type: ignore[attr-defined]
                 return context
             except Exception as exc:
-                print(f"[Segfy] Falha ao usar perfil persistente ({exc}); tentando modo normal.")
+                # Se falhar (Chrome ja aberto usando o perfil), tenta fechar e reabrir.
+                error_msg = str(exc).lower()
+                if "already in use" in error_msg or "lock" in error_msg or "single instance" in error_msg:
+                    print(
+                        "[Segfy] Perfil do Chrome em uso por outra instancia. "
+                        "Feche o Chrome e tente novamente, ou configure SEGFY_CHROME_CDP_URL."
+                    )
+                else:
+                    print(f"[Segfy] Falha ao usar perfil persistente ({exc}); tentando modo normal.")
 
+        # Estrategia 3: Abrir Chrome normal (sem perfil — ultimo recurso).
         channels = [self.browser_channel, "chrome", "msedge"]
         if not self.allow_channel_fallback:
             channels = [self.browser_channel]
@@ -715,12 +736,13 @@ class SegfyWebGateway:
             print("[Segfy] Aviso: usuario nao encontrado no formulario; seguindo com senha preenchida.")
 
         # 5. Clicar em Entrar.
-        self._click_first(
+        entrar_clicked = self._click_first(
             page,
             selectors=[
+                "button:has-text('Entrar')",
                 "button[type='submit']",
                 "input[type='submit']",
-                "button:has-text('Entrar')",
+                "a:has-text('Entrar')",
                 "button:has-text('Acessar')",
                 "button:has-text('Login')",
                 "button:has-text('Continuar')",
@@ -729,7 +751,15 @@ class SegfyWebGateway:
                 "text=Login",
             ],
         )
-        page.wait_for_timeout(2500)
+        if entrar_clicked:
+            print("[Segfy] Botao 'Entrar' clicado com sucesso.")
+        else:
+            print("[Segfy] AVISO: Botao 'Entrar' nao encontrado. Tentando submit via Enter.")
+            try:
+                page.keyboard.press("Enter")
+            except Exception:
+                pass
+        page.wait_for_timeout(3000)
 
         # 6. Dispensar modais pos-login.
         self._dismiss_segfy_overlays(page)
