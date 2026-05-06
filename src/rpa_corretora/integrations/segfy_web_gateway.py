@@ -646,81 +646,82 @@ class SegfyWebGateway:
         return self._submit_form(page)
 
     def _launch_browser(self, playwright: Playwright):
-        # Estrategia 1: Conectar ao Chrome ja aberto via CDP (porta de debug).
-        cdp_url = (os.getenv("SEGFY_CHROME_CDP_URL") or "").strip()
-        if cdp_url:
-            try:
-                browser = playwright.chromium.connect_over_cdp(cdp_url)
-                print(f"[Segfy] Conectado ao Chrome existente via CDP: {cdp_url}")
-                browser._rpa_persistent = True  # type: ignore[attr-defined]
-                return browser
-            except Exception as exc:
-                print(f"[Segfy] Falha ao conectar via CDP ({exc}); tentando perfil persistente.")
+        import subprocess
+        import time
+        import shutil
 
-        # Estrategia 2: Abrir Chrome com perfil persistente (mantem extensoes/sessoes).
-        user_data_dir = (
-            os.getenv("SEGFY_CHROME_USER_DATA_DIR")
-            or os.getenv("CHROME_USER_DATA_DIR")
-            or ""
-        ).strip()
+        cdp_port = int((os.getenv("SEGFY_CHROME_CDP_PORT") or "9222").strip() or "9222")
+        cdp_url = (os.getenv("SEGFY_CHROME_CDP_URL") or f"http://localhost:{cdp_port}").strip()
 
-        # Auto-detecta o perfil padrao do Chrome no Windows.
+        user_data_dir = (os.getenv("SEGFY_CHROME_USER_DATA_DIR") or os.getenv("CHROME_USER_DATA_DIR") or "").strip()
         if not user_data_dir and sys.platform.startswith("win"):
             default_path = Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data"
             if default_path.exists():
                 user_data_dir = str(default_path)
 
-        if user_data_dir and Path(user_data_dir).exists():
-            try:
-                context = playwright.chromium.launch_persistent_context(
-                    user_data_dir=user_data_dir,
-                    channel="chrome",
-                    headless=self.headless,
-                    locale="pt-BR",
-                    accept_downloads=True,
-                    args=[
-                        "--disable-blink-features=AutomationControlled",
-                        "--no-first-run",
-                        "--no-default-browser-check",
-                    ],
-                )
-                print(f"[Segfy] Chrome com perfil persistente: {user_data_dir}")
-                context._rpa_persistent = True  # type: ignore[attr-defined]
-                return context
-            except Exception as exc:
-                # Se falhar (Chrome ja aberto usando o perfil), tenta fechar e reabrir.
-                error_msg = str(exc).lower()
-                if "already in use" in error_msg or "lock" in error_msg or "single instance" in error_msg:
-                    print(
-                        "[Segfy] Perfil do Chrome em uso por outra instancia. "
-                        "Feche o Chrome e tente novamente, ou configure SEGFY_CHROME_CDP_URL."
-                    )
-                else:
-                    print(f"[Segfy] Falha ao usar perfil persistente ({exc}); tentando modo normal.")
+        profile_dir = (os.getenv("SEGFY_CHROME_PROFILE_DIR") or "Profile 1").strip()
 
-        # Estrategia 3: Abrir Chrome normal (sem perfil — ultimo recurso).
-        channels = [self.browser_channel, "chrome", "msedge"]
-        if not self.allow_channel_fallback:
-            channels = [self.browser_channel]
-        seen: set[str] = set()
-        for channel in channels:
-            channel_name = channel.strip().lower()
-            if not channel_name or channel_name in seen:
-                continue
-            seen.add(channel_name)
+        chrome_exe = None
+        for candidate in [
+            shutil.which("chrome") or shutil.which("chrome.exe"),
+            str(Path(os.getenv("PROGRAMFILES", "")) / "Google" / "Chrome" / "Application" / "chrome.exe"),
+            str(Path(os.getenv("PROGRAMFILES(X86)", "")) / "Google" / "Chrome" / "Application" / "chrome.exe"),
+            str(Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "Application" / "chrome.exe"),
+        ]:
+            if candidate and Path(candidate).exists():
+                chrome_exe = candidate
+                break
+
+        # Estrategia 1: Conectar ao Chrome existente via CDP.
+        try:
+            browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=5000)
+            print(f"[Segfy] Conectado ao Chrome existente via CDP ({cdp_url}).")
+            browser._rpa_persistent = True
+            return browser
+        except Exception:
+            pass
+
+        # Estrategia 2: Fechar Chrome, reiniciar com perfil + debug port.
+        if chrome_exe and user_data_dir and sys.platform.startswith("win"):
+            print("[Segfy] Chrome sem debug port. Reiniciando com perfil + porta de debug...")
             try:
-                browser = playwright.chromium.launch(channel=channel_name, headless=self.headless)
-                print(f"[Segfy] Navegador Playwright iniciado com canal: {channel_name}.")
+                subprocess.run(["taskkill", "/IM", "chrome.exe"], capture_output=True, timeout=5)
+            except Exception:
+                pass
+            time.sleep(2)
+            cmd = [chrome_exe, f"--remote-debugging-port={cdp_port}", f"--user-data-dir={user_data_dir}", f"--profile-directory={profile_dir}", "--no-first-run", "--no-default-browser-check", "--restore-last-session"]
+            try:
+                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f"[Segfy] Chrome iniciado com perfil: {profile_dir}")
+            except Exception as exc:
+                print(f"[Segfy] Falha ao iniciar Chrome: {exc}")
+            for _ in range(15):
+                time.sleep(1)
+                try:
+                    browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=3000)
+                    print("[Segfy] Conectado ao Chrome via CDP apos reinicio.")
+                    browser._rpa_persistent = True
+                    return browser
+                except Exception:
+                    continue
+            print("[Segfy] AVISO: Nao conseguiu conectar via CDP apos reinicio.")
+
+        # Estrategia 3: Fallback launch normal.
+        channels = [self.browser_channel, "chrome", "msedge"]
+        seen = set()
+        for channel in channels:
+            ch = channel.strip().lower()
+            if not ch or ch in seen:
+                continue
+            seen.add(ch)
+            try:
+                browser = playwright.chromium.launch(channel=ch, headless=self.headless)
+                print(f"[Segfy] Navegador {ch} iniciado (SEM perfil - fallback).")
                 return browser
             except Exception:
                 continue
-        if not self.allow_channel_fallback:
-            raise RuntimeError(
-                "Falha ao iniciar o navegador no canal solicitado para o Segfy: "
-                f"{self.browser_channel or 'indefinido'}."
-            )
         browser = playwright.chromium.launch(headless=self.headless)
-        print("[Segfy] Navegador Playwright iniciado com Chromium padrao (fallback).")
+        print("[Segfy] Chromium padrao (SEM perfil - ultimo recurso).")
         return browser
 
     def _login(self, page: Page) -> None:
