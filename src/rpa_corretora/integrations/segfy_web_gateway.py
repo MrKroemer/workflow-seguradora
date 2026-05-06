@@ -406,18 +406,59 @@ class SegfyWebGateway:
             "input[placeholder*='Apólice' i]",
             "input[name*='search' i]",
             "input[name*='busca' i]",
+            "input[aria-label*='Buscar' i]",
+            "input[aria-label*='Pesquisar' i]",
         ]
         filled = self._fill_first(page, selectors=search_selectors, value=query)
         if not filled:
             return False
+
+        # Dispara eventos reativos para frameworks Angular/React.
+        try:
+            page.evaluate("""
+                (query) => {
+                    const inputs = document.querySelectorAll('input');
+                    for (const input of inputs) {
+                        if (input.value && input.value.includes(query.substring(0, 5))) {
+                            input.dispatchEvent(new Event('input', {bubbles: true}));
+                            input.dispatchEvent(new Event('change', {bubbles: true}));
+                            input.dispatchEvent(new KeyboardEvent('keyup', {bubbles: true, key: 'Enter', keyCode: 13}));
+                            input.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, key: 'Enter', keyCode: 13}));
+                            break;
+                        }
+                    }
+                }
+            """, query)
+        except Exception:
+            pass
+
+        # Pressiona Enter para disparar busca.
         try:
             page.keyboard.press("Enter")
         except Exception:
             pass
+        page.wait_for_timeout(800)
+
+        # Clica no botao de pesquisa se existir.
+        self._click_first(
+            page,
+            selectors=[
+                "button:has-text('Pesquisar')",
+                "button:has-text('Buscar')",
+                "button:has-text('Filtrar')",
+                "button[aria-label*='pesquisar' i]",
+                "button[aria-label*='buscar' i]",
+                "button[type='submit']",
+                "a:has-text('Pesquisar')",
+                "a:has-text('Buscar')",
+            ],
+            timeout_ms=2000,
+        )
         page.wait_for_timeout(1500)
 
+        # Tenta abrir o primeiro resultado.
         query_escaped = query.replace("\\", "\\\\").replace('"', '\\"')
-        for row_sel in [f'tr:has-text("{query_escaped}")', f'div[role="row"]:has-text("{query_escaped}")', f'li:has-text("{query_escaped}")', f'div:has-text("{query_escaped}")', f'a:has-text("{query_escaped}")']:
+        for row_sel in [f'tr:has-text("{query_escaped}")', f'div[role="row"]:has-text("{query_escaped}")', f'li:has-text("{query_escaped}")', f'a:has-text("{query_escaped}")', f'div:has-text("{query_escaped}")']:
             locator = page.locator(row_sel)
             if self._locator_count(locator) > 0:
                 try:
@@ -439,6 +480,23 @@ class SegfyWebGateway:
                 f"textarea[name*='{label}' i]",
             ]
             if self._fill_first(page, selectors=selectors, value=value):
+                # Dispara eventos reativos apos preencher.
+                try:
+                    page.evaluate("""
+                        (val) => {
+                            const inputs = document.querySelectorAll('input, textarea');
+                            for (const el of inputs) {
+                                if (el.value && el.value.includes(val.substring(0, 5))) {
+                                    el.dispatchEvent(new Event('input', {bubbles: true}));
+                                    el.dispatchEvent(new Event('change', {bubbles: true}));
+                                    el.dispatchEvent(new Event('blur', {bubbles: true}));
+                                    break;
+                                }
+                            }
+                        }
+                    """, value)
+                except Exception:
+                    pass
                 return True
         return False
 
