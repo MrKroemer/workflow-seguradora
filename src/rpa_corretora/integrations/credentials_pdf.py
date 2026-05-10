@@ -30,12 +30,12 @@ def _normalize_line(line: str) -> str:
 def extract_text_from_pdf_ocr(pdf_path: str | Path) -> str:
     pdf_file = Path(pdf_path)
     if not pdf_file.exists():
-        raise FileNotFoundError(f"Arquivo nao encontrado: {pdf_file}")
+        raise FileNotFoundError(f"Arquivo não encontrado: {pdf_file}")
 
     if shutil.which("pdftoppm") is None:
-        raise RuntimeError("Comando pdftoppm nao encontrado no sistema")
+        raise RuntimeError("Comando pdftoppm não encontrado no sistema")
     if shutil.which("tesseract") is None:
-        raise RuntimeError("Comando tesseract nao encontrado no sistema")
+        raise RuntimeError("Comando tesseract não encontrado no sistema")
 
     with tempfile.TemporaryDirectory(prefix="rpa-cred-") as temp_dir:
         temp_path = Path(temp_dir)

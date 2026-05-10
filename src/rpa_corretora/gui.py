@@ -15,9 +15,11 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from pathlib import Path
 import json
+import re
+import sqlite3
 import webbrowser
 
 
@@ -38,6 +40,7 @@ BORDER = "#334155"
 BASE_DIR = Path(__file__).resolve().parents[2]
 SRC_DIR = BASE_DIR / "src"
 OUTPUTS_DIR = BASE_DIR / "outputs"
+DB_PATH = OUTPUTS_DIR / "rpa_corretora.db"
 
 
 class RPAApp:
@@ -106,6 +109,32 @@ class RPAApp:
         )
         self.btn_dryrun.pack(side="left", padx=4)
 
+        self.btn_agent = tk.Button(
+            btn_frame, text="🤖 Agente IA", font=("Segoe UI", 10),
+            bg="#7c3aed", fg="#fff", relief="flat", padx=12, pady=6,
+            command=self._toggle_agent, cursor="hand2",
+        )
+        self.btn_agent.pack(side="left", padx=4)
+
+        # Estado do agente embutido
+        self._agent_visible = False
+        self._agent_frame = None
+        self._agent_messages: list[dict] = []
+
+        # FAB (Floating Action Button) para abrir o agente
+        self._fab = tk.Button(
+            self.root, text="🤖", font=("Segoe UI", 16),
+            bg="#7c3aed", fg="#fff", relief="flat",
+            width=3, height=1, cursor="hand2",
+            command=self._toggle_agent,
+            activebackground="#5b21b6", activeforeground="#fff",
+        )
+        self._fab.place(relx=1.0, rely=1.0, anchor="se", x=-25, y=-45)
+        self._fab.lift()
+        # Tooltip
+        self._fab.bind("<Enter>", lambda e: self._fab.configure(bg="#5b21b6"))
+        self._fab.bind("<Leave>", lambda e: self._fab.configure(bg="#7c3aed"))
+
         # Separador
         sep = tk.Frame(self.root, height=1, bg=BORDER)
         sep.pack(fill="x", padx=20, pady=8)
@@ -118,7 +147,9 @@ class RPAApp:
         self._build_execution_tab()
         # Aba 2: Status
         self._build_status_tab()
-        # Aba 3: Ferramentas
+        # Aba 3: Noticias e Informacoes
+        self._build_news_tab()
+        # Aba 4: Ferramentas
         self._build_tools_tab()
 
         # Status bar
@@ -219,6 +250,29 @@ class RPAApp:
             mode_lbl = tk.Label(row, text=mode, font=("Segoe UI", 8, "bold"), bg=SURFACE, fg=SUCCESS)
             mode_lbl.pack(side="right", padx=10)
             self.integration_labels[key] = mode_lbl
+
+
+    def _build_news_tab(self) -> None:
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="  Notícias  ")
+
+        # Header da aba
+        header = tk.Frame(tab, bg=SURFACE)
+        header.pack(fill="x", padx=10, pady=10)
+        tk.Label(header, text="📰 Notícias e Informações do Mercado", font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT).pack(anchor="w", padx=10, pady=8)
+        tk.Button(header, text="🔄 Atualizar", font=("Segoe UI", 9), bg=SURFACE2, fg=TEXT, relief="flat", padx=10, pady=4, command=self._refresh_news, cursor="hand2").pack(anchor="e", padx=10, pady=(0, 8))
+
+        # Area de noticias
+        self.news_text = scrolledtext.ScrolledText(
+            tab, font=("Segoe UI", 9), bg=CHAT_BG if "CHAT_BG" in dir() else "#0a0a14", fg=TEXT,
+            insertbackground=TEXT, relief="flat", wrap="word", state="disabled",
+        )
+        self.news_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.news_text.tag_configure("title", font=("Segoe UI", 10, "bold"), foreground=ACCENT)
+        self.news_text.tag_configure("source", foreground=TEXT_MUTED, font=("Segoe UI", 8))
+
+        # Carrega noticias ao iniciar
+        self.root.after(2000, self._refresh_news)
 
     def _build_tools_tab(self) -> None:
         tab = ttk.Frame(self.notebook)
@@ -435,3 +489,230 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+    def _toggle_agent(self) -> None:
+        """Abre/fecha o painel do agente IA dentro da janela principal."""
+        if self._agent_visible:
+            self._agent_frame.place_forget()
+            self._agent_visible = False
+            self.btn_agent.configure(bg="#7c3aed")
+            # Mostra o FAB novamente
+            self._fab.place(relx=1.0, rely=1.0, anchor="se", x=-25, y=-45)
+            self._fab.lift()
+            return
+
+        if self._agent_frame is None:
+            self._build_agent_panel()
+
+        # Esconde o FAB
+        self._fab.place_forget()
+
+        # Posiciona no canto inferior direito, sobrepondo o conteudo
+        self._agent_frame.place(relx=1.0, rely=1.0, anchor="se", x=-20, y=-40, width=380, height=480)
+        self._agent_frame.lift()
+        self._agent_visible = True
+        self.btn_agent.configure(bg="#5b21b6")
+
+        if not self._agent_messages:
+            self._agent_add_message(
+                "🤖 Olá! Sou o agente IA da PBSeg.\n\n"
+                "Pergunte qualquer coisa ou use comandos:\n"
+                "• \"executar\" — roda o ciclo\n"
+                "• \"buscar [nome]\" — pesquisa segurado\n"
+                "• \"relatório [seguradora]\"\n"
+                "• \"pesquisar [tema]\" — busca na web\n"
+                "• \"alertas\" — pendências",
+                is_user=False,
+            )
+
+    def _build_agent_panel(self) -> None:
+        """Constroi o painel do agente embutido."""
+        self._agent_frame = tk.Frame(self.root, bg="#0f0f1a", relief="raised", bd=1, highlightbackground="#2d3748", highlightthickness=1)
+
+        # Header do painel
+        header = tk.Frame(self._agent_frame, bg="#1a1a2e", height=40)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        tk.Label(header, text="🤖 Agente IA", font=("Segoe UI", 10, "bold"), bg="#1a1a2e", fg="#06b6d4").pack(side="left", padx=10)
+        tk.Label(header, text="Llama 3.1", font=("Segoe UI", 8), bg="#1a1a2e", fg="#94a3b8").pack(side="left")
+        tk.Button(header, text="✕", font=("Segoe UI", 9), bg="#1a1a2e", fg="#94a3b8", relief="flat", command=self._toggle_agent, cursor="hand2").pack(side="right", padx=8)
+
+        # Chat area
+        self._agent_chat = scrolledtext.ScrolledText(
+            self._agent_frame, font=("Segoe UI", 9), bg="#0a0a14", fg=TEXT,
+            insertbackground=TEXT, relief="flat", wrap="word", state="disabled",
+            height=18, padx=10, pady=8,
+        )
+        self._agent_chat.pack(fill="both", expand=True, padx=4, pady=(0, 4))
+        self._agent_chat.tag_configure("user", foreground="#0ea5e9", font=("Segoe UI", 9, "bold"))
+        self._agent_chat.tag_configure("bot", foreground="#06b6d4")
+        self._agent_chat.tag_configure("tool", foreground="#10b981", font=("Consolas", 8))
+
+        # Input
+        input_frame = tk.Frame(self._agent_frame, bg="#1a1a2e")
+        input_frame.pack(fill="x", padx=4, pady=(0, 4))
+        self._agent_input = tk.Entry(input_frame, font=("Segoe UI", 9), bg="#0d1117", fg=TEXT, insertbackground=TEXT, relief="flat")
+        self._agent_input.pack(side="left", fill="x", expand=True, padx=(8, 4), pady=6)
+        self._agent_input.bind("<Return>", self._agent_on_send)
+        tk.Button(input_frame, text="➤", font=("Segoe UI", 11), bg="#06b6d4", fg="#fff", relief="flat", command=self._agent_on_send, cursor="hand2", width=3).pack(side="right", padx=(0, 6), pady=4)
+
+        # Quick actions
+        actions = tk.Frame(self._agent_frame, bg="#0f0f1a")
+        actions.pack(fill="x", padx=4, pady=(0, 6))
+        for text in ["Executar", "Status", "Alertas", "Dashboard"]:
+            btn = tk.Button(actions, text=text, font=("Segoe UI", 8), bg="#1a1a2e", fg="#94a3b8", relief="flat", padx=6, pady=2, cursor="hand2", command=lambda t=text: self._agent_quick(t))
+            btn.pack(side="left", padx=2)
+
+    def _agent_add_message(self, text: str, is_user: bool = False) -> None:
+        self._agent_chat.configure(state="normal")
+        tag = "user" if is_user else "bot"
+        prefix = "Você: " if is_user else "🤖 "
+        self._agent_chat.insert("end", f"\n{prefix}", tag)
+        self._agent_chat.insert("end", f"{text}\n")
+        self._agent_chat.configure(state="disabled")
+        self._agent_chat.see("end")
+        self._agent_messages.append({"role": "user" if is_user else "assistant", "content": text})
+
+    def _agent_on_send(self, event=None) -> None:
+        text = self._agent_input.get().strip()
+        if not text:
+            return
+        self._agent_input.delete(0, "end")
+        self._agent_add_message(text, is_user=True)
+
+        # Processa comando
+        lower = text.lower()
+        if lower in ("executar", "rodar"):
+            self._agent_add_message("⚡ Iniciando ciclo...", is_user=False)
+            self._start_execution()
+            return
+        if lower in ("dry-run", "testar"):
+            self._agent_add_message("🧪 Dry-run iniciado...", is_user=False)
+            self._start_dryrun()
+            return
+        if lower == "dashboard":
+            self._open_dashboard()
+            self._agent_add_message("📈 Dashboard aberto.", is_user=False)
+            return
+        if lower in ("status", "carteira"):
+            self._agent_show_status()
+            return
+        if lower in ("alertas", "pendencias"):
+            self._agent_show_alerts()
+            return
+
+        # Envia para LLM (ou fallback local)
+        threading.Thread(target=self._agent_ask_llm, args=(text,), daemon=True).start()
+
+    def _agent_quick(self, action: str) -> None:
+        self._agent_input.delete(0, "end")
+        self._agent_input.insert(0, action)
+        self._agent_on_send()
+
+    def _agent_show_status(self) -> None:
+        if not DB_PATH.exists():
+            self._agent_add_message("Execute o ciclo primeiro.", is_user=False)
+            return
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            total = conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
+            pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
+            sin = conn.execute("SELECT COUNT(*) FROM policies WHERE sinistro_open = 1").fetchone()[0]
+            conn.close()
+            self._agent_add_message(f"📊 Carteira:\n• Apólices: {total}\n• Comissões pendentes: {pending}\n• Sinistros: {sin}", is_user=False)
+        except Exception:
+            self._agent_add_message("Erro ao consultar banco.", is_user=False)
+
+    def _agent_show_alerts(self) -> None:
+        if not DB_PATH.exists():
+            self._agent_add_message("Execute o ciclo primeiro.", is_user=False)
+            return
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
+            sin = conn.execute("SELECT COUNT(*) FROM policies WHERE sinistro_open = 1").fetchone()[0]
+            end = conn.execute("SELECT COUNT(*) FROM policies WHERE endosso_open = 1").fetchone()[0]
+            today = date.today()
+            future = (today + timedelta(days=10)).isoformat()
+            expiring = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), future)).fetchone()[0]
+            conn.close()
+            msg = "🚨 Pendências:\n"
+            if expiring: msg += f"🔴 {expiring} apólice(s) vencem em 10 dias\n"
+            if sin: msg += f"🟠 {sin} sinistro(s) aberto(s)\n"
+            if end: msg += f"🟡 {end} endosso(s) pendente(s)\n"
+            if pending > 20: msg += f"⚠️ {pending} comissões pendentes\n"
+            if not any([expiring, sin, end, pending > 20]): msg = "✅ Nenhuma pendência crítica."
+            self._agent_add_message(msg, is_user=False)
+        except Exception:
+            self._agent_add_message("Erro ao consultar alertas.", is_user=False)
+
+    def _agent_ask_llm(self, question: str) -> None:
+        """Tenta Ollama; se indisponivel, usa base de conhecimento local."""
+        try:
+            from urllib.request import Request, urlopen
+            payload = json.dumps({
+                "model": "llama3.1",
+                "messages": [{"role": "user", "content": question}],
+                "stream": False,
+                "options": {"temperature": 0.7, "num_predict": 512},
+            }).encode("utf-8")
+            req = Request("http://localhost:11434/api/chat", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            with urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                answer = data.get("message", {}).get("content", "Sem resposta.")
+                self.root.after(0, self._agent_add_message, answer, False)
+        except Exception:
+            # Fallback: resposta local
+            self.root.after(0, self._agent_add_message, "Ollama não disponível. Instale com scripts/setup_ollama.bat para IA completa.\n\nPosso ajudar com: status, alertas, executar, dashboard.", False)
+
+    def _open_agent(self) -> None:
+        """Fallback: abre agente em janela separada."""
+        env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
+        subprocess.Popen(
+            [sys.executable, "-m", "rpa_corretora.agent"],
+            cwd=str(BASE_DIR), env=env,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def _refresh_news(self) -> None:
+        """Busca noticias sobre seguros e mercado."""
+        threading.Thread(target=self._fetch_news, daemon=True).start()
+
+    def _fetch_news(self) -> None:
+        from urllib.request import Request, urlopen
+        from urllib.parse import quote_plus
+
+        queries = [
+            "seguros brasil 2026 novidades",
+            "SUSEP regulamentação corretores",
+            "mercado seguros auto tendências",
+        ]
+        all_results = []
+        for query in queries:
+            try:
+                url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+                req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urlopen(req, timeout=10) as resp:
+                    html = resp.read().decode("utf-8", errors="ignore")
+                titles = re.findall(r'"result__a"[^>]*>(.*?)</a>', html, re.DOTALL)[:3]
+                snippets = re.findall(r'"result__snippet">(.*?)</a>', html, re.DOTALL)[:3]
+                for title, snippet in zip(titles, snippets):
+                    clean_title = re.sub(r"<[^>]+>", "", title).strip()
+                    clean_snippet = re.sub(r"<[^>]+>", "", snippet).strip()
+                    if clean_title:
+                        all_results.append((clean_title, clean_snippet, query))
+            except Exception:
+                continue
+        self.root.after(0, self._display_news, all_results)
+
+    def _display_news(self, results) -> None:
+        self.news_text.configure(state="normal")
+        self.news_text.delete("1.0", "end")
+        if not results:
+            self.news_text.insert("end", "Sem conexão ou nenhuma notícia encontrada.\nClique em Atualizar para tentar novamente.")
+        else:
+            for i, (title, snippet, source) in enumerate(results[:12], 1):
+                self.news_text.insert("end", f"\n{i}. {title}\n", "title")
+                self.news_text.insert("end", f"   {snippet}\n")
+                self.news_text.insert("end", f"   Fonte: {source}\n\n", "source")
+        self.news_text.configure(state="disabled")

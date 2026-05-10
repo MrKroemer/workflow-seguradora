@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Mockup - Agente RPA PBSeg</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #2d2d2d; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
+
+.window {
+    width: 480px; height: 650px; background: #0f0f1a; border-radius: 12px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+    overflow: hidden; border: 1px solid #2d3748;
+}
+
+.header {
+    background: #1a1a2e; padding: 12px 16px; display: flex; align-items: center;
+    border-bottom: 1px solid #2d3748; cursor: move;
+}
+.header .icon { font-size: 24px; margin-right: 8px; }
+.header .title { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+.header .subtitle { font-size: 9px; color: #94a3b8; }
+.header .btns { margin-left: auto; display: flex; gap: 4px; }
+.header .btns span { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; cursor: pointer; border-radius: 4px; }
+.header .btns span:hover { background: #2d3748; }
+
+.chat {
+    flex: 1; overflow-y: auto; padding: 16px; background: #0a0a14;
+    display: flex; flex-direction: column; gap: 12px;
+}
+
+.msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 12px; line-height: 1.5; }
+.msg.agent { background: #1e293b; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg.user { background: #0ea5e9; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg.alert { background: #1e293b; border-left: 3px solid #f59e0b; color: #fcd34d; align-self: flex-start; }
+.msg.tool { background: #0d2818; border-left: 3px solid #10b981; color: #6ee7b7; align-self: flex-start; font-family: Consolas, monospace; font-size: 11px; }
+
+.msg .label { font-size: 10px; color: #06b6d4; font-weight: 600; margin-bottom: 4px; }
+
+.input-area {
+    background: #1a1a2e; padding: 12px 16px; display: flex; align-items: center; gap: 8px;
+    border-top: 1px solid #2d3748;
+}
+.input-area input {
+    flex: 1; background: #0d1117; border: none; color: #e2e8f0; padding: 10px 14px;
+    border-radius: 8px; font-size: 12px; outline: none;
+}
+.input-area input::placeholder { color: #4a5568; }
+.input-area button {
+    background: #06b6d4; border: none; color: #fff; width: 36px; height: 36px;
+    border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+.actions {
+    background: #0f0f1a; padding: 8px 12px; display: flex; gap: 6px; border-top: 1px solid #1a1a2e;
+}
+.actions button {
+    background: #1a1a2e; border: none; color: #94a3b8; padding: 5px 10px;
+    border-radius: 6px; font-size: 10px; cursor: pointer;
+}
+.actions button:hover { background: #2d3748; color: #e2e8f0; }
+</style>
+</head>
+<body>
+
+<div class="window">
+    <div class="header">
+        <span class="icon">🤖</span>
+        <div>
+            <div class="title">RPA PBSeg</div>
+            <div class="subtitle">Llama 3.1 • Open Source</div>
+        </div>
+        <div class="btns">
+            <span>─</span>
+            <span>✕</span>
+        </div>
+    </div>
+
+    <div class="chat">
+        <div class="msg agent">
+            <div class="label">🤖</div>
+            Olá! Eu sou o RPA PBSeg — seu assistente cognitivo.<br><br>
+            Posso executar tarefas, pesquisar na web, analisar dados,<br>
+            gerar relatórios e responder qualquer dúvida.<br><br>
+            Exemplos:<br>
+            • "executar" — roda o ciclo completo<br>
+            • "buscar Ana Silva" — pesquisa segurado<br>
+            • "pesquisar novidades seguro auto 2026"<br>
+            • "relatório Porto Seguro"<br>
+            • "criar dashboard de comissões"
+        </div>
+
+        <div class="msg alert">
+            🚨 Pendências:<br>
+            🔴 3 apólice(s) vencem em 10 dias<br>
+            🟠 5 sinistro(s) aberto(s)<br>
+            ⚠️ 126 comissões pendentes
+        </div>
+
+        <div class="msg user">buscar Tatiana Carvalho</div>
+
+        <div class="msg agent">
+            🔍 Resultados para "Tatiana Carvalho":<br><br>
+            ✅ TATIANA CARVALHO RAMOS CAVALCANTI<br>
+            &nbsp;&nbsp;&nbsp;Seguradora: YELUM<br>
+            &nbsp;&nbsp;&nbsp;Vigência: 2025-01-02<br>
+            &nbsp;&nbsp;&nbsp;Prêmio: R$ 1.860,81 | Comissão: R$ 433,23<br>
+            &nbsp;&nbsp;&nbsp;Pgto: QUITADA 12/03/26<br>
+            &nbsp;&nbsp;&nbsp;Veículo: YARIS
+        </div>
+
+        <div class="msg user">pesquisar novas regras SUSEP 2026</div>
+
+        <div class="msg tool">
+            🌐 Pesquisa: novas regras SUSEP 2026<br><br>
+            1. SUSEP publica novas normas para seguros<br>
+            &nbsp;&nbsp;&nbsp;Resolução CNSP nº 462/2026 altera regras...<br><br>
+            2. Corretores devem se adaptar até julho<br>
+            &nbsp;&nbsp;&nbsp;Prazo para adequação às novas exigências...
+        </div>
+
+        <div class="msg agent">
+            As principais mudanças da SUSEP para 2026 incluem:<br><br>
+            • Nova resolução CNSP nº 462 sobre transparência<br>
+            • Prazo de adequação até julho/2026<br>
+            • Impacto direto na documentação de apólices<br><br>
+            Quer que eu detalhe algum ponto específico?
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" placeholder="Digite uma mensagem ou comando...">
+        <button>➤</button>
+    </div>
+
+    <div class="actions">
+        <button>▶ Executar</button>
+        <button>📊 Status</button>
+        <button>🔍 Pesquisar</button>
+        <button>📈 Dashboard</button>
+        <button>🚨 Alertas</button>
+    </div>
+</div>
+
+</body>
+</html>
