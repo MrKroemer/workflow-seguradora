@@ -1,15 +1,26 @@
 @echo off
+chcp 65001 >nul 2>nul
+title RPA PBSeg - Painel Web
 for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
 cd /d "%ROOT_DIR%"
 set "PYTHONPATH=%ROOT_DIR%\src"
 
-if exist ".venv\Scripts\pythonw.exe" (
-    start "" ".venv\Scripts\pythonw.exe" -m rpa_corretora.gui
+echo ============================================================
+echo   RPA PBSeg - Painel Web
+echo   Abrindo em http://localhost:5000
+echo ============================================================
+echo.
+
+if exist ".venv\Scripts\python.exe" (
+    .venv\Scripts\python.exe -m rpa_corretora.webapp
 ) else (
-    where pythonw >nul 2>nul
-    if %ERRORLEVEL%==0 (
-        start "" pythonw -m rpa_corretora.gui
-    ) else (
-        start "" py -3 -m rpa_corretora.gui
-    )
+    py -3 -m rpa_corretora.webapp
+)
+
+if %ERRORLEVEL% neq 0 (
+    echo.
+    echo [ERRO] Falha ao iniciar. Verifique se Flask esta instalado:
+    echo   pip install flask
+    echo.
+    pause
 )
