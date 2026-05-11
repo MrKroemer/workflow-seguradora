@@ -170,6 +170,18 @@ def build_incident_alerts(policy: PolicyRecord) -> list[Alert]:
                 context={"policy_id": policy.policy_id, "insured_name": policy.insured_name},
             )
         )
+    if not policy.renewal_started and is_blank(policy.status_pgto):
+        alerts.append(
+            Alert(
+                code="PROPOSTA_PENDENTE",
+                severity="ALTA",
+                message=(
+                    f"Proposta pendente de emissao para {policy.insured_name} "
+                    f"({policy.insurer}) - sem confirmacao e sem pagamento."
+                ),
+                context={"policy_id": policy.policy_id, "insured_name": policy.insured_name, "insurer": policy.insurer},
+            )
+        )
     return alerts
 
 
