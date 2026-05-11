@@ -711,7 +711,11 @@ class SegfyWebGateway:
         print(f"[Segfy] Iniciando Chrome com perfil '{profile_dir}' + debug port {cdp_port}...")
 
         # Fecha Chrome existente (nao tem debug port, precisa reiniciar).
-        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"], capture_output=True, timeout=10)
+        # Fecha Chrome graciosamente (sem /F) para preservar configuracoes do usuario.
+        subprocess.run(["taskkill", "/IM", "chrome.exe"], capture_output=True, timeout=10)
+        time.sleep(3)
+        # Se ainda estiver rodando, forca.
+        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"], capture_output=True, timeout=5)
         time.sleep(2)
 
         # Inicia Chrome com debug port + perfil + restaura sessao.
