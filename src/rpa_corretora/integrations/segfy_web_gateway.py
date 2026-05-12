@@ -671,6 +671,7 @@ class SegfyWebGateway:
         return self._submit_form(page)
 
     def _launch_browser(self, playwright: Playwright):
+        """Conecta ao Chrome existente via CDP, ou inicia com perfil + debug port."""
         import subprocess
         import time
         import shutil
@@ -678,69 +679,64 @@ class SegfyWebGateway:
         cdp_port = int((os.getenv("SEGFY_CHROME_CDP_PORT") or "9222").strip() or "9222")
         cdp_url = f"http://localhost:{cdp_port}"
 
-        # Tenta conectar ao Chrome existente via CDP.
-        try:
+        # 1. Verifica se Chrome ja esta com CDP ativo.
+        if self._chrome_cdp_disponivel(cdp_port):
             browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=5000)
-            print(f"[Segfy] Conectado ao Chrome via CDP ({cdp_url}).")
+            print(f"[Segfy] Conectado ao Chrome existente via CDP.")
             browser._rpa_persistent = True  # type: ignore[attr-defined]
             return browser
-        except Exception:
-            pass
 
-        # Chrome nao tem debug port. Inicia Chrome com perfil + debug port.
+        # 2. Chrome nao tem CDP. Inicia com perfil + debug port (sem matar o existente).
         chrome_exe = None
         for candidate in [
-            shutil.which("chrome") or shutil.which("chrome.exe"),
-            str(Path(os.getenv("PROGRAMFILES", "")) / "Google" / "Chrome" / "Application" / "chrome.exe"),
-            str(Path(os.getenv("PROGRAMFILES(X86)", "")) / "Google" / "Chrome" / "Application" / "chrome.exe"),
-            str(Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "Application" / "chrome.exe"),
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            shutil.which("chrome") or "",
         ]:
             if candidate and Path(candidate).exists():
                 chrome_exe = candidate
                 break
 
-        if not chrome_exe or not sys.platform.startswith("win"):
-            print("[Segfy] Chrome nao encontrado. Usando Playwright padrao.")
-            return playwright.chromium.launch(channel="chrome", headless=self.headless)
+        if not chrome_exe:
+            raise RuntimeError("Chrome nao encontrado no sistema.")
 
+        profile_dir = (os.getenv("SEGFY_CHROME_PROFILE_DIR") or "Profile 1").strip()
         user_data_dir = (os.getenv("SEGFY_CHROME_USER_DATA_DIR") or "").strip()
         if not user_data_dir:
             user_data_dir = str(Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data")
-        profile_dir = (os.getenv("SEGFY_CHROME_PROFILE_DIR") or "Profile 1").strip()
 
-        print(f"[Segfy] Iniciando Chrome com perfil '{profile_dir}' + debug port {cdp_port}...")
+        print(f"[Segfy] Chrome sem CDP. Iniciando com perfil '{profile_dir}' + porta {cdp_port}...")
+        subprocess.Popen([
+            chrome_exe,
+            f"--remote-debugging-port={cdp_port}",
+            f"--user-data-dir={user_data_dir}",
+            f"--profile-directory={profile_dir}",
+            "--restore-last-session",
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # Fecha Chrome existente (nao tem debug port, precisa reiniciar).
-        # Fecha Chrome graciosamente (sem /F) para preservar configuracoes do usuario.
-        subprocess.run(["taskkill", "/IM", "chrome.exe"], capture_output=True, timeout=10)
-        time.sleep(3)
-        # Se ainda estiver rodando, forca.
-        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"], capture_output=True, timeout=5)
-        time.sleep(2)
-
-        # Inicia Chrome com debug port + perfil + restaura sessao.
-        subprocess.Popen(
-            [chrome_exe, f"--remote-debugging-port={cdp_port}",
-             f"--user-data-dir={user_data_dir}", f"--profile-directory={profile_dir}",
-             "--restore-last-session", "--no-first-run", "--no-default-browser-check"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-
-        # Aguarda Chrome ficar pronto e conecta.
-        for attempt in range(20):
+        # 3. Aguarda Chrome ficar pronto.
+        for attempt in range(15):
             time.sleep(1)
-            try:
-                browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=3000)
+            if self._chrome_cdp_disponivel(cdp_port):
+                browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=5000)
                 print(f"[Segfy] Chrome iniciado e conectado via CDP (tentativa {attempt + 1}).")
                 browser._rpa_persistent = True  # type: ignore[attr-defined]
                 return browser
-            except Exception:
-                continue
 
         raise RuntimeError(
-            "Nao foi possivel conectar ao Chrome via CDP.\n"
-            "Execute scripts/configurar_chrome.bat e abra o Chrome pelo atalho 'Chrome PBSeg'."
+            f"Chrome nao respondeu na porta {cdp_port} apos 15 tentativas. "
+            "Verifique se outro Chrome esta usando o mesmo perfil."
         )
+
+    @staticmethod
+    def _chrome_cdp_disponivel(port: int) -> bool:
+        """Verifica se Chrome esta respondendo na porta CDP."""
+        try:
+            from urllib.request import urlopen
+            urlopen(f"http://localhost:{port}/json/version", timeout=2)
+            return True
+        except Exception:
+            return False
 
     def _login(self, page: Page) -> None:
         page.goto(self.base_url, wait_until="domcontentloaded")

@@ -51,6 +51,11 @@ def index():
     return send_from_directory(str(STATIC_DIR), "index.html")
 
 
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
+
+
 @app.route("/api/status")
 def api_status():
     """Retorna status geral do sistema."""
@@ -84,14 +89,14 @@ def api_execute():
     """Inicia execução do RPA."""
     global _process, _running
     if _running:
-        return jsonify({"error": "Já em execução"}), 409
+        return jsonify({"status": "already_running", "message": "Ciclo ja em execucao. Aguarde."}), 200
 
     dry_run = request.json.get("dry_run", False) if request.json else False
     cmd = [sys.executable, "-m", "rpa_corretora.main"]
     if dry_run:
         cmd.append("--dry-run")
 
-    env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
+    env = {**os.environ, "PYTHONPATH": str(SRC_DIR), "RPA_NO_CHROME_RESTART": "1"}
     _running = True
 
     def run():
@@ -425,13 +430,9 @@ def main():
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     port = int(os.getenv("RPA_WEB_PORT", "5000"))
     print(f"[RPA Web] Servidor iniciado em http://localhost:{port}")
-    print(f"[RPA Web] Abrindo navegador...")
+    print(f"[RPA Web] Acesse no navegador: http://localhost:{port}")
 
-    # Abre no navegador
-    import webbrowser
-    threading.Timer(1.5, lambda: webbrowser.open(f"http://localhost:{port}")).start()
-
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False, threaded=True)
 
 
 if __name__ == "__main__":
