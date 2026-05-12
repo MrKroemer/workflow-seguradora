@@ -1,26 +1,33 @@
 @echo off
-chcp 65001 >nul 2>nul
-title RPA PBSeg - Painel Web
-for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
-cd /d "%ROOT_DIR%"
-set "PYTHONPATH=%ROOT_DIR%\src"
+setlocal EnableDelayedExpansion
+cd /d "%~dp0.."
+set "PYTHONPATH=%cd%\src"
 
-echo ============================================================
-echo   RPA PBSeg - Painel Web
-echo   Abrindo em http://localhost:5000
-echo ============================================================
-echo.
-
-if exist ".venv\Scripts\python.exe" (
-    .venv\Scripts\python.exe -m rpa_corretora.webapp
-) else (
-    py -3 -m rpa_corretora.webapp
+REM Detecta Python
+set "PY="
+where py >nul 2>nul
+if !ERRORLEVEL! equ 0 (
+    set "PY=py -3"
+    goto :run
 )
+where python >nul 2>nul
+if !ERRORLEVEL! equ 0 (
+    set "PY=python"
+    goto :run
+)
+if exist ".venv\Scripts\python.exe" (
+    set "PY=.venv\Scripts\python.exe"
+    goto :run
+)
+echo [ERRO] Python nao encontrado.
+pause
+exit /b 1
 
-if %ERRORLEVEL% neq 0 (
+:run
+echo Iniciando RPA PBSeg...
+%PY% -m rpa_corretora.webapp
+if !ERRORLEVEL! neq 0 (
     echo.
-    echo [ERRO] Falha ao iniciar. Verifique se Flask esta instalado:
-    echo   pip install flask
-    echo.
+    echo [ERRO] Falha ao iniciar. Execute setup_windows.bat primeiro.
     pause
 )
