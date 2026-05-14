@@ -417,8 +417,13 @@ class SegfyWebGateway:
                 timeout_ms=2500,
             )
             if clicked:
-                page.wait_for_timeout(1200)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=8000)
+                except Exception:
+                    page.wait_for_timeout(1500)
                 return True
+        print(f"[Segfy] AVISO: nao conseguiu navegar para {section_labels}. Capturando debug.")
+        self._capture_debug_snapshot(page=page, label=f"nav_failed_{'_'.join(section_labels[:1])}")
         return False
 
     def _search_and_open_record(self, page: Page, query: str) -> bool:
@@ -462,7 +467,10 @@ class SegfyWebGateway:
             page.keyboard.press("Enter")
         except Exception:
             pass
-        page.wait_for_timeout(800)
+        try:
+            page.wait_for_load_state("networkidle", timeout=5000)
+        except Exception:
+            page.wait_for_timeout(800)
 
         # Clica no botao de pesquisa se existir.
         self._click_first(
@@ -479,7 +487,10 @@ class SegfyWebGateway:
             ],
             timeout_ms=2000,
         )
-        page.wait_for_timeout(1500)
+        try:
+            page.wait_for_load_state("networkidle", timeout=6000)
+        except Exception:
+            page.wait_for_timeout(1200)
 
         # Tenta abrir o primeiro resultado.
         query_escaped = query.replace("\\", "\\\\").replace('"', '\\"')
@@ -542,13 +553,16 @@ class SegfyWebGateway:
         )
 
     def _sync_policies_on_page(self, page: Page, policies: list[PolicyRecord]) -> int:
-        self._navigate_to_section(page, [
+        if not self._navigate_to_section(page, [
             "Segurados", "Clientes", "Propostas e Apólices",
             "Propostas e Apolices", "Apólices", "Apolices",
-        ])
+        ]):
+            return 0
+        self._dismiss_segfy_overlays(page)
         synced = 0
         for policy in policies:
             try:
+                self._dismiss_segfy_overlays(page)
                 self._click_first(page, selectors=[
                     "button:has-text('Novo')", "button:has-text('Adicionar')",
                     "button:has-text('Cadastrar')", "a:has-text('Novo')",
@@ -577,10 +591,13 @@ class SegfyWebGateway:
         return synced
 
     def _sync_followups_on_page(self, page: Page, followups: list[FollowupRecord]) -> int:
-        self._navigate_to_section(page, ["Tarefas", "Acompanhamento", "Atividades"])
+        if not self._navigate_to_section(page, ["Tarefas", "Acompanhamento", "Atividades"]):
+            return 0
+        self._dismiss_segfy_overlays(page)
         synced = 0
         for followup in followups:
             try:
+                self._dismiss_segfy_overlays(page)
                 self._click_first(page, selectors=[
                     "button:has-text('Nova Tarefa')", "button:has-text('Novo')",
                     "button:has-text('Adicionar')", "a:has-text('Nova Tarefa')",
@@ -605,13 +622,16 @@ class SegfyWebGateway:
         return synced
 
     def _sync_cashflow_on_page(self, page: Page, entries: list[CashflowEntry]) -> int:
-        self._navigate_to_section(page, [
+        if not self._navigate_to_section(page, [
             "Financeiro", "Recebimentos", "Fluxo de Caixa",
             "Extrato", "Extratos Bancários", "Extratos Bancarios",
-        ])
+        ]):
+            return 0
+        self._dismiss_segfy_overlays(page)
         synced = 0
         for entry in entries:
             try:
+                self._dismiss_segfy_overlays(page)
                 self._click_first(page, selectors=[
                     "button:has-text('Novo')", "button:has-text('Adicionar')",
                     "button:has-text('Lançar')", "button:has-text('Lancar')",

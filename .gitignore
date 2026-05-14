@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+PROMPT_RPA_PBSEG_FINAL.md

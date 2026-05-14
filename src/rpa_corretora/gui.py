@@ -9,18 +9,19 @@ Interface grafica com:
 """
 from __future__ import annotations
 
+import json
 import os
+import re
+import sqlite3
 import subprocess
 import sys
 import threading
+import traceback
+import webbrowser
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, filedialog
 from datetime import datetime, date, timedelta
 from pathlib import Path
-import json
-import re
-import sqlite3
-import webbrowser
+from tkinter import ttk, scrolledtext, messagebox
 
 
 # Cores do tema escuro
@@ -43,6 +44,18 @@ OUTPUTS_DIR = BASE_DIR / "outputs"
 DB_PATH = OUTPUTS_DIR / "rpa_corretora.db"
 
 
+def _global_exc_handler(exc_type, exc_val, exc_tb):
+    msg = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
+    try:
+        OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+        (OUTPUTS_DIR / "gui_crash.log").open("a").write(f"\n[{datetime.now()}]\n{msg}\n")
+    except Exception:
+        pass
+
+
+sys.excepthook = _global_exc_handler
+
+
 class RPAApp:
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -51,13 +64,14 @@ class RPAApp:
         self.root.configure(bg=BG)
         self.root.minsize(900, 600)
 
-        # Estado
         self.running = False
         self.process: subprocess.Popen | None = None
 
         self._setup_styles()
         self._build_ui()
         self._load_status()
+        self._tick_clock()
+        self._animate_dot()
 
     def _setup_styles(self) -> None:
         style = ttk.Style()
@@ -75,6 +89,11 @@ class RPAApp:
         style.configure("TNotebook", background=BG)
         style.configure("TNotebook.Tab", background=SURFACE, foreground=TEXT, padding=[12, 6])
         style.map("TNotebook.Tab", background=[("selected", ACCENT)])
+        style.configure(
+            "Run.Horizontal.TProgressbar",
+            troughcolor=SURFACE2, background=ACCENT,
+            lightcolor=ACCENT, darkcolor=ACCENT, bordercolor=SURFACE2,
+        )
 
     def _build_ui(self) -> None:
         # Header
@@ -82,9 +101,10 @@ class RPAApp:
         header.pack(fill="x", padx=20, pady=(15, 5))
 
         ttk.Label(header, text="⚡ RPA Corretora PBSeg", style="Title.TLabel").pack(side="left")
-        ttk.Label(header, text="Automação inteligente de corretora de seguros", style="Subtitle.TLabel").pack(side="left", padx=(15, 0), pady=(5, 0))
+        ttk.Label(header, text="Automação inteligente de corretora de seguros", style="Subtitle.TLabel").pack(
+            side="left", padx=(15, 0), pady=(5, 0)
+        )
 
-        # Botoes de acao no header
         btn_frame = ttk.Frame(header)
         btn_frame.pack(side="right")
 
@@ -121,7 +141,7 @@ class RPAApp:
         self._agent_frame = None
         self._agent_messages: list[dict] = []
 
-        # FAB (Floating Action Button) para abrir o agente
+        # FAB
         self._fab = tk.Button(
             self.root, text="🤖", font=("Segoe UI", 16),
             bg="#7c3aed", fg="#fff", relief="flat",
@@ -131,43 +151,50 @@ class RPAApp:
         )
         self._fab.place(relx=1.0, rely=1.0, anchor="se", x=-25, y=-45)
         self._fab.lift()
-        # Tooltip
         self._fab.bind("<Enter>", lambda e: self._fab.configure(bg="#5b21b6"))
         self._fab.bind("<Leave>", lambda e: self._fab.configure(bg="#7c3aed"))
 
-        # Separador
         sep = tk.Frame(self.root, height=1, bg=BORDER)
         sep.pack(fill="x", padx=20, pady=8)
 
-        # Notebook (abas)
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill="both", expand=True, padx=20, pady=(0, 15))
 
-        # Aba 1: Execucao
         self._build_execution_tab()
-        # Aba 2: Status
         self._build_status_tab()
-        # Aba 3: Noticias e Informacoes
         self._build_news_tab()
-        # Aba 4: Ferramentas
         self._build_tools_tab()
 
-        # Status bar
+        sb_frame = tk.Frame(self.root, bg=SURFACE)
+        sb_frame.pack(fill="x", side="bottom")
+
+        self._dot_canvas = tk.Canvas(sb_frame, width=10, height=10, bg=SURFACE, highlightthickness=0)
+        self._dot_canvas.pack(side="left", padx=(10, 4), pady=4)
+        self._dot_oval = self._dot_canvas.create_oval(2, 2, 9, 9, fill=TEXT_MUTED, outline="")
+
         self.status_bar = tk.Label(
-            self.root, text="Pronto para execução", font=("Segoe UI", 9),
-            bg=SURFACE, fg=TEXT_MUTED, anchor="w", padx=10, pady=4,
+            sb_frame, text="Pronto para execução", font=("Segoe UI", 9),
+            bg=SURFACE, fg=TEXT_MUTED, anchor="w", pady=4,
         )
-        self.status_bar.pack(fill="x", side="bottom")
+        self.status_bar.pack(side="left", fill="x", expand=True)
+
+        self._clock_label = tk.Label(
+            sb_frame, text="", font=("Consolas", 9),
+            bg=SURFACE, fg=TEXT_MUTED, padx=12, pady=4,
+        )
+        self._clock_label.pack(side="right")
 
     def _build_execution_tab(self) -> None:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="  Execução  ")
 
-        # Painel de etapas
         stages_frame = tk.Frame(tab, bg=SURFACE, relief="flat", bd=0)
         stages_frame.pack(fill="x", padx=10, pady=10)
 
-        tk.Label(stages_frame, text="Etapas do Ciclo", font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT).pack(anchor="w", padx=10, pady=(8, 4))
+        tk.Label(
+            stages_frame, text="Etapas do Ciclo",
+            font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
 
         self.stage_labels = {}
         stages = [
@@ -185,29 +212,41 @@ class RPAApp:
             row.pack(fill="x", padx=10, pady=2)
             indicator = tk.Label(row, text="⬜", font=("Segoe UI", 10), bg=SURFACE, fg=TEXT_MUTED)
             indicator.pack(side="left")
-            lbl = tk.Label(row, text=f"  {label}", font=("Segoe UI", 9), bg=SURFACE, fg=TEXT)
-            lbl.pack(side="left")
+            tk.Label(row, text=f"  {label}", font=("Segoe UI", 9), bg=SURFACE, fg=TEXT).pack(side="left")
             status_lbl = tk.Label(row, text="", font=("Segoe UI", 8), bg=SURFACE, fg=TEXT_MUTED)
             status_lbl.pack(side="right", padx=10)
             self.stage_labels[key] = (indicator, status_lbl)
 
-        # Log de execucao
         log_frame = tk.Frame(tab, bg=SURFACE)
         log_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
-        tk.Label(log_frame, text="Log de Execução", font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT).pack(anchor="w", padx=10, pady=(8, 4))
+        tk.Label(
+            log_frame, text="Log de Execução",
+            font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+
+        self._progress = ttk.Progressbar(
+            log_frame, mode="indeterminate",
+            style="Run.Horizontal.TProgressbar", length=100,
+        )
+        self._progress.pack(fill="x", padx=10, pady=(0, 4))
+        self._progress.pack_forget()
 
         self.log_text = scrolledtext.ScrolledText(
             log_frame, font=("Consolas", 9), bg="#0d1117", fg="#c9d1d9",
             insertbackground=TEXT, relief="flat", height=12, wrap="word",
         )
         self.log_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.log_text.tag_configure("ts",   foreground="#2a3d55")
+        self.log_text.tag_configure("ok",   foreground=SUCCESS)
+        self.log_text.tag_configure("warn", foreground=WARNING)
+        self.log_text.tag_configure("err",  foreground=DANGER)
+        self.log_text.tag_configure("info", foreground=ACCENT2)
 
     def _build_status_tab(self) -> None:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="  Status  ")
 
-        # KPIs
         kpi_frame = tk.Frame(tab, bg=BG)
         kpi_frame.pack(fill="x", padx=10, pady=10)
 
@@ -219,19 +258,23 @@ class RPAApp:
             ("incidents", "Incidentes", "0", DANGER),
         ]
         for i, (key, label, value, color) in enumerate(kpis):
-            card = tk.Frame(kpi_frame, bg=SURFACE, relief="flat", padx=15, pady=10)
-            card.grid(row=0, column=i, padx=5, sticky="nsew")
             kpi_frame.columnconfigure(i, weight=1)
+            outer = tk.Frame(kpi_frame, bg=color)
+            outer.grid(row=0, column=i, padx=5, sticky="nsew")
+            card = tk.Frame(outer, bg=SURFACE, padx=12, pady=10)
+            card.pack(fill="both", expand=True, padx=(3, 0))
             tk.Label(card, text=label, font=("Segoe UI", 8), bg=SURFACE, fg=TEXT_MUTED).pack(anchor="w")
             val_lbl = tk.Label(card, text=value, font=("Segoe UI", 22, "bold"), bg=SURFACE, fg=color)
             val_lbl.pack(anchor="w")
             self.kpi_widgets[key] = val_lbl
 
-        # Integracoes
         int_frame = tk.Frame(tab, bg=SURFACE)
         int_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
-        tk.Label(int_frame, text="Integrações", font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT).pack(anchor="w", padx=10, pady=(8, 4))
+        tk.Label(
+            int_frame, text="Integrações",
+            font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
 
         self.integration_labels = {}
         integrations = [
@@ -251,27 +294,30 @@ class RPAApp:
             mode_lbl.pack(side="right", padx=10)
             self.integration_labels[key] = mode_lbl
 
-
     def _build_news_tab(self) -> None:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="  Notícias  ")
 
-        # Header da aba
         header = tk.Frame(tab, bg=SURFACE)
         header.pack(fill="x", padx=10, pady=10)
-        tk.Label(header, text="📰 Notícias e Informações do Mercado", font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT).pack(anchor="w", padx=10, pady=8)
-        tk.Button(header, text="🔄 Atualizar", font=("Segoe UI", 9), bg=SURFACE2, fg=TEXT, relief="flat", padx=10, pady=4, command=self._refresh_news, cursor="hand2").pack(anchor="e", padx=10, pady=(0, 8))
+        tk.Label(
+            header, text="📰 Notícias e Informações do Mercado",
+            font=("Segoe UI", 11, "bold"), bg=SURFACE, fg=TEXT,
+        ).pack(anchor="w", padx=10, pady=8)
+        tk.Button(
+            header, text="🔄 Atualizar", font=("Segoe UI", 9),
+            bg=SURFACE2, fg=TEXT, relief="flat", padx=10, pady=4,
+            command=self._refresh_news, cursor="hand2",
+        ).pack(anchor="e", padx=10, pady=(0, 8))
 
-        # Area de noticias
         self.news_text = scrolledtext.ScrolledText(
-            tab, font=("Segoe UI", 9), bg=CHAT_BG if "CHAT_BG" in dir() else "#0a0a14", fg=TEXT,
+            tab, font=("Segoe UI", 9), bg="#0a0a14", fg=TEXT,
             insertbackground=TEXT, relief="flat", wrap="word", state="disabled",
         )
         self.news_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         self.news_text.tag_configure("title", font=("Segoe UI", 10, "bold"), foreground=ACCENT)
         self.news_text.tag_configure("source", foreground=TEXT_MUTED, font=("Segoe UI", 8))
 
-        # Carrega noticias ao iniciar
         self.root.after(2000, self._refresh_news)
 
     def _build_tools_tab(self) -> None:
@@ -292,7 +338,7 @@ class RPAApp:
             ("📅 Abrir Google Agenda", self._open_calendar),
         ]
 
-        for i, (text, command) in enumerate(buttons):
+        for text, command in buttons:
             btn = tk.Button(
                 tools_frame, text=text, font=("Segoe UI", 10),
                 bg=SURFACE, fg=TEXT, relief="flat", padx=15, pady=8,
@@ -302,7 +348,8 @@ class RPAApp:
             btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=SURFACE2))
             btn.bind("<Leave>", lambda e, b=btn: b.configure(bg=SURFACE))
 
-    # --- Acoes ---
+    # --- Execução ---
+
     def _start_execution(self) -> None:
         self._run_rpa(dry_run=False)
 
@@ -320,7 +367,10 @@ class RPAApp:
         self._reset_stages()
         mode = "DRY-RUN" if dry_run else "PRODUÇÃO"
         self._log(f"[{datetime.now().strftime('%H:%M:%S')}] Iniciando ciclo ({mode})...\n")
-        self.status_bar.configure(text=f"Executando ciclo ({mode})...")
+        self.status_bar.configure(text=f"⚡ Executando ciclo ({mode})...", fg=WARNING)
+        self._dot_canvas.itemconfig(self._dot_oval, fill=WARNING)
+        self._progress.pack(fill="x", padx=10, pady=(0, 4))
+        self._progress.start(14)
 
         cmd = [sys.executable, "-m", "rpa_corretora.main"]
         if dry_run:
@@ -329,8 +379,7 @@ class RPAApp:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(SRC_DIR)
 
-        thread = threading.Thread(target=self._execute_process, args=(cmd, env), daemon=True)
-        thread.start()
+        threading.Thread(target=self._execute_process, args=(cmd, env), daemon=True).start()
 
     def _execute_process(self, cmd: list[str], env: dict) -> None:
         try:
@@ -341,27 +390,15 @@ class RPAApp:
             for line in iter(self.process.stdout.readline, ""):
                 self.root.after(0, self._process_line, line)
             self.process.wait()
-            exit_code = self.process.returncode
-            self.root.after(0, self._execution_finished, exit_code)
+            self.root.after(0, self._execution_finished, self.process.returncode)
         except Exception as exc:
             self.root.after(0, self._log, f"\n[ERRO] {exc}\n")
             self.root.after(0, self._execution_finished, 1)
 
     def _process_line(self, line: str) -> None:
         self._log(line)
-        # Atualiza indicadores de etapa
-        stage_map = {
-            "google_calendar": ("Google Calendar", "📅"),
-            "microsoft_todo": ("Microsoft To Do", "✅"),
-            "gmail": ("Gmail", "📧"),
-            "spreadsheets": ("Planilhas", "📊"),
-            "segfy": ("Segfy", "🔄"),
-            "insurer_portals": ("Portais", "🌐"),
-            "whatsapp": ("WhatsApp", "💬"),
-            "dashboard": ("Dashboard", "📈"),
-        }
         lower = line.lower()
-        for key in stage_map:
+        for key in self.stage_labels:
             if key.replace("_", " ") in lower or key in lower:
                 if "falha" in lower or "erro" in lower:
                     self._update_stage(key, "❌", DANGER)
@@ -377,12 +414,17 @@ class RPAApp:
         self.btn_stop.configure(state="disabled")
         self.btn_dryrun.configure(state="normal")
 
+        self._progress.stop()
+        self._progress.pack_forget()
+
         if exit_code == 0:
             self._log(f"\n[{datetime.now().strftime('%H:%M:%S')}] ✅ Ciclo finalizado com sucesso.\n")
             self.status_bar.configure(text="✅ Ciclo finalizado com sucesso", fg=SUCCESS)
+            self._dot_canvas.itemconfig(self._dot_oval, fill=SUCCESS)
         else:
             self._log(f"\n[{datetime.now().strftime('%H:%M:%S')}] ❌ Ciclo finalizado com erros (código {exit_code}).\n")
             self.status_bar.configure(text=f"❌ Erro no ciclo (código {exit_code})", fg=DANGER)
+            self._dot_canvas.itemconfig(self._dot_oval, fill=DANGER)
 
         self._load_status()
 
@@ -392,31 +434,41 @@ class RPAApp:
             self._log("\n[PARADO] Execução interrompida pelo usuário.\n")
 
     def _log(self, text: str) -> None:
-        self.log_text.insert("end", text)
+        tag = ""
+        if re.search(r"✅|conclu|sucesso|\[OK\]", text, re.I): tag = "ok"
+        elif re.search(r"AVISO|alerta|WARN", text, re.I):       tag = "warn"
+        elif re.search(r"ERRO|falha|ERROR|exception", text, re.I): tag = "err"
+        elif re.search(r"Iniciando|Segfy|Chrome|Playwright", text, re.I): tag = "info"
+
+        ts_m = re.match(r"(\[\d{2}:\d{2}:\d{2}\])(.*)", text, re.DOTALL)
+        if ts_m:
+            self.log_text.insert("end", ts_m.group(1), "ts")
+            self.log_text.insert("end", ts_m.group(2), tag)
+        else:
+            self.log_text.insert("end", text, tag)
         self.log_text.see("end")
 
     def _reset_stages(self) -> None:
-        for key, (indicator, status_lbl) in self.stage_labels.items():
+        for _key, (indicator, status_lbl) in self.stage_labels.items():
             indicator.configure(text="⬜", fg=TEXT_MUTED)
             status_lbl.configure(text="")
 
     def _update_stage(self, key: str, icon: str, color: str) -> None:
         if key in self.stage_labels:
-            indicator, status_lbl = self.stage_labels[key]
+            indicator, _status_lbl = self.stage_labels[key]
             indicator.configure(text=icon, fg=color)
 
     def _load_status(self) -> None:
-        # Carrega dados do banco se existir
-        db_path = OUTPUTS_DIR / "rpa_corretora.db"
-        if not db_path.exists():
+        if not DB_PATH.exists():
             return
         try:
-            import sqlite3
-            conn = sqlite3.connect(str(db_path))
+            conn = sqlite3.connect(str(DB_PATH))
             policies = conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
             alerts = conn.execute("SELECT COUNT(*) FROM alerts WHERE run_date = date('now')").fetchone()[0]
             pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
-            incidents = conn.execute("SELECT COUNT(*) FROM policies WHERE sinistro_open = 1 OR endosso_open = 1").fetchone()[0]
+            incidents = conn.execute(
+                "SELECT COUNT(*) FROM policies WHERE sinistro_open = 1 OR endosso_open = 1"
+            ).fetchone()[0]
             conn.close()
 
             self.kpi_widgets["policies"].configure(text=str(policies))
@@ -427,6 +479,7 @@ class RPAApp:
             pass
 
     # --- Ferramentas ---
+
     def _open_dashboard(self) -> None:
         path = OUTPUTS_DIR / "dashboard_inteligente.html"
         if path.exists():
@@ -478,25 +531,13 @@ class RPAApp:
     def _open_calendar(self) -> None:
         webbrowser.open("https://calendar.google.com")
 
-    def run(self) -> None:
-        self.root.mainloop()
-
-
-def main() -> None:
-    app = RPAApp()
-    app.run()
-
-
-if __name__ == "__main__":
-    main()
+    # --- Agente IA ---
 
     def _toggle_agent(self) -> None:
-        """Abre/fecha o painel do agente IA dentro da janela principal."""
         if self._agent_visible:
             self._agent_frame.place_forget()
             self._agent_visible = False
             self.btn_agent.configure(bg="#7c3aed")
-            # Mostra o FAB novamente
             self._fab.place(relx=1.0, rely=1.0, anchor="se", x=-25, y=-45)
             self._fab.lift()
             return
@@ -504,10 +545,7 @@ if __name__ == "__main__":
         if self._agent_frame is None:
             self._build_agent_panel()
 
-        # Esconde o FAB
         self._fab.place_forget()
-
-        # Posiciona no canto inferior direito, sobrepondo o conteudo
         self._agent_frame.place(relx=1.0, rely=1.0, anchor="se", x=-20, y=-40, width=380, height=480)
         self._agent_frame.lift()
         self._agent_visible = True
@@ -526,18 +564,24 @@ if __name__ == "__main__":
             )
 
     def _build_agent_panel(self) -> None:
-        """Constroi o painel do agente embutido."""
-        self._agent_frame = tk.Frame(self.root, bg="#0f0f1a", relief="raised", bd=1, highlightbackground="#2d3748", highlightthickness=1)
+        self._agent_frame = tk.Frame(
+            self.root, bg="#0f0f1a", relief="raised", bd=1,
+            highlightbackground="#2d3748", highlightthickness=1,
+        )
 
-        # Header do painel
         header = tk.Frame(self._agent_frame, bg="#1a1a2e", height=40)
         header.pack(fill="x")
         header.pack_propagate(False)
-        tk.Label(header, text="🤖 Agente IA", font=("Segoe UI", 10, "bold"), bg="#1a1a2e", fg="#06b6d4").pack(side="left", padx=10)
+        tk.Label(
+            header, text="🤖 Agente IA",
+            font=("Segoe UI", 10, "bold"), bg="#1a1a2e", fg="#06b6d4",
+        ).pack(side="left", padx=10)
         tk.Label(header, text="Llama 3.1", font=("Segoe UI", 8), bg="#1a1a2e", fg="#94a3b8").pack(side="left")
-        tk.Button(header, text="✕", font=("Segoe UI", 9), bg="#1a1a2e", fg="#94a3b8", relief="flat", command=self._toggle_agent, cursor="hand2").pack(side="right", padx=8)
+        tk.Button(
+            header, text="✕", font=("Segoe UI", 9), bg="#1a1a2e", fg="#94a3b8",
+            relief="flat", command=self._toggle_agent, cursor="hand2",
+        ).pack(side="right", padx=8)
 
-        # Chat area
         self._agent_chat = scrolledtext.ScrolledText(
             self._agent_frame, font=("Segoe UI", 9), bg="#0a0a14", fg=TEXT,
             insertbackground=TEXT, relief="flat", wrap="word", state="disabled",
@@ -548,20 +592,27 @@ if __name__ == "__main__":
         self._agent_chat.tag_configure("bot", foreground="#06b6d4")
         self._agent_chat.tag_configure("tool", foreground="#10b981", font=("Consolas", 8))
 
-        # Input
         input_frame = tk.Frame(self._agent_frame, bg="#1a1a2e")
         input_frame.pack(fill="x", padx=4, pady=(0, 4))
-        self._agent_input = tk.Entry(input_frame, font=("Segoe UI", 9), bg="#0d1117", fg=TEXT, insertbackground=TEXT, relief="flat")
+        self._agent_input = tk.Entry(
+            input_frame, font=("Segoe UI", 9), bg="#0d1117", fg=TEXT,
+            insertbackground=TEXT, relief="flat",
+        )
         self._agent_input.pack(side="left", fill="x", expand=True, padx=(8, 4), pady=6)
         self._agent_input.bind("<Return>", self._agent_on_send)
-        tk.Button(input_frame, text="➤", font=("Segoe UI", 11), bg="#06b6d4", fg="#fff", relief="flat", command=self._agent_on_send, cursor="hand2", width=3).pack(side="right", padx=(0, 6), pady=4)
+        tk.Button(
+            input_frame, text="➤", font=("Segoe UI", 11), bg="#06b6d4", fg="#fff",
+            relief="flat", command=self._agent_on_send, cursor="hand2", width=3,
+        ).pack(side="right", padx=(0, 6), pady=4)
 
-        # Quick actions
         actions = tk.Frame(self._agent_frame, bg="#0f0f1a")
         actions.pack(fill="x", padx=4, pady=(0, 6))
-        for text in ["Executar", "Status", "Alertas", "Dashboard"]:
-            btn = tk.Button(actions, text=text, font=("Segoe UI", 8), bg="#1a1a2e", fg="#94a3b8", relief="flat", padx=6, pady=2, cursor="hand2", command=lambda t=text: self._agent_quick(t))
-            btn.pack(side="left", padx=2)
+        for label in ["Executar", "Status", "Alertas", "Dashboard"]:
+            tk.Button(
+                actions, text=label, font=("Segoe UI", 8), bg="#1a1a2e", fg="#94a3b8",
+                relief="flat", padx=6, pady=2, cursor="hand2",
+                command=lambda t=label: self._agent_quick(t),
+            ).pack(side="left", padx=2)
 
     def _agent_add_message(self, text: str, is_user: bool = False) -> None:
         self._agent_chat.configure(state="normal")
@@ -580,7 +631,6 @@ if __name__ == "__main__":
         self._agent_input.delete(0, "end")
         self._agent_add_message(text, is_user=True)
 
-        # Processa comando
         lower = text.lower()
         if lower in ("executar", "rodar"):
             self._agent_add_message("⚡ Iniciando ciclo...", is_user=False)
@@ -601,7 +651,6 @@ if __name__ == "__main__":
             self._agent_show_alerts()
             return
 
-        # Envia para LLM (ou fallback local)
         threading.Thread(target=self._agent_ask_llm, args=(text,), daemon=True).start()
 
     def _agent_quick(self, action: str) -> None:
@@ -619,7 +668,10 @@ if __name__ == "__main__":
             pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
             sin = conn.execute("SELECT COUNT(*) FROM policies WHERE sinistro_open = 1").fetchone()[0]
             conn.close()
-            self._agent_add_message(f"📊 Carteira:\n• Apólices: {total}\n• Comissões pendentes: {pending}\n• Sinistros: {sin}", is_user=False)
+            self._agent_add_message(
+                f"📊 Carteira:\n• Apólices: {total}\n• Comissões pendentes: {pending}\n• Sinistros: {sin}",
+                is_user=False,
+            )
         except Exception:
             self._agent_add_message("Erro ao consultar banco.", is_user=False)
 
@@ -634,20 +686,27 @@ if __name__ == "__main__":
             end = conn.execute("SELECT COUNT(*) FROM policies WHERE endosso_open = 1").fetchone()[0]
             today = date.today()
             future = (today + timedelta(days=10)).isoformat()
-            expiring = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), future)).fetchone()[0]
+            expiring = conn.execute(
+                "SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?",
+                (today.isoformat(), future),
+            ).fetchone()[0]
             conn.close()
             msg = "🚨 Pendências:\n"
-            if expiring: msg += f"🔴 {expiring} apólice(s) vencem em 10 dias\n"
-            if sin: msg += f"🟠 {sin} sinistro(s) aberto(s)\n"
-            if end: msg += f"🟡 {end} endosso(s) pendente(s)\n"
-            if pending > 20: msg += f"⚠️ {pending} comissões pendentes\n"
-            if not any([expiring, sin, end, pending > 20]): msg = "✅ Nenhuma pendência crítica."
+            if expiring:
+                msg += f"🔴 {expiring} apólice(s) vencem em 10 dias\n"
+            if sin:
+                msg += f"🟠 {sin} sinistro(s) aberto(s)\n"
+            if end:
+                msg += f"🟡 {end} endosso(s) pendente(s)\n"
+            if pending > 20:
+                msg += f"⚠️ {pending} comissões pendentes\n"
+            if not any([expiring, sin, end, pending > 20]):
+                msg = "✅ Nenhuma pendência crítica."
             self._agent_add_message(msg, is_user=False)
         except Exception:
             self._agent_add_message("Erro ao consultar alertas.", is_user=False)
 
     def _agent_ask_llm(self, question: str) -> None:
-        """Tenta Ollama; se indisponivel, usa base de conhecimento local."""
         try:
             from urllib.request import Request, urlopen
             payload = json.dumps({
@@ -656,17 +715,23 @@ if __name__ == "__main__":
                 "stream": False,
                 "options": {"temperature": 0.7, "num_predict": 512},
             }).encode("utf-8")
-            req = Request("http://localhost:11434/api/chat", data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            req = Request(
+                "http://localhost:11434/api/chat", data=payload,
+                headers={"Content-Type": "application/json"}, method="POST",
+            )
             with urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 answer = data.get("message", {}).get("content", "Sem resposta.")
                 self.root.after(0, self._agent_add_message, answer, False)
         except Exception:
-            # Fallback: resposta local
-            self.root.after(0, self._agent_add_message, "Ollama não disponível. Instale com scripts/setup_ollama.bat para IA completa.\n\nPosso ajudar com: status, alertas, executar, dashboard.", False)
+            self.root.after(
+                0, self._agent_add_message,
+                "Ollama não disponível. Instale com scripts/setup_ollama.bat para IA completa.\n\n"
+                "Posso ajudar com: status, alertas, executar, dashboard.",
+                False,
+            )
 
     def _open_agent(self) -> None:
-        """Fallback: abre agente em janela separada."""
         env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
         subprocess.Popen(
             [sys.executable, "-m", "rpa_corretora.agent"],
@@ -674,8 +739,9 @@ if __name__ == "__main__":
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
 
+    # --- Notícias ---
+
     def _refresh_news(self) -> None:
-        """Busca noticias sobre seguros e mercado."""
         threading.Thread(target=self._fetch_news, daemon=True).start()
 
     def _fetch_news(self) -> None:
@@ -705,14 +771,39 @@ if __name__ == "__main__":
                 continue
         self.root.after(0, self._display_news, all_results)
 
-    def _display_news(self, results) -> None:
+    def _display_news(self, results: list) -> None:
         self.news_text.configure(state="normal")
         self.news_text.delete("1.0", "end")
         if not results:
-            self.news_text.insert("end", "Sem conexão ou nenhuma notícia encontrada.\nClique em Atualizar para tentar novamente.")
+            self.news_text.insert(
+                "end",
+                "Sem conexão ou nenhuma notícia encontrada.\nClique em Atualizar para tentar novamente.",
+            )
         else:
             for i, (title, snippet, source) in enumerate(results[:12], 1):
                 self.news_text.insert("end", f"\n{i}. {title}\n", "title")
                 self.news_text.insert("end", f"   {snippet}\n")
                 self.news_text.insert("end", f"   Fonte: {source}\n\n", "source")
         self.news_text.configure(state="disabled")
+
+    def _tick_clock(self) -> None:
+        self._clock_label.configure(text=datetime.now().strftime("🕐 %H:%M:%S"))
+        self.root.after(1000, self._tick_clock)
+
+    def _animate_dot(self) -> None:
+        if self.running:
+            cur = self._dot_canvas.itemcget(self._dot_oval, "fill")
+            self._dot_canvas.itemconfig(self._dot_oval, fill=WARNING if cur != WARNING else SURFACE2)
+        self.root.after(600, self._animate_dot)
+
+    def run(self) -> None:
+        self.root.mainloop()
+
+
+def main() -> None:
+    app = RPAApp()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()
