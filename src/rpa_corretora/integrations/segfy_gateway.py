@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import urljoin
@@ -11,6 +12,21 @@ import unicodedata
 from openpyxl import load_workbook
 
 from rpa_corretora.domain.models import CashflowEntry, FollowupRecord, PolicyRecord, SegfyPolicyData
+
+
+def _to_date(value: object) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value
+    text = str(value).strip()
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%y"):
+        try:
+            from datetime import datetime as _dt
+            return _dt.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
 
 
 def _normalize(value: object) -> str:
@@ -72,6 +88,10 @@ class SegfyGateway:
         if api_data is not None:
             return api_data
         return self._fetch_policy_data_from_export()
+
+    def fetch_full_policies(self) -> list[PolicyRecord]:
+        """Lê todas as colunas disponíveis do export Segfy e retorna PolicyRecords completos."""
+        return self._fetch_full_policies_from_export()
 
     def import_documents(self) -> int:
         return 0
@@ -330,14 +350,26 @@ class SegfyGateway:
         return parsed
 
     def _find_headers(self, ws) -> tuple[int | None, dict[str, int]]:
-        aliases = defaultdict(
-            set,
-            {
-                "POLICY": {"POLICY", "POLICY ID", "APOLICE", "NUMERO APOLICE", "N APOLICE"},
-                "PREMIO": {"PREMIO", "PREMIO TOTAL", "VALOR PREMIO"},
-                "COMISSAO": {"COMISSAO", "VALOR COMISSAO"},
+        aliases: dict[str, set[str]] = {
+            "POLICY": {"POLICY", "POLICY ID", "APOLICE", "NUMERO APOLICE", "N APOLICE"},
+            "PREMIO": {"PREMIO", "PREMIO TOTAL", "VALOR PREMIO"},
+            "COMISSAO": {"COMISSAO", "VALOR COMISSAO"},
+            "SEGURADO": {"SEGURADO", "SEGURADO(A)", "SEGURADA", "NOME", "CLIENTE", "SEGURADO A"},
+            "SEGURADORA": {"SEGURADORA", "CIA", "COMPANHIA", "EMPRESA", "SEGURADORA CIA"},
+            "VIG": {
+                "VIG", "VIGENCIA", "VIG.", "VENCIMENTO", "DATA VIG", "VIG FIM",
+                "VENCIMENTO APOLICE", "VIGENCIA FIM", "DATA VIGENCIA", "FIM VIGENCIA",
             },
-        )
+            "STATUS_PGTO": {
+                "STATUS PGTO", "STATUS PAGAMENTO", "PAGAMENTO", "PGTO", "STATUS",
+                "SITUACAO PGTO", "SITUACAO PAGAMENTO",
+            },
+            "SINISTRO": {"SINISTRO", "SINISTRO ABERTO", "OCORRENCIA", "SINISTROS"},
+            "ENDOSSO": {"ENDOSSO", "ENDOSSO ABERTO", "ENDOSSOS"},
+            "ITEM": {"ITEM", "VEICULO", "ITEM SEGURADO", "PRODUTO", "BEM SEGURADO"},
+            "MODELO": {"MODELO", "DESCRICAO", "DESCR", "DESCRICAO VEICULO", "MODELO VEICULO"},
+            "PLACA": {"PLACA", "PLACA VEICULO", "PLACA DO VEICULO"},
+        }
         for row_index in range(1, min(ws.max_row, 50) + 1):
             resolved: dict[str, int] = {}
             for col in range(1, ws.max_column + 1):
@@ -350,3 +382,58 @@ class SegfyGateway:
             if {"POLICY", "PREMIO", "COMISSAO"}.issubset(set(resolved.keys())):
                 return row_index, resolved
         return None, {}
+
+    def _fetch_full_policies_from_export(self) -> list[PolicyRecord]:
+        if self.export_xlsx_path is None or not self.export_xlsx_path.exists():
+            return []
+
+        today = date.today()
+        workbook = load_workbook(self.export_xlsx_path, data_only=True)
+        parsed: list[PolicyRecord] = []
+        for ws in workbook.worksheets:
+            header_row, header_map = self._find_headers(ws)
+            if header_row is None:
+                continue
+            policy_col = header_map.get("POLICY")
+            if policy_col is None:
+                continue
+            premio_col = header_map.get("PREMIO")
+            comissao_col = header_map.get("COMISSAO")
+            segurado_col = header_map.get("SEGURADO")
+            seguradora_col = header_map.get("SEGURADORA")
+            vig_col = header_map.get("VIG")
+            status_pgto_col = header_map.get("STATUS_PGTO")
+            sinistro_col = header_map.get("SINISTRO")
+            endosso_col = header_map.get("ENDOSSO")
+            item_col = header_map.get("ITEM")
+            modelo_col = header_map.get("MODELO")
+            placa_col = header_map.get("PLACA")
+
+            for row_index in range(header_row + 1, ws.max_row + 1):
+                policy_id = str(ws.cell(row_index, policy_col).value or "").strip()
+                if not policy_id:
+                    continue
+
+                vig_raw = ws.cell(row_index, vig_col).value if vig_col else None
+                vig = _to_date(vig_raw) if vig_raw is not None else today
+
+                sinistro_raw = _normalize(ws.cell(row_index, sinistro_col).value) if sinistro_col else ""
+                endosso_raw = _normalize(ws.cell(row_index, endosso_col).value) if endosso_col else ""
+                sinistro_open = sinistro_raw in {"SIM", "S", "1", "ABERTO", "OPEN", "X"}
+                endosso_open = endosso_raw in {"SIM", "S", "1", "ABERTO", "OPEN", "X"}
+
+                parsed.append(PolicyRecord(
+                    policy_id=policy_id,
+                    insured_name=str(ws.cell(row_index, segurado_col).value or "").strip() if segurado_col else "",
+                    insurer=str(ws.cell(row_index, seguradora_col).value or "").strip() if seguradora_col else "",
+                    vig=vig or today,
+                    status_pgto=str(ws.cell(row_index, status_pgto_col).value or "").strip() if status_pgto_col else "",
+                    sinistro_open=sinistro_open,
+                    endosso_open=endosso_open,
+                    premio_total=_to_decimal(ws.cell(row_index, premio_col).value) if premio_col else Decimal("0"),
+                    comissao=_to_decimal(ws.cell(row_index, comissao_col).value) if comissao_col else Decimal("0"),
+                    vehicle_item=str(ws.cell(row_index, item_col).value or "").strip() if item_col else "",
+                    vehicle_model=str(ws.cell(row_index, modelo_col).value or "").strip() if modelo_col else "",
+                    vehicle_plate=str(ws.cell(row_index, placa_col).value or "").strip() if placa_col else "",
+                ))
+        return parsed

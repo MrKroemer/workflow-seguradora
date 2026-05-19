@@ -68,12 +68,14 @@ from rpa_corretora.integrations.segfy_web_gateway import (
     segfy_web_automation_available,
 )
 from rpa_corretora.integrations.smtp_email_sender import SmtpEmailSenderGateway
+from rpa_corretora.integrations.db_spreadsheet_gateway import DatabaseBackedSpreadsheetGateway
 from rpa_corretora.integrations.stub_adapters import (
     StubInsurerPortalGateway,
     StubSpreadsheetGateway,
 )
 from rpa_corretora.integrations.whatsapp_http_gateway import WhatsAppHttpGateway
 from rpa_corretora.integrations.workbook_gateway import WorkbookSpreadsheetGateway
+from rpa_corretora.core import DEFAULT_DB_PATH, OperationalDatabase
 from rpa_corretora.processing.dashboard import DashboardBuilder
 from rpa_corretora.processing.dashboard_web import DashboardMeta, write_dashboard_html
 from rpa_corretora.processing.execution_report import (
@@ -390,6 +392,9 @@ def main() -> None:
                 except Exception as exc:
                     print(f"[Portais] Falha ao ler credenciais do PDF: {exc}")
 
+        db_path = Path(os.getenv("RPA_DB_PATH") or DEFAULT_DB_PATH)
+        db_gateway = DatabaseBackedSpreadsheetGateway(db_path)
+
         sheets_gateway = StubSpreadsheetGateway()
         using_real_sheets = False
         sheets_hint = ""
@@ -410,7 +415,9 @@ def main() -> None:
                 )
                 using_real_sheets = True
             else:
-                sheets_hint = "Planilhas reais indisponiveis: " + "; ".join(missing_files)
+                sheets_gateway = db_gateway
+                using_real_sheets = True
+                sheets_hint = "Banco de dados substituindo planilhas: " + "; ".join(missing_files)
 
         calendar_gateway = NoopCalendarGateway()
         calendar_mode = "NOOP"
@@ -934,6 +941,20 @@ def main() -> None:
 
         if args.windows_audit_only:
             return
+
+        if db_gateway.policy_count() == 0 and isinstance(sheets_gateway, DatabaseBackedSpreadsheetGateway):
+            print("[Bootstrap] Banco vazio — importando apolices do export Segfy...")
+            try:
+                bootstrap_policies = segfy_api_gateway.fetch_full_policies()
+                if bootstrap_policies:
+                    op_db = OperationalDatabase(db_path)
+                    seeded = op_db.upsert_policies(bootstrap_policies, source="SEGFY_EXPORT_BOOTSTRAP")
+                    op_db.close()
+                    print(f"[Bootstrap] {seeded} apolices importadas do Segfy para o banco.")
+                else:
+                    print("[Bootstrap] Export Segfy nao disponivel ou vazio — banco permanece vazio.")
+            except Exception as _exc:
+                print(f"[Bootstrap] Falha ao importar do Segfy: {_exc}")
 
         if args.scan_credentials and not args.dry_run:
             print("Scan de credenciais ativa dry-run automaticamente para evitar envios externos.")

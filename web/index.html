@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 
@@ -345,6 +346,79 @@ button:active::after{transform:scale(3);opacity:0;transition:0s}
 .toast.err{border-left:2px solid var(--red)}
 .toast.warn{border-left:2px solid var(--amber)}
 .toast.info{border-left:2px solid var(--cyan)}
+
+/* ── BI DASHBOARD ── */
+.bi-panel{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.bi-panel::-webkit-scrollbar{width:4px}
+.bi-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.bi-section-hd{font-family:var(--mono);font-size:8px;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--text-muted);padding:0 0 7px;
+  border-bottom:1px solid var(--border);margin-bottom:2px;display:flex;
+  align-items:center;gap:8px}
+.bi-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bi-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:7px;
+  padding:12px 14px;border-top:2px solid var(--border);transition:all .18s}
+.bi-kpi.c{border-top-color:var(--cyan)}.bi-kpi.g{border-top-color:var(--green)}
+.bi-kpi.a{border-top-color:var(--amber)}.bi-kpi.p{border-top-color:var(--purple)}
+.bi-kpi:hover{background:var(--bg3);transform:translateY(-1px)}
+.bi-kpi-label{font-family:var(--mono);font-size:8px;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--text-muted);margin-bottom:5px}
+.bi-kpi-value{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1}
+.bi-kpi.c .bi-kpi-value{color:var(--cyan)}.bi-kpi.g .bi-kpi-value{color:var(--green)}
+.bi-kpi.a .bi-kpi-value{color:var(--amber)}.bi-kpi.p .bi-kpi-value{color:var(--purple)}
+.bi-kpi-sub{font-family:var(--mono);font-size:8px;color:var(--text-muted);margin-top:3px}
+.bi-charts-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bi-chart-box{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:12px 14px}
+.bi-chart-title{font-family:var(--mono);font-size:8px;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px}
+.bi-chart-box canvas{max-height:200px;width:100%!important}
+.bi-pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bi-phase{background:var(--bg2);border:1px solid var(--border);border-radius:7px;
+  display:flex;flex-direction:column;max-height:260px}
+.bi-phase-hd{padding:9px 12px 7px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.bi-phase-name{font-family:var(--mono);font-size:9px;font-weight:700}
+.bi-phase.vencida .bi-phase-name{color:var(--red)}
+.bi-phase.urgente .bi-phase-name{color:var(--amber)}
+.bi-phase.neg .bi-phase-name{color:var(--cyan)}
+.bi-phase.prosp .bi-phase-name{color:var(--green)}
+.bi-phase-badge{font-family:var(--mono);font-size:9px;font-weight:700;
+  padding:1px 7px;border-radius:3px}
+.bi-phase.vencida .bi-phase-badge{background:rgba(255,68,68,.15);color:var(--red)}
+.bi-phase.urgente .bi-phase-badge{background:rgba(255,179,0,.15);color:var(--amber)}
+.bi-phase.neg .bi-phase-badge{background:rgba(0,200,212,.12);color:var(--cyan)}
+.bi-phase.prosp .bi-phase-badge{background:rgba(0,230,118,.1);color:var(--green)}
+.bi-phase-cards{overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:5px;flex:1}
+.bi-phase-cards::-webkit-scrollbar{width:3px}
+.bi-phase-cards::-webkit-scrollbar-thumb{background:var(--border)}
+.bi-card{background:var(--bg3);border:1px solid var(--border);border-radius:5px;
+  padding:7px 9px;font-family:var(--sans);font-size:9px;transition:all .15s;
+  animation:rowIn .2s ease-out both}
+.bi-card:hover{border-color:var(--cyan);transform:translateX(2px)}
+.bi-card-name{font-weight:600;color:var(--text-bright);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.bi-card-meta{color:var(--text-muted);display:flex;justify-content:space-between}
+.bi-card-premio{font-family:var(--mono);font-size:8px}
+.bi-perf-wrap{overflow-x:auto;border-radius:7px}
+.bi-perf-table{width:100%;border-collapse:collapse;font-size:9px;font-family:var(--mono)}
+.bi-perf-table th{padding:8px 10px;text-align:right;color:var(--text-muted);
+  font-size:8px;text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;
+  background:var(--bg2);user-select:none}
+.bi-perf-table th:first-child{text-align:left}
+.bi-perf-table th:hover{color:var(--cyan)}
+.bi-perf-table td{padding:7px 10px;text-align:right;border-bottom:1px solid rgba(30,45,69,.6);
+  white-space:nowrap}
+.bi-perf-table td:first-child{text-align:left;font-weight:600;color:var(--text-bright)}
+.bi-perf-table tr:hover td{background:var(--bg3)}
+.bi-bar-inline{display:inline-block;height:4px;border-radius:2px;margin-left:5px;
+  vertical-align:middle;transition:width .4s}
+.bi-refresh{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+  padding:2px 10px;border-radius:4px;font-size:8px;font-family:var(--mono);
+  transition:all .15s;margin-left:auto}
+.bi-refresh:hover{border-color:var(--cyan);color:var(--cyan)}
+.bi-empty{font-family:var(--mono);font-size:9px;color:var(--text-muted);
+  text-align:center;padding:10px 0;display:block}
 </style>
 </head>
 <body>
@@ -414,6 +488,7 @@ button:active::after{transform:scale(3);opacity:0;transition:0s}
       <div class="ctab" onclick="switchTab(1)">Status</div>
       <div class="ctab" onclick="switchTab(2)">Notícias</div>
       <div class="ctab" onclick="switchTab(3)">Ferramentas</div>
+      <div class="ctab" onclick="switchTab(4)" style="color:var(--purple);border-bottom-color:transparent" id="tabBI">📊 BI</div>
       <div class="log-filters" id="lf">
         <button class="lf fall on" onclick="filter('all')">ALL</button>
         <button class="lf fok"     onclick="filter('ok')">OK</button>
@@ -453,6 +528,130 @@ button:active::after{transform:scale(3);opacity:0;transition:0s}
           <button class="tool-btn" onclick="showAlerts()">🚨 Ver Alertas</button>
           <button class="tool-btn" onclick="showHistory()">📋 Histórico</button>
         </div>
+      </div>
+    </div>
+    <!-- BI DASHBOARD -->
+    <div class="cpanel" id="cp4">
+      <div class="bi-panel">
+
+        <!-- Topo: atualização e refresh -->
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)" id="biUpdated">—</span>
+          <button class="bi-refresh" onclick="loadBI()">⟳ Atualizar</button>
+        </div>
+
+        <!-- KPIs financeiros -->
+        <div>
+          <div class="bi-section-hd">Resumo Financeiro da Carteira</div>
+          <div class="bi-kpis">
+            <div class="bi-kpi c">
+              <div class="bi-kpi-label">Prêmio Total</div>
+              <div class="bi-kpi-value" id="biPremio">—</div>
+              <div class="bi-kpi-sub" id="biPoliciesInfo">carregando…</div>
+            </div>
+            <div class="bi-kpi g">
+              <div class="bi-kpi-label">Comissão Total</div>
+              <div class="bi-kpi-value" id="biComissao">—</div>
+              <div class="bi-kpi-sub" id="biComissaoPct">—% taxa média</div>
+            </div>
+            <div class="bi-kpi a">
+              <div class="bi-kpi-label">Ticket Médio</div>
+              <div class="bi-kpi-value" id="biTicket">—</div>
+              <div class="bi-kpi-sub" id="biTopInsurer">top seguradora</div>
+            </div>
+            <div class="bi-kpi p">
+              <div class="bi-kpi-label">Risco 90d</div>
+              <div class="bi-kpi-value" id="biRisco">—</div>
+              <div class="bi-kpi-sub" id="biRiscoSub">a renovar</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráficos linha 1 -->
+        <div class="bi-charts-2">
+          <div class="bi-chart-box">
+            <div class="bi-chart-title">Prêmio & Comissão — por Seguradora</div>
+            <canvas id="chartRevByInsurer"></canvas>
+          </div>
+          <div class="bi-chart-box">
+            <div class="bi-chart-title">Projeção de Fluxo de Caixa (histórico + 3 meses)</div>
+            <canvas id="chartCashflowProj"></canvas>
+          </div>
+        </div>
+
+        <!-- Pipeline kanban -->
+        <div>
+          <div class="bi-section-hd">Pipeline de Renovações
+            <span style="font-family:var(--mono);font-size:8px;color:var(--amber)" id="biRiscoUrgente"></span>
+          </div>
+          <div class="bi-pipeline">
+            <div class="bi-phase vencida">
+              <div class="bi-phase-hd">
+                <span class="bi-phase-name">VENCIDA</span>
+                <span class="bi-phase-badge" id="pBadgeV">0</span>
+              </div>
+              <div class="bi-phase-cards" id="pCardsV"></div>
+            </div>
+            <div class="bi-phase urgente">
+              <div class="bi-phase-hd">
+                <span class="bi-phase-name">URGENTE ≤30d</span>
+                <span class="bi-phase-badge" id="pBadgeU">0</span>
+              </div>
+              <div class="bi-phase-cards" id="pCardsU"></div>
+            </div>
+            <div class="bi-phase neg">
+              <div class="bi-phase-hd">
+                <span class="bi-phase-name">NEGOCIAÇÃO ≤90d</span>
+                <span class="bi-phase-badge" id="pBadgeN">0</span>
+              </div>
+              <div class="bi-phase-cards" id="pCardsN"></div>
+            </div>
+            <div class="bi-phase prosp">
+              <div class="bi-phase-hd">
+                <span class="bi-phase-name">PROSPECÇÃO 90d+</span>
+                <span class="bi-phase-badge" id="pBadgeP">0</span>
+              </div>
+              <div class="bi-phase-cards" id="pCardsP"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráficos linha 2 -->
+        <div class="bi-charts-2">
+          <div class="bi-chart-box">
+            <div class="bi-chart-title">Taxa de Sinistros & Endossos por Seguradora (%)</div>
+            <canvas id="chartSinistros"></canvas>
+          </div>
+          <div class="bi-chart-box">
+            <div class="bi-chart-title">Aging de Apólices Vencidas</div>
+            <canvas id="chartAging"></canvas>
+          </div>
+        </div>
+
+        <!-- Tabela de performance -->
+        <div>
+          <div class="bi-section-hd">Performance por Seguradora
+            <span style="color:var(--text-muted);font-weight:normal">clique no cabeçalho para ordenar</span>
+          </div>
+          <div class="bi-chart-box bi-perf-wrap" style="padding:0;overflow:hidden">
+            <table class="bi-perf-table" id="biPerfTable">
+              <thead><tr>
+                <th onclick="sortPerf('insurer')"    >Seguradora</th>
+                <th onclick="sortPerf('total')"      >Apólices</th>
+                <th onclick="sortPerf('premio_total')">Prêmio Total</th>
+                <th onclick="sortPerf('comissao_total')">Comissão</th>
+                <th onclick="sortPerf('comissao_pct')">% Com.</th>
+                <th onclick="sortPerf('ticket_medio')">Ticket Médio</th>
+                <th onclick="sortPerf('vencendo_30d')">Venc. 30d</th>
+                <th onclick="sortPerf('sinistros')"  >Sinistros</th>
+                <th onclick="sortPerf('pgto_pendente')">Pgto Pend.</th>
+                <th onclick="sortPerf('premio_risco_90d')">Risco 90d</th>
+              </tr></thead>
+              <tbody id="biPerfBody"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -580,12 +779,14 @@ function closeModal(){document.getElementById('overlay').classList.remove('open'
 const tabs=document.querySelectorAll('.ctab');
 const panels=document.querySelectorAll('.cpanel');
 const lfEl=document.getElementById('lf');
+let _biLoaded=false;
 function switchTab(i){
   tabs.forEach((t,j)=>t.classList.toggle('active',j===i));
   panels.forEach((p,j)=>p.classList.toggle('active',j===i));
   lfEl.style.display=i===0?'flex':'none';
   if(i===1)loadStatus();
   if(i===2)loadNews();
+  if(i===4){if(!_biLoaded){_biLoaded=true;loadBI();}}
 }
 
 // ── LOG FILTER
@@ -836,6 +1037,230 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape')closeModal();
 });
+
+// ── BI DASHBOARD
+const _biCharts={};
+let _biPerfData=[];
+let _biPerfSort={key:'premio_total',asc:false};
+const _biColors=['#00c8d4','#00e676','#ffb300','#ff4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+const _chartDefaults={
+  color:'#4a6080',
+  borderColor:'rgba(30,45,69,.7)',
+  grid:{color:'rgba(30,45,69,.7)'},
+  ticks:{color:'#4a6080',font:{size:8}},
+};
+
+function fmt(v,d=0){
+  if(v==null||isNaN(+v))return'—';
+  return new Intl.NumberFormat('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(+v);
+}
+function fmtR(v){
+  if(v==null||isNaN(+v))return'—';
+  const n=+v;
+  if(Math.abs(n)>=1e6)return'R$'+fmt(n/1e6,1)+'M';
+  if(Math.abs(n)>=1e3)return'R$'+fmt(n/1e3,0)+'k';
+  return'R$'+fmt(n,0);
+}
+function mkChart(id,cfg){
+  if(_biCharts[id]){_biCharts[id].destroy();delete _biCharts[id];}
+  const el=document.getElementById(id);
+  if(!el)return;
+  _biCharts[id]=new Chart(el,cfg);
+}
+function biSet(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+async function loadBI(){
+  biSet('biUpdated','Carregando…');
+  try{
+    const [rev,pip,cf,inc,perf]=await Promise.all([
+      fetch('/api/bi/revenue').then(r=>r.json()),
+      fetch('/api/bi/pipeline').then(r=>r.json()),
+      fetch('/api/bi/cashflow').then(r=>r.json()),
+      fetch('/api/bi/incidents').then(r=>r.json()),
+      fetch('/api/bi/insurer_performance').then(r=>r.json()),
+    ]);
+
+    // ── KPIs
+    const ins=perf.insurers||[];
+    const totalPremio=ins.reduce((s,i)=>s+(i.premio_total||0),0);
+    const totalCom=ins.reduce((s,i)=>s+(i.comissao_total||0),0);
+    const totalPol=ins.reduce((s,i)=>s+(i.total||0),0);
+    const avgTicket=totalPol>0?totalPremio/totalPol:0;
+    const pctCom=totalPremio>0?(totalCom/totalPremio*100):0;
+    const risco90=ins.reduce((s,i)=>s+(i.premio_risco_90d||0),0);
+    const urgentes=(pip.summary&&pip.summary.URGENTE)||0;
+    biSet('biPremio',fmtR(totalPremio));
+    biSet('biPoliciesInfo',fmt(totalPol)+' apólices • '+ins.length+' seguradoras');
+    biSet('biComissao',fmtR(totalCom));
+    biSet('biComissaoPct',fmt(pctCom,1)+'% taxa média de comissão');
+    biSet('biTicket',fmtR(avgTicket));
+    biSet('biTopInsurer','top: '+(ins[0]?.insurer||'—'));
+    biSet('biRisco',fmtR(risco90));
+    biSet('biRiscoSub',urgentes+' urgentes a renovar');
+    if(urgentes>0)biSet('biRiscoUrgente','⚠ '+urgentes+' apólice(s) vencendo em 30d — prêmio em risco: '+fmtR((pip.premio_risk&&pip.premio_risk.urgente)||0));
+
+    // ── Gráfico 1: Prêmio & Comissão por Seguradora (barras horizontais)
+    const rData=(rev.by_insurer||[]).slice(0,10);
+    mkChart('chartRevByInsurer',{
+      type:'bar',
+      data:{
+        labels:rData.map(i=>i.insurer),
+        datasets:[
+          {label:'Prêmio',data:rData.map(i=>i.premio||0),backgroundColor:'rgba(0,200,212,.65)',borderRadius:3,borderSkipped:false},
+          {label:'Comissão',data:rData.map(i=>i.comissao||0),backgroundColor:'rgba(0,230,118,.65)',borderRadius:3,borderSkipped:false},
+        ],
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{labels:{color:'#4a6080',font:{size:9},boxWidth:10}}},
+        scales:{
+          x:{grid:_chartDefaults.grid,ticks:{..._chartDefaults.ticks,callback:v=>fmtR(v)}},
+          y:{grid:{display:false},ticks:{color:'#c9d8ef',font:{size:9}}},
+        },
+      },
+    });
+
+    // ── Gráfico 2: Projeção de Fluxo de Caixa
+    const hist=cf.historical||[];
+    const proj=cf.projected||[];
+    const allM=[...hist.map(h=>h.month),...proj.map(p=>p.month)];
+    const nH=hist.length;
+    const padH=arr=>[...arr,...Array(proj.length).fill(null)];
+    const padP=arr=>[...Array(nH).fill(null),...arr];
+    mkChart('chartCashflowProj',{
+      type:'line',
+      data:{
+        labels:allM,
+        datasets:[
+          {label:'Receita',data:padH(hist.map(h=>h.receita)),borderColor:'#00e676',backgroundColor:'rgba(0,230,118,.07)',tension:.3,fill:true,pointRadius:3,pointHoverRadius:5},
+          {label:'Despesas',data:padH(hist.map(h=>h.despesas)),borderColor:'#ff4444',backgroundColor:'rgba(255,68,68,.05)',tension:.3,fill:true,pointRadius:3,pointHoverRadius:5},
+          {label:'Líquido',data:padH(hist.map(h=>h.liquido)),borderColor:'#00c8d4',tension:.3,pointRadius:3,borderWidth:2,pointHoverRadius:5},
+          {label:'Projeção',data:padP(proj.map(p=>p.liquido_projetado)),borderColor:'#00c8d4',borderDash:[6,4],tension:.3,pointRadius:5,pointStyle:'star',borderWidth:2,backgroundColor:'transparent'},
+        ],
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{labels:{color:'#4a6080',font:{size:9},boxWidth:10}}},
+        scales:{
+          x:{grid:_chartDefaults.grid,ticks:_chartDefaults.ticks},
+          y:{grid:_chartDefaults.grid,ticks:{..._chartDefaults.ticks,callback:v=>fmtR(v)}},
+        },
+      },
+    });
+
+    // ── Pipeline Kanban
+    const phases=[
+      {key:'VENCIDA',   cardsId:'pCardsV',badgeId:'pBadgeV'},
+      {key:'URGENTE',   cardsId:'pCardsU',badgeId:'pBadgeU'},
+      {key:'NEGOCIACAO',cardsId:'pCardsN',badgeId:'pBadgeN'},
+      {key:'PROSPECCAO',cardsId:'pCardsP',badgeId:'pBadgeP'},
+    ];
+    phases.forEach(ph=>{
+      const items=(pip.pipeline&&pip.pipeline[ph.key])||[];
+      biSet(ph.badgeId,items.length);
+      const el=document.getElementById(ph.cardsId);
+      if(!el)return;
+      el.innerHTML=items.length===0
+        ?'<span class="bi-empty">vazia</span>'
+        :items.slice(0,25).map((p,ix)=>`
+          <div class="bi-card" style="animation-delay:${ix*15}ms">
+            <div class="bi-card-name">${esc(p.insured_name||'—')}</div>
+            <div class="bi-card-meta">
+              <span>${esc(p.insurer||'')}</span>
+              <span class="bi-card-premio">${fmtR(p.premio_total)}</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:8px;color:var(--text-muted);margin-top:3px">
+              ${p.days!=null?(p.days<0?Math.abs(p.days)+'d vencida':p.days+'d restantes'):'—'}
+            </div>
+          </div>`).join('');
+    });
+
+    // ── Gráfico 3: Taxa de Sinistros/Endossos (só seguradoras com incidentes)
+    const iData=(inc.by_insurer||[]).filter(i=>i.sinistros>0||i.endossos>0).slice(0,10);
+    if(iData.length>0){
+      mkChart('chartSinistros',{
+        type:'bar',
+        data:{
+          labels:iData.map(i=>i.insurer),
+          datasets:[
+            {label:'Sinistros %',data:iData.map(i=>i.sinistro_rate),backgroundColor:'rgba(255,68,68,.7)',borderRadius:3},
+            {label:'Endossos %', data:iData.map(i=>i.endosso_rate), backgroundColor:'rgba(255,179,0,.7)',borderRadius:3},
+          ],
+        },
+        options:{
+          responsive:true,maintainAspectRatio:true,
+          plugins:{legend:{labels:{color:'#4a6080',font:{size:9},boxWidth:10}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:'#c9d8ef',font:{size:9}}},
+            y:{grid:_chartDefaults.grid,ticks:{..._chartDefaults.ticks,callback:v=>v+'%'}},
+          },
+        },
+      });
+    }else{
+      const el=document.getElementById('chartSinistros');
+      if(el&&el.parentNode)el.parentNode.innerHTML='<span class="bi-empty">Nenhum sinistro ou endosso aberto. ✅</span>';
+    }
+
+    // ── Gráfico 4: Aging (doughnut)
+    const ag=inc.aging||[];
+    const agNonZero=ag.filter(a=>a.count>0);
+    mkChart('chartAging',{
+      type:'doughnut',
+      data:{
+        labels:agNonZero.map(a=>a.bucket+' ('+a.count+')'),
+        datasets:[{
+          data:agNonZero.map(a=>a.count),
+          backgroundColor:['rgba(0,230,118,.75)','rgba(255,179,0,.75)','rgba(255,68,68,.75)','rgba(139,92,246,.75)'],
+          borderWidth:0,hoverOffset:6,
+        }],
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:9},padding:10,boxWidth:10}}},
+      },
+    });
+
+    // ── Tabela de Performance
+    _biPerfData=ins;
+    renderPerfTable();
+
+    biSet('biUpdated','Atualizado às '+new Date().toLocaleTimeString('pt-BR'));
+  }catch(e){
+    biSet('biUpdated','Erro: '+e.message);
+    toast('Erro ao carregar BI: '+e.message,'err');
+  }
+}
+
+function renderPerfTable(){
+  const data=[..._biPerfData].sort((a,b)=>{
+    const k=_biPerfSort.key;
+    const va=a[k]??0, vb=b[k]??0;
+    const r=typeof va==='string'?va.localeCompare(String(vb)):(+vb)-(+va);
+    return _biPerfSort.asc?-r:r;
+  });
+  const maxPremio=Math.max(...data.map(d=>d.premio_total||0),1);
+  document.getElementById('biPerfBody').innerHTML=data.map(d=>`
+    <tr>
+      <td>${esc(d.insurer||'—')}</td>
+      <td style="color:var(--text)">${d.total||0}</td>
+      <td style="color:var(--cyan)">${fmtR(d.premio_total)}
+        <span class="bi-bar-inline" style="width:${Math.round((d.premio_total||0)/maxPremio*50)}px;background:rgba(0,200,212,.35)"></span>
+      </td>
+      <td style="color:var(--green)">${fmtR(d.comissao_total)}</td>
+      <td style="color:${(d.comissao_pct||0)>=15?'var(--green)':(d.comissao_pct||0)>=8?'var(--amber)':'var(--red)'};font-weight:600">${fmt(d.comissao_pct,1)}%</td>
+      <td style="color:var(--text)">${fmtR(d.ticket_medio)}</td>
+      <td style="color:${(d.vencendo_30d||0)>0?'var(--amber)':'var(--text-muted)'};font-weight:${(d.vencendo_30d||0)>0?700:400}">${d.vencendo_30d||0}</td>
+      <td style="color:${(d.sinistros||0)>0?'var(--red)':'var(--text-muted)'}">${d.sinistros||0}</td>
+      <td style="color:${(d.pgto_pendente||0)>0?'var(--amber)':'var(--text-muted)'}">${d.pgto_pendente||0}</td>
+      <td style="color:var(--purple)">${fmtR(d.premio_risco_90d)}</td>
+    </tr>`).join('');
+}
+
+function sortPerf(key){
+  if(_biPerfSort.key===key)_biPerfSort.asc=!_biPerfSort.asc;
+  else{_biPerfSort={key,asc:false};}
+  renderPerfTable();
+}
 
 // ── INIT
 loadStatus();

@@ -289,6 +289,216 @@ def api_history():
 
 
 # ============================================================
+# BI ENDPOINTS
+# ============================================================
+
+@app.route("/api/bi/revenue")
+def api_bi_revenue():
+    """Prêmio e comissão por seguradora + histórico mensal por VIG."""
+    if not DB_PATH.exists():
+        return jsonify({"by_insurer": [], "monthly_premio": []})
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        by_insurer = [
+            {"insurer": r[0], "premio": r[1], "comissao": r[2], "policies": r[3]}
+            for r in conn.execute(
+                "SELECT insurer, COALESCE(SUM(premio_total),0), COALESCE(SUM(comissao),0), COUNT(*) "
+                "FROM policies GROUP BY insurer ORDER BY SUM(premio_total) DESC"
+            ).fetchall()
+        ]
+        monthly_premio = [
+            {"month": r[0], "premio": r[1], "comissao": r[2]}
+            for r in conn.execute(
+                "SELECT strftime('%Y-%m', vig) as m, "
+                "COALESCE(SUM(premio_total),0), COALESCE(SUM(comissao),0) "
+                "FROM policies GROUP BY m ORDER BY m DESC LIMIT 18"
+            ).fetchall()
+        ]
+        monthly_premio.reverse()
+        conn.close()
+        return jsonify({"by_insurer": by_insurer, "monthly_premio": monthly_premio})
+    except Exception as exc:
+        return jsonify({"error": str(exc), "by_insurer": [], "monthly_premio": []})
+
+
+@app.route("/api/bi/pipeline")
+def api_bi_pipeline():
+    """Pipeline de renovações agrupado por fase com receita em risco."""
+    if not DB_PATH.exists():
+        return jsonify({"pipeline": {}, "summary": {}, "premio_risk": {}})
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        today = date.today().isoformat()
+        d30 = (date.today() + timedelta(days=30)).isoformat()
+        d90 = (date.today() + timedelta(days=90)).isoformat()
+
+        def fetch_phase(where, params=()):
+            return [
+                {
+                    "policy_id": r[0], "insured_name": r[1], "insurer": r[2],
+                    "vig": r[3], "premio_total": r[4], "comissao": r[5],
+                    "renewal_kind": r[6], "days": r[7],
+                }
+                for r in conn.execute(
+                    "SELECT policy_id, insured_name, insurer, vig, premio_total, comissao, renewal_kind, "
+                    "CAST(julianday(vig) - julianday('now') AS INTEGER) as days "
+                    f"FROM policies WHERE {where} ORDER BY vig ASC",
+                    params,
+                ).fetchall()
+            ]
+
+        pipeline = {
+            "VENCIDA":    fetch_phase("vig < ?", (today,)),
+            "URGENTE":    fetch_phase("vig BETWEEN ? AND ?", (today, d30)),
+            "NEGOCIACAO": fetch_phase("vig > ? AND vig <= ?", (d30, d90)),
+            "PROSPECCAO": fetch_phase("vig > ?", (d90,)),
+        }
+        summary = {phase: len(items) for phase, items in pipeline.items()}
+        premio_risk = {
+            "urgente":    round(sum(p["premio_total"] or 0 for p in pipeline["URGENTE"]), 2),
+            "negociacao": round(sum(p["premio_total"] or 0 for p in pipeline["NEGOCIACAO"]), 2),
+        }
+        conn.close()
+        return jsonify({"pipeline": pipeline, "summary": summary, "premio_risk": premio_risk})
+    except Exception as exc:
+        return jsonify({"error": str(exc), "pipeline": {}, "summary": {}, "premio_risk": {}})
+
+
+@app.route("/api/bi/cashflow")
+def api_bi_cashflow():
+    """Fluxo de caixa histórico (12m) + projeção linear 3 meses."""
+    if not DB_PATH.exists():
+        return jsonify({"historical": [], "projected": []})
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        rows = conn.execute("""
+            SELECT m,
+                COALESCE((SELECT SUM(value) FROM cashflow  WHERE strftime('%Y-%m', entry_date)=m),0),
+                COALESCE((SELECT SUM(value) FROM expenses  WHERE strftime('%Y-%m', entry_date)=m),0)
+            FROM (
+                SELECT DISTINCT strftime('%Y-%m', entry_date) as m FROM cashflow
+                UNION
+                SELECT DISTINCT strftime('%Y-%m', entry_date) FROM expenses
+            ) ORDER BY m ASC
+        """).fetchall()
+        historical = [
+            {"month": r[0], "receita": round(r[1], 2), "despesas": round(r[2], 2),
+             "liquido": round(r[1] - r[2], 2)}
+            for r in rows[-12:]
+        ]
+
+        projected = []
+        if len(historical) >= 3:
+            ys = [h["liquido"] for h in historical]
+            n = len(ys)
+            xs = list(range(n))
+            sx, sy = sum(xs), sum(ys)
+            sxy = sum(x * y for x, y in zip(xs, ys))
+            sx2 = sum(x * x for x in xs)
+            denom = n * sx2 - sx * sx
+            slope = (n * sxy - sx * sy) / denom if denom else 0
+            intercept = (sy - slope * sx) / n
+            last = historical[-1]["month"]
+            yr, mo = int(last[:4]), int(last[5:7])
+            for i in range(1, 4):
+                mo += 1
+                if mo > 12:
+                    mo = 1
+                    yr += 1
+                projected.append({
+                    "month": f"{yr:04d}-{mo:02d}",
+                    "liquido_projetado": round(intercept + slope * (n + i - 1), 2),
+                })
+        conn.close()
+        return jsonify({"historical": historical, "projected": projected})
+    except Exception as exc:
+        return jsonify({"error": str(exc), "historical": [], "projected": []})
+
+
+@app.route("/api/bi/incidents")
+def api_bi_incidents():
+    """Taxa de sinistros/endossos e aging de apólices vencidas."""
+    if not DB_PATH.exists():
+        return jsonify({"by_insurer": [], "aging": []})
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        today = date.today().isoformat()
+        by_insurer = [
+            {
+                "insurer": r[0], "total": r[1], "sinistros": r[2], "endossos": r[3],
+                "sinistro_rate": round(r[2] / r[1] * 100, 1) if r[1] else 0,
+                "endosso_rate":  round(r[3] / r[1] * 100, 1) if r[1] else 0,
+            }
+            for r in conn.execute(
+                "SELECT insurer, COUNT(*), SUM(sinistro_open), SUM(endosso_open) "
+                "FROM policies GROUP BY insurer ORDER BY COUNT(*) DESC"
+            ).fetchall()
+        ]
+        buckets = [
+            ("0-30d",  "julianday(?)-julianday(vig) BETWEEN 0 AND 30"),
+            ("31-60d", "julianday(?)-julianday(vig) BETWEEN 31 AND 60"),
+            ("61-90d", "julianday(?)-julianday(vig) BETWEEN 61 AND 90"),
+            ("90d+",   "julianday(?)-julianday(vig) > 90"),
+        ]
+        aging = []
+        for label, cond in buckets:
+            r = conn.execute(
+                f"SELECT COUNT(*), COALESCE(SUM(premio_total),0), COALESCE(SUM(comissao),0) "
+                f"FROM policies WHERE vig < ? AND {cond}", (today, today)
+            ).fetchone()
+            aging.append({"bucket": label, "count": r[0], "premio": round(r[1], 2), "comissao": round(r[2], 2)})
+        conn.close()
+        return jsonify({"by_insurer": by_insurer, "aging": aging})
+    except Exception as exc:
+        return jsonify({"error": str(exc), "by_insurer": [], "aging": []})
+
+
+@app.route("/api/bi/insurer_performance")
+def api_bi_insurer_performance():
+    """Scorecard completo por seguradora: prêmio, comissão, ticket, risco, sinistros, pgto."""
+    if not DB_PATH.exists():
+        return jsonify({"insurers": []})
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        today = date.today().isoformat()
+        d30  = (date.today() + timedelta(days=30)).isoformat()
+        d90  = (date.today() + timedelta(days=90)).isoformat()
+        rows = conn.execute("""
+            SELECT
+                insurer,
+                COUNT(*) as total,
+                COALESCE(SUM(premio_total), 0) as premio_total,
+                COALESCE(SUM(comissao), 0) as comissao_total,
+                CASE WHEN SUM(premio_total)>0
+                     THEN ROUND(SUM(comissao)/SUM(premio_total)*100,1) ELSE 0 END as comissao_pct,
+                SUM(sinistro_open) as sinistros,
+                SUM(endosso_open)  as endossos,
+                SUM(CASE WHEN status_pgto=''  THEN 1 ELSE 0 END) as pgto_pendente,
+                SUM(CASE WHEN status_pgto!='' THEN 1 ELSE 0 END) as pgto_ok,
+                SUM(CASE WHEN vig BETWEEN ? AND ? THEN 1 ELSE 0 END) as vencendo_30d,
+                COALESCE(SUM(CASE WHEN vig BETWEEN ? AND ? THEN premio_total ELSE 0 END),0) as premio_risco_90d,
+                ROUND(AVG(premio_total),2) as ticket_medio
+            FROM policies
+            GROUP BY insurer
+            ORDER BY SUM(premio_total) DESC
+        """, (today, d30, today, d90)).fetchall()
+        insurers = [
+            {
+                "insurer": r[0], "total": r[1], "premio_total": round(r[2], 2),
+                "comissao_total": round(r[3], 2), "comissao_pct": r[4],
+                "sinistros": r[5], "endossos": r[6], "pgto_pendente": r[7],
+                "pgto_ok": r[8], "vencendo_30d": r[9],
+                "premio_risco_90d": round(r[10], 2), "ticket_medio": round(r[11] or 0, 2),
+            }
+            for r in rows
+        ]
+        conn.close()
+        return jsonify({"insurers": insurers})
+    except Exception as exc:
+        return jsonify({"error": str(exc), "insurers": []})
+
+
+# ============================================================
 # HELPERS
 # ============================================================
 
