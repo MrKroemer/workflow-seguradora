@@ -692,6 +692,19 @@ class DailyProcessor:
                             recommended_action="Executar sem --dry-run para sincronizar fluxo de caixa.",
                         )
             segfy_data = self.segfy.fetch_policy_data()
+
+            # Enriquecer policies com valores frescos do Segfy (prêmio/comissão do ciclo atual)
+            if segfy_data:
+                _segfy_map = {s.policy_id: s for s in segfy_data}
+                for _p in policies:
+                    _si = _segfy_map.get(_p.policy_id)
+                    if _si is None:
+                        continue
+                    if _si.premio_total > 0:
+                        _p.premio_total = _si.premio_total
+                    if _si.comissao > 0:
+                        _p.comissao = _si.comissao
+
         except Exception as exc:
             if trace is not None:
                 trace.fail_stage("segfy", exc, context={"acao": "fetch_policy_data"})
@@ -788,6 +801,7 @@ class DailyProcessor:
                     today=today,
                     commitments=commitments,
                     policies=policies,
+                    todo_tasks=todo_tasks,
                     nubank_receipts=nubank_receipts,
                 )
                 alerts.extend(notification_summary.blocked_alerts)
@@ -972,6 +986,7 @@ class DailyProcessor:
         today: date,
         commitments: list[CalendarCommitment],
         policies: list[PolicyRecord],
+        todo_tasks: list[TodoTask],
         nubank_receipts: list[tuple[EmailMessage, CashflowEntry]],
     ) -> NotificationDispatchSummary:
         sent_keys = self._load_dispatch_keys()
@@ -1153,6 +1168,35 @@ class DailyProcessor:
                     content=body,
                 )
                 summary.insured_emails_sent += 1
+
+        # Dispatch automático para apólices URGENTE (≤30d) sem compromisso correspondente no Calendar.
+        # Ativado via variável de ambiente WHATSAPP_AUTO_RENEWAL_ENABLED=1.
+        if os.getenv("WHATSAPP_AUTO_RENEWAL_ENABLED", "").strip() in ("1", "true", "yes"):
+            commitment_client_names = {
+                self._normalize_name(c.client_name or "")
+                for c in commitments
+                if c.client_name
+            }
+            for policy in policies:
+                days_to_vig = (policy.vig - today).days
+                if not (0 <= days_to_vig <= 30):
+                    continue
+                if self._normalize_name(policy.insured_name) in commitment_client_names:
+                    continue
+                phone, _ = self._resolve_contact_from_todo(
+                    client_name=policy.insured_name,
+                    todo_tasks=todo_tasks,
+                )
+                if not phone:
+                    summary.skipped_without_phone += 1
+                    continue
+                dispatch_key = f"whatsapp:auto_renovacao:{policy.policy_id}:{policy.vig.isoformat()}"
+                if not register_once(dispatch_key):
+                    summary.duplicate_blocked += 1
+                    continue
+                self.whatsapp.send_message(phone, renovacao_cliente_message(policy.insured_name))
+                summary.whatsapp_sent += 1
+                summary.renewal_messages_sent += 1
 
         for message, entry in nubank_receipts:
             if not corretora_notification_email:

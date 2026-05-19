@@ -395,10 +395,17 @@ def main() -> None:
         db_path = Path(os.getenv("RPA_DB_PATH") or DEFAULT_DB_PATH)
         db_gateway = DatabaseBackedSpreadsheetGateway(db_path)
 
-        sheets_gateway = StubSpreadsheetGateway()
+        sheets_gateway: object = StubSpreadsheetGateway()
         using_real_sheets = False
         sheets_hint = ""
-        if not args.use_stub_sheets and settings.files is not None:
+
+        if args.use_stub_sheets:
+            sheets_hint = "Modo stub forçado via --use-stub-sheets."
+        elif settings.files is None:
+            sheets_gateway = db_gateway
+            using_real_sheets = True
+            sheets_hint = "Configuração de arquivos não definida — banco de dados ativo."
+        else:
             missing_files: list[str] = []
             if not settings.files.seguros_pbseg_xlsx.exists():
                 missing_files.append(str(settings.files.seguros_pbseg_xlsx))

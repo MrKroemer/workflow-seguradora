@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 
@@ -537,7 +538,9 @@ button:active::after{transform:scale(3);opacity:0;transition:0s}
         <!-- Topo: atualização e refresh -->
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <span style="font-family:var(--mono);font-size:9px;color:var(--text-muted)" id="biUpdated">—</span>
+          <span id="biNextRefresh" style="font-family:var(--mono);font-size:8px;color:var(--text-muted)"></span>
           <button class="bi-refresh" onclick="loadBI()">⟳ Atualizar</button>
+          <button class="bi-refresh" onclick="exportBIXlsx()" style="border-color:var(--green);color:var(--green)">↓ XLSX</button>
         </div>
 
         <!-- KPIs financeiros -->
@@ -786,7 +789,12 @@ function switchTab(i){
   lfEl.style.display=i===0?'flex':'none';
   if(i===1)loadStatus();
   if(i===2)loadNews();
-  if(i===4){if(!_biLoaded){_biLoaded=true;loadBI();}}
+  if(i===4){
+    if(!_biLoaded){_biLoaded=true;loadBI();}
+    startBIRefresh();
+  }else{
+    stopBIRefresh();
+  }
 }
 
 // ── LOG FILTER
@@ -1261,6 +1269,76 @@ function sortPerf(key){
   else{_biPerfSort={key,asc:false};}
   renderPerfTable();
 }
+
+// ── BI EXPORT XLSX
+function exportBIXlsx(){
+  if(!_biPerfData.length){toast('Carregue o BI antes de exportar','warn');return;}
+  try{
+    const wb=XLSX.utils.book_new();
+
+    // Aba: Performance por Seguradora
+    const perfRows=_biPerfData.map(d=>({
+      'Seguradora':d.insurer,'Apólices':d.total,
+      'Prêmio Total':d.premio_total,'Comissão Total':d.comissao_total,
+      '% Comissão':d.comissao_pct,'Ticket Médio':d.ticket_medio,
+      'Vencendo 30d':d.vencendo_30d,'Sinistros':d.sinistros,
+      'Endossos':d.endossos,'Pgto Pendente':d.pgto_pendente,
+      'Risco 90d (R$)':d.premio_risco_90d,
+    }));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(perfRows),'Performance');
+
+    // Aba: Pipeline (busca dados do DOM via fetch inline)
+    fetch('/api/bi/pipeline').then(r=>r.json()).then(pip=>{
+      const pipeRows=[];
+      const labels={VENCIDA:'VENCIDA',URGENTE:'URGENTE ≤30d',NEGOCIACAO:'NEGOCIAÇÃO ≤90d',PROSPECCAO:'PROSPECÇÃO 90d+'};
+      Object.entries(labels).forEach(([key,label])=>{
+        ((pip.pipeline&&pip.pipeline[key])||[]).forEach(p=>pipeRows.push({
+          'Fase':label,'Segurado':p.insured_name,'Seguradora':p.insurer,
+          'VIG':p.vig,'Dias':p.days,'Prêmio':p.premio_total,'Comissão':p.comissao,
+        }));
+      });
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pipeRows),'Pipeline');
+
+      fetch('/api/bi/incidents').then(r=>r.json()).then(inc=>{
+        XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(inc.by_insurer||[]),'Sinistros');
+        XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(inc.aging||[]),'Aging');
+        const fname='pbseg_bi_'+new Date().toISOString().slice(0,10)+'.xlsx';
+        XLSX.writeFile(wb,fname);
+        toast('Exportado: '+fname,'ok');
+      });
+    });
+  }catch(e){toast('Erro ao exportar: '+e.message,'err');}
+}
+
+// ── BI AUTO-REFRESH (60s quando tab BI está ativa)
+let _biRefInt=null,_biRefCountdown=0;
+function startBIRefresh(){
+  stopBIRefresh();
+  _biRefCountdown=60;
+  _biRefInt=setInterval(()=>{
+    _biRefCountdown--;
+    const el=document.getElementById('biNextRefresh');
+    if(el)el.textContent='refresh em '+_biRefCountdown+'s';
+    if(_biRefCountdown<=0){
+      loadBI();
+      _biRefCountdown=60;
+    }
+  },1000);
+}
+function stopBIRefresh(){
+  clearInterval(_biRefInt);
+  _biRefInt=null;
+  const el=document.getElementById('biNextRefresh');
+  if(el)el.textContent='';
+}
+
+// Sobrescrever switchTab para gerir o timer do BI
+const _origSwitchTab=switchTab;
+// (já integrado diretamente — gerir o timer via extensão do switchTab abaixo)
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)stopBIRefresh();
+  else if(_biLoaded&&document.getElementById('cp4')?.classList.contains('active'))startBIRefresh();
+});
 
 // ── INIT
 loadStatus();
