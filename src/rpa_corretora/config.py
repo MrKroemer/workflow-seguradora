@@ -89,9 +89,47 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+_DEFAULT_SETTINGS_DATA: dict = {
+    "timezone": "America/Fortaleza",
+    "files": {
+        "seguros_pbseg_xlsx": "arquivos/SEGUROS PBSEG.xlsx",
+        "acompanhamento_2026_xlsx": "arquivos/ACOMPANHAMENTO 2026.xlsx",
+        "fluxo_caixa_xlsx": "arquivos/FLUXO DE CAIXA.xlsx",
+        "senhas_pdf": "arquivos/SENHAS.pdf",
+    },
+    "renewal": {"internal_days": 30, "new_days": 15, "reminder_days": [7, 1], "holidays": []},
+    "insurers": {
+        "Yelum": "https://novomeuespacocorretor.yelumseguros.com.br/dashboard",
+        "Porto Seguro": "https://corretor.portoseguro.com.br",
+        "Mapfre": "https://negocios.mapfre.com.br/tela-principal",
+        "Bradesco": "https://wwwn.bradescoseguros.com.br",
+        "Allianz": "https://www.allianznet.com.br",
+        "Suhai": "https://suhaiseguradoracotacao.com.br/login",
+        "Tokio Marine": "https://www.tokiomarine.com.br/corretores",
+        "HDI": "https://www.hdi.com.br/hdidigital",
+        "Azul": "https://www.azulseguros.com.br/area-restrita",
+        "Justos": "https://corretores.justos.com.br/entrar",
+    },
+    "insurer_domains": [
+        "yelum", "portoseguro", "mapfre", "bradesco",
+        "allianz", "suhai", "tokiomarine", "hdi", "azulseguros", "justos",
+    ],
+}
+
+
 def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> AppSettings:
-    with Path(path).open("r", encoding="utf-8") as file:
-        data = json.load(file)
+    settings_path = Path(path)
+    if not settings_path.exists():
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        settings_path.write_text(
+            json.dumps(_DEFAULT_SETTINGS_DATA, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"[Config] settings.json nao encontrado — criado com defaults em {settings_path}")
+        data = _DEFAULT_SETTINGS_DATA
+    else:
+        with settings_path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
 
     renewal_data = data["renewal"]
     renewal = RenewalSettings(
