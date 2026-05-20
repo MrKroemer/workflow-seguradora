@@ -609,65 +609,86 @@ class DailyProcessor:
         segfy_renewals = 0
         try:
             if not dry_run:
-                import_func = getattr(self.segfy, "import_documents", None)
-                if callable(import_func):
-                    imported_documents = int(import_func() or 0)
+                # Cada operação de sincronização é isolada: falha no Chrome/CDP não aborta o ciclo.
+                try:
+                    import_func = getattr(self.segfy, "import_documents", None)
+                    if callable(import_func):
+                        imported_documents = int(import_func() or 0)
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: import_documents indisponivel ({_exc}).")
 
-                # --- Sincronizacao completa com o Segfy ---
-                sync_policies_func = getattr(self.segfy, "sync_policies", None)
-                if callable(sync_policies_func) and policies:
-                    segfy_sync_policies = int(sync_policies_func(policies) or 0)
+                try:
+                    sync_policies_func = getattr(self.segfy, "sync_policies", None)
+                    if callable(sync_policies_func) and policies:
+                        segfy_sync_policies = int(sync_policies_func(policies) or 0)
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: sync_policies indisponivel ({_exc}).")
 
-                sync_followups_func = getattr(self.segfy, "sync_followups", None)
-                if callable(sync_followups_func) and followups:
-                    segfy_sync_followups = int(sync_followups_func(followups) or 0)
+                try:
+                    sync_followups_func = getattr(self.segfy, "sync_followups", None)
+                    if callable(sync_followups_func) and followups:
+                        segfy_sync_followups = int(sync_followups_func(followups) or 0)
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: sync_followups indisponivel ({_exc}).")
 
-                sync_cashflow_func = getattr(self.segfy, "sync_cashflow", None)
-                if callable(sync_cashflow_func) and cashflow_entries:
-                    segfy_sync_cashflow = int(sync_cashflow_func(cashflow_entries) or 0)
+                try:
+                    sync_cashflow_func = getattr(self.segfy, "sync_cashflow", None)
+                    if callable(sync_cashflow_func) and cashflow_entries:
+                        segfy_sync_cashflow = int(sync_cashflow_func(cashflow_entries) or 0)
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: sync_cashflow indisponivel ({_exc}).")
 
-                register_incident_func = getattr(self.segfy, "register_incident", None)
-                if callable(register_incident_func):
-                    for policy in policies:
-                        if policy.sinistro_open:
-                            ok = register_incident_func(
-                                policy_id=policy.policy_id,
-                                incident_type="SINISTRO",
-                                description=f"Sinistro em aberto - {policy.insured_name}",
-                            )
-                            if ok:
-                                segfy_incidents += 1
-                        if policy.endosso_open:
-                            ok = register_incident_func(
-                                policy_id=policy.policy_id,
-                                incident_type="ENDOSSO",
-                                description=f"Endosso em aberto - {policy.insured_name}",
-                            )
-                            if ok:
-                                segfy_incidents += 1
+                try:
+                    register_incident_func = getattr(self.segfy, "register_incident", None)
+                    if callable(register_incident_func):
+                        for policy in policies:
+                            if policy.sinistro_open:
+                                ok = register_incident_func(
+                                    policy_id=policy.policy_id,
+                                    incident_type="SINISTRO",
+                                    description=f"Sinistro em aberto - {policy.insured_name}",
+                                )
+                                if ok:
+                                    segfy_incidents += 1
+                            if policy.endosso_open:
+                                ok = register_incident_func(
+                                    policy_id=policy.policy_id,
+                                    incident_type="ENDOSSO",
+                                    description=f"Endosso em aberto - {policy.insured_name}",
+                                )
+                                if ok:
+                                    segfy_incidents += 1
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: register_incident indisponivel ({_exc}).")
 
-                update_commission_func = getattr(self.segfy, "update_commission_status", None)
-                if callable(update_commission_func):
-                    for policy in policies:
-                        if policy.status_pgto.strip():
-                            ok = update_commission_func(
-                                policy_id=policy.policy_id,
-                                status=policy.status_pgto.strip(),
-                            )
-                            if ok:
-                                segfy_commissions += 1
+                try:
+                    update_commission_func = getattr(self.segfy, "update_commission_status", None)
+                    if callable(update_commission_func):
+                        for policy in policies:
+                            if policy.status_pgto.strip():
+                                ok = update_commission_func(
+                                    policy_id=policy.policy_id,
+                                    status=policy.status_pgto.strip(),
+                                )
+                                if ok:
+                                    segfy_commissions += 1
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: update_commission_status indisponivel ({_exc}).")
 
-                register_renewal_func = getattr(self.segfy, "register_renewal", None)
-                if callable(register_renewal_func):
-                    for followup in followups:
-                        if followup.fase.strip() or followup.status.strip():
-                            ok = register_renewal_func(
-                                policy_id=followup.insured_name,
-                                phase=followup.fase.strip() or "SEM FASE",
-                                status=followup.status.strip() or "SEM STATUS",
-                            )
-                            if ok:
-                                segfy_renewals += 1
+                try:
+                    register_renewal_func = getattr(self.segfy, "register_renewal", None)
+                    if callable(register_renewal_func):
+                        for followup in followups:
+                            if followup.fase.strip() or followup.status.strip():
+                                ok = register_renewal_func(
+                                    policy_id=followup.insured_name,
+                                    phase=followup.fase.strip() or "SEM FASE",
+                                    status=followup.status.strip() or "SEM STATUS",
+                                )
+                                if ok:
+                                    segfy_renewals += 1
+                except Exception as _exc:
+                    print(f"[Segfy] Aviso: register_renewal indisponivel ({_exc}).")
             else:
                 if trace is not None:
                     trace.add_non_executed_item(
@@ -704,6 +725,33 @@ class DailyProcessor:
                         _p.premio_total = _si.premio_total
                     if _si.comissao > 0:
                         _p.comissao = _si.comissao
+
+            # Importar carteira completa do Segfy (apólices novas, renovadas e atualizadas).
+            # Garante que o banco seja a fonte de verdade sem depender das planilhas.
+            _fetch_full = getattr(self.segfy, "fetch_full_policies", None)
+            if _fetch_full is None:
+                _primary = getattr(self.segfy, "primary", None)
+                if _primary is not None:
+                    _fetch_full = getattr(_primary, "fetch_full_policies", None)
+            if callable(_fetch_full):
+                try:
+                    _full_policies = _fetch_full()
+                    if _full_policies:
+                        _existing_ids = {p.policy_id for p in policies}
+                        _new_policies = [p for p in _full_policies if p.policy_id not in _existing_ids]
+                        if _new_policies:
+                            policies.extend(_new_policies)
+                            print(f"[Segfy] {len(_new_policies)} apolices novas incorporadas da carteira completa.")
+                        # Atualiza DB com toda a carteira atual (upsert — inclui renovacoes com novo VIG).
+                        try:
+                            _refresh_db = OperationalDatabase()
+                            _refresh_db.upsert_policies(_full_policies, source="SEGFY_EXPORT_REFRESH")
+                            _refresh_db.close()
+                            print(f"[Segfy] {len(_full_policies)} apolices atualizadas no banco via export completo.")
+                        except Exception as _db_exc:
+                            print(f"[Segfy] Aviso: falha ao persistir export completo ({_db_exc}).")
+                except Exception as _full_exc:
+                    print(f"[Segfy] Aviso: fetch_full_policies falhou ({_full_exc}). Continuando com dados parciais.")
 
         except Exception as exc:
             if trace is not None:
@@ -769,11 +817,14 @@ class DailyProcessor:
                             )
 
                 # Sincronizar politicas atualizadas para o Segfy.
-                sync_func = getattr(self.segfy, "sync_policies", None)
-                if callable(sync_func):
-                    updated_policies = [p for p in policies if p.policy_id in portal_map]
-                    if updated_policies:
-                        portal_synced_to_segfy = int(sync_func(updated_policies) or 0)
+                try:
+                    sync_func = getattr(self.segfy, "sync_policies", None)
+                    if callable(sync_func):
+                        updated_policies = [p for p in policies if p.policy_id in portal_map]
+                        if updated_policies:
+                            portal_synced_to_segfy = int(sync_func(updated_policies) or 0)
+                except Exception as _exc:
+                    print(f"[Portais] Aviso: sincronizacao Segfy indisponivel ({_exc}).")
 
         except Exception as exc:
             if trace is not None:
@@ -822,7 +873,7 @@ class DailyProcessor:
             except Exception as exc:
                 if trace is not None:
                     trace.fail_stage("whatsapp", exc, context={"acao": "dispatch_notifications"})
-                raise
+                print(f"[WhatsApp] Aviso: despacho de notificacoes falhou ({exc}). Continuando para dashboard.")
 
         for commitment_id in notification_summary.segfy_payment_failed_ids:
             alerts.append(
@@ -946,8 +997,10 @@ class DailyProcessor:
         try:
             db = OperationalDatabase()
             run_id = db.start_run(today)
-            db.upsert_policies(policies, source="PLANILHA+PORTAL")
-            db.upsert_followups(followups, source="PLANILHA")
+            # Políticas: inclui enriquecimento via Segfy e portal já aplicado em memória.
+            db.upsert_policies(policies, source="SEGFY+PORTAL" if (segfy_data or portal_data) else "ORCHESTRATOR")
+            # Acompanhamentos derivados do banco (calculados pelo DatabaseBackedSpreadsheetGateway).
+            db.upsert_followups(followups, source="DB_AUTO")
             if cashflow_entries:
                 db.insert_cashflow(cashflow_entries)
             if expense_entries:
@@ -1197,6 +1250,37 @@ class DailyProcessor:
                 self.whatsapp.send_message(phone, renovacao_cliente_message(policy.insured_name))
                 summary.whatsapp_sent += 1
                 summary.renewal_messages_sent += 1
+
+        # Criação automática de To Do para apólices URGENTE sem compromisso no Calendar.
+        # Usa o mesmo guard de WHATSAPP_AUTO_RENEWAL_ENABLED para manter coerência operacional.
+        if self._todo_is_writable() and os.getenv("WHATSAPP_AUTO_RENEWAL_ENABLED", "").strip() in ("1", "true", "yes"):
+            commitment_client_names_todo = {
+                self._normalize_name(c.client_name or "")
+                for c in commitments
+                if c.client_name
+            }
+            for policy in policies:
+                days_to_vig = (policy.vig - today).days
+                if not (0 <= days_to_vig <= 30):
+                    continue
+                if self._normalize_name(policy.insured_name) in commitment_client_names_todo:
+                    continue
+                task_key = f"todo:auto_renovacao:{policy.policy_id}:{policy.vig.isoformat()}"
+                if not register_once(task_key):
+                    continue
+                premio_fmt = f"{policy.premio_total:.2f}".replace(".", ",")
+                self.todo.create_task(
+                    title=f"Renovacao URGENTE | {policy.insured_name} | VIG {policy.vig.isoformat()}",
+                    due_date=policy.vig,
+                    notes=(
+                        f"Apolice: {policy.policy_id}\n"
+                        f"Seguradora: {policy.insurer}\n"
+                        f"VIG: {policy.vig.isoformat()}\n"
+                        f"Premio: R$ {premio_fmt}\n"
+                        f"Dias restantes: {days_to_vig}\n"
+                        f"Criado automaticamente pelo RPA PBSeg."
+                    ),
+                )
 
         for message, entry in nubank_receipts:
             if not corretora_notification_email:

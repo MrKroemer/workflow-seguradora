@@ -1272,6 +1272,7 @@ function sortPerf(key){
 
 // ── BI EXPORT XLSX
 function exportBIXlsx(){
+  if(typeof XLSX==='undefined'){toast('Biblioteca XLSX indisponível — verifique conexão com a internet','err');return;}
   if(!_biPerfData.length){toast('Carregue o BI antes de exportar','warn');return;}
   try{
     const wb=XLSX.utils.book_new();

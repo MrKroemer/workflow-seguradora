@@ -210,3 +210,16 @@ class DatabaseBackedSpreadsheetGateway:
                 return conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
         except sqlite3.OperationalError:
             return 0
+
+    def active_policy_count(self) -> int:
+        """Retorna o número de apólices com VIG igual ou posterior a hoje."""
+        if not self._db_path.exists():
+            return 0
+        try:
+            with self._conn() as conn:
+                today = date.today().isoformat()
+                return conn.execute(
+                    "SELECT COUNT(*) FROM policies WHERE vig >= ?", (today,)
+                ).fetchone()[0]
+        except sqlite3.OperationalError:
+            return 0

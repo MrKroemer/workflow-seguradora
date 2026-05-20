@@ -400,7 +400,9 @@ def main() -> None:
         sheets_hint = ""
 
         if args.use_stub_sheets:
-            sheets_hint = "Modo stub forçado via --use-stub-sheets."
+            sheets_gateway = db_gateway
+            using_real_sheets = True
+            sheets_hint = "Modo stub solicitado — banco de dados ativo como fonte de dados real."
         elif settings.files is None:
             sheets_gateway = db_gateway
             using_real_sheets = True
@@ -949,19 +951,25 @@ def main() -> None:
         if args.windows_audit_only:
             return
 
-        if db_gateway.policy_count() == 0 and isinstance(sheets_gateway, DatabaseBackedSpreadsheetGateway):
-            print("[Bootstrap] Banco vazio — importando apolices do export Segfy...")
-            try:
-                bootstrap_policies = segfy_api_gateway.fetch_full_policies()
-                if bootstrap_policies:
-                    op_db = OperationalDatabase(db_path)
-                    seeded = op_db.upsert_policies(bootstrap_policies, source="SEGFY_EXPORT_BOOTSTRAP")
-                    op_db.close()
-                    print(f"[Bootstrap] {seeded} apolices importadas do Segfy para o banco.")
-                else:
-                    print("[Bootstrap] Export Segfy nao disponivel ou vazio — banco permanece vazio.")
-            except Exception as _exc:
-                print(f"[Bootstrap] Falha ao importar do Segfy: {_exc}")
+        if isinstance(sheets_gateway, DatabaseBackedSpreadsheetGateway):
+            _total = db_gateway.policy_count()
+            _active = db_gateway.active_policy_count()
+            _needs_refresh = _total == 0 or _active == 0
+            if _needs_refresh:
+                _motivo = "banco vazio" if _total == 0 else f"sem apolices com VIG atual (total: {_total}, ativas: {_active})"
+                print(f"[Bootstrap] {_motivo.capitalize()} — importando do export Segfy...")
+                try:
+                    bootstrap_policies = segfy_api_gateway.fetch_full_policies()
+                    if bootstrap_policies:
+                        op_db = OperationalDatabase(db_path)
+                        seeded = op_db.upsert_policies(bootstrap_policies, source="SEGFY_EXPORT_BOOTSTRAP")
+                        op_db.close()
+                        active_after = db_gateway.active_policy_count()
+                        print(f"[Bootstrap] {seeded} apolices importadas. Ativas apos import: {active_after}.")
+                    else:
+                        print("[Bootstrap] Export Segfy nao disponivel ou vazio.")
+                except Exception as _exc:
+                    print(f"[Bootstrap] Falha ao importar do Segfy: {_exc}")
 
         if args.scan_credentials and not args.dry_run:
             print("Scan de credenciais ativa dry-run automaticamente para evitar envios externos.")

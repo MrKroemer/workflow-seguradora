@@ -40,6 +40,7 @@ app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="/static")
 _process: subprocess.Popen | None = None
 _log_queue: Queue = Queue()
 _running = False
+_execute_lock = threading.Lock()
 
 
 # ============================================================
@@ -88,16 +89,17 @@ def api_status():
 def api_execute():
     """Inicia execução do RPA."""
     global _process, _running
-    if _running:
-        return jsonify({"status": "already_running", "message": "Ciclo ja em execucao. Aguarde."}), 200
+    with _execute_lock:
+        if _running:
+            return jsonify({"status": "already_running", "message": "Ciclo ja em execucao. Aguarde."}), 200
+        _running = True
 
     dry_run = request.json.get("dry_run", False) if request.json else False
     cmd = [sys.executable, "-m", "rpa_corretora.main"]
     if dry_run:
         cmd.append("--dry-run")
 
-    env = {**os.environ, "PYTHONPATH": str(SRC_DIR), "RPA_NO_CHROME_RESTART": "1"}
-    _running = True
+    env = {**os.environ, "PYTHONPATH": str(SRC_DIR), "RPA_NO_CHROME_RESTART": "1", "PYTHONUNBUFFERED": "1"}
 
     def run():
         global _process, _running
@@ -138,7 +140,10 @@ def api_logs():
                 yield f"data: {json.dumps({'line': line})}\n\n"
             except Exception:
                 yield f"data: {json.dumps({'heartbeat': True})}\n\n"
-    return Response(stream(), mimetype="text/event-stream")
+    resp = Response(stream(), mimetype="text/event-stream")
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["X-Accel-Buffering"] = "no"
+    return resp
 
 
 @app.route("/api/agent", methods=["POST"])
@@ -503,73 +508,223 @@ def api_bi_insurer_performance():
 # ============================================================
 
 def _query_db_for_agent(question: str) -> str:
+    """Responde perguntas usando dados reais do banco SQLite."""
     if not DB_PATH.exists():
         return ""
     q = question.lower()
+    today = date.today()
+
+    def _fmt(v: float) -> str:
+        return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
     try:
         conn = sqlite3.connect(str(DB_PATH))
 
-        if any(w in q for w in ("status", "carteira", "quantas", "total")):
+        # ── Status geral / carteira ──────────────────────────────────────
+        if any(w in q for w in ("status", "carteira", "quantas", "total", "resumo", "panorama")):
             total = conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
-            pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
+            active = conn.execute("SELECT COUNT(*) FROM policies WHERE vig >= ?", (today.isoformat(),)).fetchone()[0]
             sin = conn.execute("SELECT COUNT(*) FROM policies WHERE sinistro_open = 1").fetchone()[0]
+            end = conn.execute("SELECT COUNT(*) FROM policies WHERE endosso_open = 1").fetchone()[0]
+            pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
+            premio = conn.execute("SELECT COALESCE(SUM(premio_total),0) FROM policies").fetchone()[0]
+            com = conn.execute("SELECT COALESCE(SUM(comissao),0) FROM policies").fetchone()[0]
+            d30 = (today + timedelta(days=30)).isoformat()
+            urgentes = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), d30)).fetchone()[0]
             conn.close()
-            return f"📊 Carteira:\n• Apólices: {total}\n• Comissões pendentes: {pending}\n• Sinistros abertos: {sin}"
+            return (
+                f"📊 Carteira PBSeg — {today.strftime('%d/%m/%Y')}\n"
+                f"• Total apólices: {total} ({active} ativas, {total - active} vencidas)\n"
+                f"• Vencendo em 30 dias: {urgentes}\n"
+                f"• Prêmio total: {_fmt(premio)}\n"
+                f"• Comissão total: {_fmt(com)}\n"
+                f"• Comissões pendentes: {pending}\n"
+                f"• Sinistros: {sin} | Endossos: {end}"
+            )
 
-        if any(w in q for w in ("comiss", "pendente", "pago")):
+        # ── Apólices vencidas / expiradas ────────────────────────────────
+        if any(w in q for w in ("vencida", "vencidas", "venceu", "expirada", "expiradas", "expirou", "2025", "antigas")):
+            expired = conn.execute("SELECT COUNT(*) FROM policies WHERE vig < ?", (today.isoformat(),)).fetchone()[0]
+            active = conn.execute("SELECT COUNT(*) FROM policies WHERE vig >= ?", (today.isoformat(),)).fetchone()[0]
+            oldest = conn.execute("SELECT MIN(vig), MAX(vig) FROM policies WHERE vig < ?", (today.isoformat(),)).fetchone()
+            conn.close()
+            result = (
+                f"📋 Situação ({today.strftime('%d/%m/%Y')}):\n"
+                f"• Vencidas: {expired}\n"
+                f"• Ativas (VIG futura): {active}\n"
+            )
+            if oldest and oldest[0]:
+                result += f"• Período vencidas: {oldest[0]} → {oldest[1]}\n"
+            if active == 0:
+                result += "\n⚠️ Todas as apólices estão vencidas. O banco precisa ser atualizado com dados 2026 via export do Segfy."
+            return result
+
+        # ── Comissões ────────────────────────────────────────────────────
+        if any(w in q for w in ("comiss", "pendente", "pago", "pagamento", "receber")):
             paid = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto != ''").fetchone()[0]
             pending = conn.execute("SELECT COUNT(*) FROM policies WHERE status_pgto = ''").fetchone()[0]
-            valor = conn.execute("SELECT COALESCE(SUM(comissao), 0) FROM policies WHERE status_pgto = ''").fetchone()[0]
+            val_pend = conn.execute("SELECT COALESCE(SUM(comissao),0) FROM policies WHERE status_pgto = ''").fetchone()[0]
+            val_paid = conn.execute("SELECT COALESCE(SUM(comissao),0) FROM policies WHERE status_pgto != ''").fetchone()[0]
             conn.close()
-            return f"💰 Comissões:\n• Pagas: {paid}\n• Pendentes: {pending}\n• Valor pendente: R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            return (
+                f"💰 Comissões:\n"
+                f"• Pagas: {paid} ({_fmt(val_paid)})\n"
+                f"• Pendentes: {pending} ({_fmt(val_pend)})\n"
+                f"• Total: {_fmt(val_pend + val_paid)}"
+            )
 
-        if any(w in q for w in ("alerta", "critico", "urgente", "pendencia")):
-            alerts = conn.execute("SELECT severity, message FROM alerts ORDER BY created_at DESC LIMIT 5").fetchall()
+        # ── Alertas / urgente / pendência ────────────────────────────────
+        if any(w in q for w in ("alerta", "critico", "urgente", "pendencia", "pendências")):
+            try:
+                alerts = conn.execute("SELECT severity, message FROM alerts ORDER BY created_at DESC LIMIT 5").fetchall()
+            except Exception:
+                alerts = []
+            d30 = (today + timedelta(days=30)).isoformat()
+            urg_rows = conn.execute(
+                "SELECT insured_name, insurer, vig FROM policies WHERE vig BETWEEN ? AND ? ORDER BY vig LIMIT 5",
+                (today.isoformat(), d30)
+            ).fetchall()
             conn.close()
-            if not alerts:
-                return "✅ Nenhum alerta recente."
-            result = "🚨 Alertas recentes:\n"
-            for sev, msg in alerts:
-                icon = "🔴" if sev in ("CRITICA", "ALTA") else "🟡"
-                result += f"{icon} [{sev}] {msg[:60]}\n"
+            result = ""
+            if alerts:
+                result += "🚨 Alertas recentes:\n"
+                for row in alerts:
+                    icon = "🔴" if row[0] in ("CRITICA", "ALTA") else "🟡"
+                    result += f"{icon} [{row[0]}] {row[1][:70]}\n"
+            else:
+                result += "✅ Nenhum alerta registrado.\n"
+            if urg_rows:
+                result += f"\n⚠️ {len(urg_rows)} apólice(s) URGENTES (vence ≤30d):\n"
+                for name, ins, vig in urg_rows:
+                    result += f"• {name} ({ins}) — {vig}\n"
+            return result.strip()
+
+        # ── Vencendo / renovação ─────────────────────────────────────────
+        if any(w in q for w in ("vencendo", "vencer", "renovar", "renovação", "renovacao", "proxim")):
+            d30 = (today + timedelta(days=30)).isoformat()
+            d60 = (today + timedelta(days=60)).isoformat()
+            d90 = (today + timedelta(days=90)).isoformat()
+            u30 = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), d30)).fetchone()[0]
+            u60 = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), d60)).fetchone()[0]
+            u90 = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), d90)).fetchone()[0]
+            rows = conn.execute(
+                "SELECT insured_name, insurer, vig FROM policies WHERE vig BETWEEN ? AND ? ORDER BY vig LIMIT 7",
+                (today.isoformat(), d30)
+            ).fetchall()
+            conn.close()
+            result = f"📅 Renovações:\n• 30 dias: {u30} | 60 dias: {u60} | 90 dias: {u90}\n"
+            if rows:
+                result += "\nUrgentes (≤30d):\n"
+                for name, ins, vig in rows:
+                    days_left = (date.fromisoformat(vig) - today).days
+                    result += f"• {name} ({ins}) — {vig} ({days_left}d)\n"
+            else:
+                result += "\n✅ Nenhuma apólice vencendo em 30 dias."
             return result
 
-        if any(w in q for w in ("vencendo", "vencer", "renovar")):
-            today = date.today()
-            future = (today + timedelta(days=30)).isoformat()
-            rows = conn.execute("SELECT insured_name, insurer, vig FROM policies WHERE vig BETWEEN ? AND ? ORDER BY vig LIMIT 5", (today.isoformat(), future)).fetchall()
+        # ── Sinistros / endossos ─────────────────────────────────────────
+        if any(w in q for w in ("sinistro", "endosso", "ocorrencia", "ocorrência")):
+            sin = conn.execute("SELECT COUNT(*) FROM policies WHERE sinistro_open = 1").fetchone()[0]
+            end = conn.execute("SELECT COUNT(*) FROM policies WHERE endosso_open = 1").fetchone()[0]
+            sin_rows = conn.execute("SELECT insured_name, insurer FROM policies WHERE sinistro_open = 1 LIMIT 5").fetchall()
             conn.close()
-            if not rows:
-                return "✅ Nenhuma apólice vencendo em 30 dias."
-            result = f"⚠️ {len(rows)} apólice(s) vencendo:\n"
-            for name, ins, vig in rows:
-                result += f"• {name} ({ins}) — {vig}\n"
+            result = f"🚗 Ocorrências abertas:\n• Sinistros: {sin} | Endossos: {end}\n"
+            if sin_rows:
+                result += "\nSinistros:\n"
+                for name, ins in sin_rows:
+                    result += f"• {name} ({ins})\n"
             return result
 
-        # Pesquisa por nome
-        if any(w in q for w in ("buscar", "procurar", "encontrar")):
-            term = re.sub(r"^(buscar|procurar|encontrar)\s+", "", q).strip()
+        # ── Prêmio / faturamento ─────────────────────────────────────────
+        if any(w in q for w in ("premio", "prêmio", "faturamento", "receita")):
+            total = conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
+            premio = conn.execute("SELECT COALESCE(SUM(premio_total),0) FROM policies").fetchone()[0]
+            comissao = conn.execute("SELECT COALESCE(SUM(comissao),0) FROM policies").fetchone()[0]
+            rows = conn.execute(
+                "SELECT insurer, COALESCE(SUM(premio_total),0) as p FROM policies GROUP BY insurer ORDER BY p DESC LIMIT 5"
+            ).fetchall()
+            conn.close()
+            result = (
+                f"💵 Prêmio e Comissão:\n"
+                f"• Prêmio total: {_fmt(premio)}\n"
+                f"• Comissão total: {_fmt(comissao)}\n"
+                f"• Ticket médio: {_fmt(premio / total if total else 0)}\n\nTop seguradoras:\n"
+            )
+            for ins, p in rows:
+                result += f"• {ins}: {_fmt(p)}\n"
+            return result
+
+        # ── Busca por nome ───────────────────────────────────────────────
+        if any(w in q for w in ("buscar", "procurar", "encontrar", "cliente", "segurado")):
+            term = re.sub(r"^(buscar|procurar|encontrar|cliente|segurado)\s*", "", q).strip()
             if len(term) >= 3:
-                rows = conn.execute("SELECT insured_name, insurer, premio_total, status_pgto, vehicle_item FROM policies WHERE UPPER(insured_name) LIKE ? LIMIT 3", (f"%{term.upper()}%",)).fetchall()
+                rows = conn.execute(
+                    "SELECT insured_name, insurer, premio_total, status_pgto, vehicle_item, vig FROM policies "
+                    "WHERE UPPER(insured_name) LIKE ? LIMIT 5",
+                    (f"%{term.upper()}%",)
+                ).fetchall()
                 conn.close()
                 if rows:
                     result = f"🔍 Resultados para \"{term}\":\n\n"
-                    for name, ins, premio, pgto, vehicle in rows:
-                        result += f"• {name} ({ins})\n  Prêmio: R$ {premio:,.2f} | {pgto or 'PENDENTE'}\n".replace(",", "X").replace(".", ",").replace("X", ".")
+                    for name, ins, premio, pgto, vehicle, vig in rows:
+                        result += f"• {name} ({ins})\n  {_fmt(premio)} | {pgto or 'PENDENTE'} | VIG {vig}\n"
                         if vehicle:
                             result += f"  Veículo: {vehicle}\n"
                     return result
+                conn.close()
+                return f"🔍 Nenhum segurado encontrado para \"{term}\"."
 
-        # Relatório por seguradora
-        known = ["yelum", "porto", "mapfre", "bradesco", "allianz", "suhai", "tokio", "hdi", "azul"]
+        # ── Seguradora específica ────────────────────────────────────────
+        known = ["yelum", "porto", "mapfre", "bradesco", "allianz", "suhai", "tokio", "hdi", "azul", "sompo", "zurich"]
         for ins in known:
             if ins in q:
                 total = conn.execute("SELECT COUNT(*) FROM policies WHERE UPPER(insurer) LIKE ?", (f"%{ins.upper()}%",)).fetchone()[0]
-                premio = conn.execute("SELECT COALESCE(SUM(premio_total), 0) FROM policies WHERE UPPER(insurer) LIKE ?", (f"%{ins.upper()}%",)).fetchone()[0]
+                premio = conn.execute("SELECT COALESCE(SUM(premio_total),0) FROM policies WHERE UPPER(insurer) LIKE ?", (f"%{ins.upper()}%",)).fetchone()[0]
+                comissao = conn.execute("SELECT COALESCE(SUM(comissao),0) FROM policies WHERE UPPER(insurer) LIKE ?", (f"%{ins.upper()}%",)).fetchone()[0]
+                pending = conn.execute("SELECT COUNT(*) FROM policies WHERE UPPER(insurer) LIKE ? AND status_pgto = ''", (f"%{ins.upper()}%",)).fetchone()[0]
                 conn.close()
-                return f"📊 {ins.upper()}:\n• Apólices: {total}\n• Prêmio: R$ {premio:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                return (
+                    f"📊 {ins.upper()}:\n"
+                    f"• Apólices: {total}\n"
+                    f"• Prêmio: {_fmt(premio)}\n"
+                    f"• Comissão: {_fmt(comissao)}\n"
+                    f"• Pgto pendente: {pending}"
+                )
 
+        # ── Fluxo de caixa / despesas ────────────────────────────────────
+        if any(w in q for w in ("caixa", "fluxo", "cashflow", "despesa", "despesas")):
+            try:
+                cf = conn.execute(
+                    "SELECT strftime('%Y-%m', entry_date) as m, SUM(value) FROM cashflow "
+                    "GROUP BY m ORDER BY m DESC LIMIT 3"
+                ).fetchall()
+                exp = conn.execute(
+                    "SELECT strftime('%Y-%m', entry_date) as m, SUM(value) FROM expenses "
+                    "GROUP BY m ORDER BY m DESC LIMIT 3"
+                ).fetchall()
+                conn.close()
+                result = "💳 Fluxo de Caixa:\n"
+                if cf:
+                    result += "Receitas:\n" + "".join(f"  {m}: {_fmt(v)}\n" for m, v in cf)
+                if exp:
+                    result += "Despesas:\n" + "".join(f"  {m}: {_fmt(v)}\n" for m, v in exp)
+                return result
+            except Exception:
+                conn.close()
+
+        # ── Nenhum padrão — snapshot geral ───────────────────────────────
+        total = conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
+        active = conn.execute("SELECT COUNT(*) FROM policies WHERE vig >= ?", (today.isoformat(),)).fetchone()[0]
+        d30 = (today + timedelta(days=30)).isoformat()
+        urgentes = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), d30)).fetchone()[0]
         conn.close()
+        return (
+            f"Não entendi a pergunta. Situação atual ({today.strftime('%d/%m/%Y')}):\n"
+            f"• {total} apólices ({active} ativas, {total - active} vencidas, {urgentes} urgentes)\n\n"
+            f"Pergunte sobre: status, vencidas, vencendo, comissões, alertas, sinistros, prêmio, "
+            f"buscar [nome], [seguradora], caixa. Ou 'pesquisar [tema]' para web."
+        )
+
     except Exception:
         pass
     return ""
@@ -621,15 +776,25 @@ def _call_ollama(question: str) -> str:
 
 
 def _fallback_answer(question: str) -> str:
-    q = question.lower()
-    answers = {
-        "sobre": "O RPA PBSeg automatiza toda a operação da corretora: planilhas, Segfy, portais, WhatsApp, agenda, e-mails.",
-        "ajuda": "Comandos: executar, dry-run, status, alertas, vencendo, buscar [nome], relatório [seguradora], pesquisar [tema]",
-    }
-    for key, answer in answers.items():
-        if key in q:
-            return answer
-    return "Posso ajudar com: status, alertas, buscar segurado, relatório por seguradora, pesquisar na web, executar o ciclo. O que precisa?"
+    """Resposta de último recurso com status real do sistema."""
+    if DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            today = date.today()
+            total = conn.execute("SELECT COUNT(*) FROM policies").fetchone()[0]
+            active = conn.execute("SELECT COUNT(*) FROM policies WHERE vig >= ?", (today.isoformat(),)).fetchone()[0]
+            d30 = (today + timedelta(days=30)).isoformat()
+            urgentes = conn.execute("SELECT COUNT(*) FROM policies WHERE vig BETWEEN ? AND ?", (today.isoformat(), d30)).fetchone()[0]
+            conn.close()
+            return (
+                f"Sistema PBSeg — {today.strftime('%d/%m/%Y')}\n"
+                f"Banco: {total} apólices ({active} ativas, {urgentes} urgentes)\n\n"
+                f"Comandos: status, vencidas, vencendo, comissões, sinistros, prêmio, alertas, "
+                f"buscar [nome], [seguradora], caixa, executar, dry-run, pesquisar [tema web]"
+            )
+        except Exception:
+            pass
+    return "Comandos: status, alertas, vencendo, buscar [nome], executar, dry-run, pesquisar [tema]."
 
 
 # ============================================================

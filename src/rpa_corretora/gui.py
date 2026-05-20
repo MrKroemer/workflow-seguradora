@@ -378,6 +378,7 @@ class RPAApp:
 
         env = os.environ.copy()
         env["PYTHONPATH"] = str(SRC_DIR)
+        env["PYTHONUNBUFFERED"] = "1"
 
         threading.Thread(target=self._execute_process, args=(cmd, env), daemon=True).start()
 

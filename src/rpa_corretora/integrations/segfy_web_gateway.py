@@ -735,7 +735,7 @@ class SegfyWebGateway:
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         # 3. Aguarda Chrome ficar pronto.
-        for attempt in range(15):
+        for attempt in range(5):
             time.sleep(1)
             if self._chrome_cdp_disponivel(cdp_port):
                 browser = playwright.chromium.connect_over_cdp(cdp_url, timeout=5000)
@@ -744,8 +744,8 @@ class SegfyWebGateway:
                 return browser
 
         raise RuntimeError(
-            f"Chrome nao respondeu na porta {cdp_port} apos 15 tentativas. "
-            "Verifique se outro Chrome esta usando o mesmo perfil."
+            f"Chrome nao respondeu na porta {cdp_port} apos 5 tentativas. "
+            "Abra o Chrome via atalho 'Chrome PBSeg' antes de executar o RPA."
         )
 
     @staticmethod
