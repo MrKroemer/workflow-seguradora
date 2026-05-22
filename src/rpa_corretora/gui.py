@@ -802,6 +802,16 @@ class RPAApp:
 
 
 def main() -> None:
+    import traceback
+    def _crash_handler(exc_type, exc_val, exc_tb):
+        from pathlib import Path
+        from datetime import datetime
+        msg = ''.join(traceback.format_exception(exc_type, exc_val, exc_tb))
+        Path("outputs").mkdir(exist_ok=True)
+        with open("outputs/gui_crash.log", "a") as f:
+            f.write(f"\n[{datetime.now()}]\n{msg}\n")
+    sys.excepthook = _crash_handler
+
     app = RPAApp()
     app.run()
 

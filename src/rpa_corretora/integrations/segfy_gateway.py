@@ -138,6 +138,13 @@ class SegfyGateway:
                 synced += 1
         return synced
 
+    def sync_all(self, *, policies, followups, cashflow_entries) -> dict:
+        """Executa sync_policies + sync_followups + sync_cashflow."""
+        p = self.sync_policies(policies) if policies else 0
+        f = self.sync_followups(followups) if followups else 0
+        c = self.sync_cashflow(cashflow_entries) if cashflow_entries else 0
+        return {"policies": p, "followups": f, "cashflow": c}
+
     def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
         payload = {"policy_id": policy_id, "incident_type": incident_type, "description": description}
         if not self.api_base_url:

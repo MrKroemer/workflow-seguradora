@@ -618,25 +618,35 @@ class DailyProcessor:
                     print(f"[Segfy] Aviso: import_documents indisponivel ({_exc}).")
 
                 try:
-                    sync_policies_func = getattr(self.segfy, "sync_policies", None)
-                    if callable(sync_policies_func) and policies:
-                        segfy_sync_policies = int(sync_policies_func(policies) or 0)
-                except Exception as _exc:
-                    print(f"[Segfy] Aviso: sync_policies indisponivel ({_exc}).")
+                    sync_all_func = getattr(self.segfy, "sync_all", None)
+                    if callable(sync_all_func) and (policies or followups or cashflow_entries):
+                        sync_res = sync_all_func(policies=policies, followups=followups, cashflow_entries=cashflow_entries) or {}
+                        segfy_sync_policies = sync_res.get("policies", 0)
+                        segfy_sync_followups = sync_res.get("followups", 0)
+                        segfy_sync_cashflow = sync_res.get("cashflow", 0)
+                    else:
+                        try:
+                            sync_policies_func = getattr(self.segfy, "sync_policies", None)
+                            if callable(sync_policies_func) and policies:
+                                segfy_sync_policies = int(sync_policies_func(policies) or 0)
+                        except Exception as _exc:
+                            print(f"[Segfy] Aviso: sync_policies indisponivel ({_exc}).")
 
-                try:
-                    sync_followups_func = getattr(self.segfy, "sync_followups", None)
-                    if callable(sync_followups_func) and followups:
-                        segfy_sync_followups = int(sync_followups_func(followups) or 0)
-                except Exception as _exc:
-                    print(f"[Segfy] Aviso: sync_followups indisponivel ({_exc}).")
+                        try:
+                            sync_followups_func = getattr(self.segfy, "sync_followups", None)
+                            if callable(sync_followups_func) and followups:
+                                segfy_sync_followups = int(sync_followups_func(followups) or 0)
+                        except Exception as _exc:
+                            print(f"[Segfy] Aviso: sync_followups indisponivel ({_exc}).")
 
-                try:
-                    sync_cashflow_func = getattr(self.segfy, "sync_cashflow", None)
-                    if callable(sync_cashflow_func) and cashflow_entries:
-                        segfy_sync_cashflow = int(sync_cashflow_func(cashflow_entries) or 0)
+                        try:
+                            sync_cashflow_func = getattr(self.segfy, "sync_cashflow", None)
+                            if callable(sync_cashflow_func) and cashflow_entries:
+                                segfy_sync_cashflow = int(sync_cashflow_func(cashflow_entries) or 0)
+                        except Exception as _exc:
+                            print(f"[Segfy] Aviso: sync_cashflow indisponivel ({_exc}).")
                 except Exception as _exc:
-                    print(f"[Segfy] Aviso: sync_cashflow indisponivel ({_exc}).")
+                    print(f"[Segfy] Aviso: sync_all indisponivel ({_exc}).")
 
                 try:
                     register_incident_func = getattr(self.segfy, "register_incident", None)

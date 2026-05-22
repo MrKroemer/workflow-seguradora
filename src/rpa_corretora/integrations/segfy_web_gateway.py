@@ -41,6 +41,9 @@ class _SegfyGatewayLike(Protocol):
     def sync_cashflow(self, entries: list[CashflowEntry]) -> int:
         ...
 
+    def sync_all(self, *, policies, followups, cashflow_entries) -> dict:
+        ...
+
     def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
         ...
 
@@ -90,6 +93,20 @@ class CascadingSegfyGateway:
         if count > 0:
             return count
         return self.fallback.sync_cashflow(entries)
+
+    def sync_all(self, *, policies, followups, cashflow_entries) -> dict:
+        """Executa sync_policies + sync_followups + sync_cashflow em uma única sessão."""
+        if hasattr(self.primary, "sync_all"):
+            res = self.primary.sync_all(policies=policies, followups=followups, cashflow_entries=cashflow_entries)
+            if res and any(res.values()):
+                return res
+        if hasattr(self.fallback, "sync_all"):
+            return self.fallback.sync_all(policies=policies, followups=followups, cashflow_entries=cashflow_entries)
+        # Fallback to individual calls if neither has sync_all implemented or failed without success
+        p = self.sync_policies(policies) if policies else 0
+        f = self.sync_followups(followups) if followups else 0
+        c = self.sync_cashflow(cashflow_entries) if cashflow_entries else 0
+        return {"policies": p, "followups": f, "cashflow": c}
 
     def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
         if self.primary.register_incident(policy_id=policy_id, incident_type=incident_type, description=description):
@@ -317,6 +334,19 @@ class SegfyWebGateway:
             return 0
         print(f"[Segfy] Sincronizacao web de {len(entries)} lancamentos financeiros iniciada.")
         return self._run_web_session(lambda page: self._sync_cashflow_on_page(page, entries))
+
+    def sync_all(self, *, policies, followups, cashflow_entries) -> dict:
+        """Executa sync_policies + sync_followups + sync_cashflow em uma única sessão."""
+        if not self._can_automate():
+            return {"policies": 0, "followups": 0, "cashflow": 0}
+
+        def _action(page):
+            p = self._sync_policies_on_page(page, policies) if policies else 0
+            f = self._sync_followups_on_page(page, followups) if followups else 0
+            c = self._sync_cashflow_on_page(page, cashflow_entries) if cashflow_entries else 0
+            return {"policies": p, "followups": f, "cashflow": c}
+
+        return self._run_web_session(_action) or {"policies": 0, "followups": 0, "cashflow": 0}
 
     def register_incident(self, *, policy_id: str, incident_type: str, description: str) -> bool:
         if not self._can_automate():
@@ -553,11 +583,24 @@ class SegfyWebGateway:
         )
 
     def _sync_policies_on_page(self, page: Page, policies: list[PolicyRecord]) -> int:
-        if not self._navigate_to_section(page, [
+        navigated = self._navigate_to_section(page, [
             "Segurados", "Clientes", "Propostas e Apólices",
             "Propostas e Apolices", "Apólices", "Apolices",
-        ]):
+        ])
+        if not navigated:
+            self._capture_debug_snapshot(page=page, label="nav_fail_segurados")
+            print("[Segfy] Não conseguiu navegar para Segurados. Abortando sync.")
             return 0
+
+        try:
+            page.wait_for_selector(
+                "button:has-text('Novo'), button:has-text('Adicionar'), table",
+                timeout=12_000
+            )
+        except Exception:
+            self._capture_debug_snapshot(page=page, label="nav_timeout_segurados")
+            return 0
+
         self._dismiss_segfy_overlays(page)
         synced = 0
         for policy in policies:
@@ -591,8 +634,21 @@ class SegfyWebGateway:
         return synced
 
     def _sync_followups_on_page(self, page: Page, followups: list[FollowupRecord]) -> int:
-        if not self._navigate_to_section(page, ["Tarefas", "Acompanhamento", "Atividades"]):
+        navigated = self._navigate_to_section(page, ["Tarefas", "Acompanhamento", "Atividades"])
+        if not navigated:
+            self._capture_debug_snapshot(page=page, label="nav_fail_tarefas")
+            print("[Segfy] Não conseguiu navegar para Tarefas. Abortando sync.")
             return 0
+
+        try:
+            page.wait_for_selector(
+                "button:has-text('Novo'), button:has-text('Adicionar'), button:has-text('Nova Tarefa'), table",
+                timeout=12_000
+            )
+        except Exception:
+            self._capture_debug_snapshot(page=page, label="nav_timeout_tarefas")
+            return 0
+
         self._dismiss_segfy_overlays(page)
         synced = 0
         for followup in followups:
@@ -622,11 +678,24 @@ class SegfyWebGateway:
         return synced
 
     def _sync_cashflow_on_page(self, page: Page, entries: list[CashflowEntry]) -> int:
-        if not self._navigate_to_section(page, [
+        navigated = self._navigate_to_section(page, [
             "Financeiro", "Recebimentos", "Fluxo de Caixa",
             "Extrato", "Extratos Bancários", "Extratos Bancarios",
-        ]):
+        ])
+        if not navigated:
+            self._capture_debug_snapshot(page=page, label="nav_fail_financeiro")
+            print("[Segfy] Não conseguiu navegar para Financeiro. Abortando sync.")
             return 0
+
+        try:
+            page.wait_for_selector(
+                "button:has-text('Novo'), button:has-text('Adicionar'), button:has-text('Lançar'), table",
+                timeout=12_000
+            )
+        except Exception:
+            self._capture_debug_snapshot(page=page, label="nav_timeout_financeiro")
+            return 0
+
         self._dismiss_segfy_overlays(page)
         synced = 0
         for entry in entries:

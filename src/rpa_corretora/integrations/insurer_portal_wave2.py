@@ -402,9 +402,17 @@ class SuhaiPortalGateway(BasePortalWebGateway):
                         page_text = page.locator("body").inner_text(timeout=self.timeout_seconds * 1000)
                         return parse_claim_status_from_text(page_text)
                     finally:
-                        context.close()
+                        if not getattr(browser, "_rpa_persistent", False):
+                            context.close()
                 finally:
-                    browser.close()
+                    if not getattr(browser, "_rpa_persistent", False):
+                        browser.close()
+                    else:
+                        try:
+                            if 'page' in locals() and page:
+                                page.close()
+                        except Exception:
+                            pass
         except PlaywrightTimeoutError:
             print(f"[{self.insurer_name} Portal] Timeout durante consulta de sinistro.")
             return None
@@ -706,9 +714,17 @@ class HDIPortalGateway(BasePortalWebGateway):
                         page_text = page.locator("body").inner_text(timeout=self.timeout_seconds * 1000)
                         return parse_claim_status_from_text(page_text)
                     finally:
-                        context.close()
+                        if not getattr(browser, "_rpa_persistent", False):
+                            context.close()
                 finally:
-                    browser.close()
+                    if not getattr(browser, "_rpa_persistent", False):
+                        browser.close()
+                    else:
+                        try:
+                            if 'page' in locals() and page:
+                                page.close()
+                        except Exception:
+                            pass
         except PlaywrightTimeoutError:
             print(f"[{self.insurer_name} Portal] Timeout durante consulta de sinistro.")
             return None
@@ -1011,9 +1027,17 @@ class AzulPortalGateway(BasePortalWebGateway):
                         page_text = page.locator("body").inner_text(timeout=self.timeout_seconds * 1000)
                         return parse_claim_status_from_text(page_text)
                     finally:
-                        context.close()
+                        if not getattr(browser, "_rpa_persistent", False):
+                            context.close()
                 finally:
-                    browser.close()
+                    if not getattr(browser, "_rpa_persistent", False):
+                        browser.close()
+                    else:
+                        try:
+                            if 'page' in locals() and page:
+                                page.close()
+                        except Exception:
+                            pass
         except PlaywrightTimeoutError:
             print(f"[{self.insurer_name} Portal] Timeout durante consulta de sinistro.")
             return None
