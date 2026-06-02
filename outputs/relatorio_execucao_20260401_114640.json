@@ -1,0 +1,130 @@
+{
+  "cabecalho": {
+    "inicio_ciclo": "2026-04-01T11:46:40.223704",
+    "fim_ciclo": "2026-04-01T11:46:41.842274",
+    "identificador_execucao": "RUN-20260401-002",
+    "versao_bot": "0.1.0"
+  },
+  "resumo_executivo": {
+    "tarefas_previstas": 8,
+    "tarefas_sucesso": 7,
+    "tarefas_falha_ou_nao_executadas": 1,
+    "status_geral": "SUCESSO PARCIAL"
+  },
+  "detalhamento_por_etapa": [
+    {
+      "nome_etapa": "Google Calendar",
+      "status": "EXECUTADO",
+      "resultado": "0 compromissos lidos (0 pendentes).",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:40.225973",
+      "fim": "2026-04-01T11:46:40.225982"
+    },
+    {
+      "nome_etapa": "Microsoft To Do",
+      "status": "EXECUTADO",
+      "resultado": "0 tarefas abertas lidas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:40.225991",
+      "fim": "2026-04-01T11:46:40.225994"
+    },
+    {
+      "nome_etapa": "Gmail",
+      "status": "EXECUTADO",
+      "resultado": "0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:40.225998",
+      "fim": "2026-04-01T11:46:41.223175"
+    },
+    {
+      "nome_etapa": "Segfy CRM",
+      "status": "EXECUTADO",
+      "resultado": "0 registros consultados; 0 baixas registradas.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:41.841592",
+      "fim": "2026-04-01T11:46:41.841656"
+    },
+    {
+      "nome_etapa": "Portais das seguradoras",
+      "status": "EXECUTADO",
+      "resultado": "0 registros de apolices retornados; 0 consultas de sinistro por agenda.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:41.841605",
+      "fim": "2026-04-01T11:46:41.841660"
+    },
+    {
+      "nome_etapa": "Planilhas operacionais",
+      "status": "EXECUTADO",
+      "resultado": "442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:40.226000",
+      "fim": "2026-04-01T11:46:41.454207"
+    },
+    {
+      "nome_etapa": "Notificacoes via WhatsApp",
+      "status": "EXECUTADO",
+      "resultado": "0 mensagens enviadas; 0 sem telefone; 0 e-mails de segurado enviados.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:41.841628",
+      "fim": "2026-04-01T11:46:41.841646"
+    },
+    {
+      "nome_etapa": "Dashboard consolidado",
+      "status": "IGNORADO",
+      "resultado": "Publicacao de dashboard desativada neste ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-01T11:46:41.842262",
+      "fim": "2026-04-01T11:46:41.842262"
+    }
+  ],
+  "itens_nao_executados": [
+    {
+      "item_id": "Google Calendar - criacao de eventos",
+      "motivo": "Fluxo atual nao possui rotina de criacao automatica de eventos.",
+      "acao_recomendada": "Manter criacao manual dos eventos ate mapear regras de escrita."
+    },
+    {
+      "item_id": "Microsoft To Do - criacao/atualizacao",
+      "motivo": "Fluxo atual realiza somente leitura de tarefas.",
+      "acao_recomendada": "Mapear regras para abertura e atualizacao automatica de tarefas."
+    },
+    {
+      "item_id": "Dashboard consolidado",
+      "motivo": "Geracao de dashboard desativada por parametro de execucao.",
+      "acao_recomendada": "Executar sem --no-dashboard-html para publicar o painel."
+    }
+  ],
+  "log_de_erros": []
+}

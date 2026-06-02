@@ -1,0 +1,160 @@
+{
+  "cabecalho": {
+    "inicio_ciclo": "2026-04-24T12:40:22.120607",
+    "fim_ciclo": "2026-04-24T12:40:22.127787",
+    "identificador_execucao": "RUN-20260424-001",
+    "versao_bot": "0.1.0"
+  },
+  "resumo_executivo": {
+    "tarefas_previstas": 8,
+    "tarefas_sucesso": 0,
+    "tarefas_falha_ou_nao_executadas": 8,
+    "status_geral": "SUCESSO PARCIAL"
+  },
+  "detalhamento_por_etapa": [
+    {
+      "nome_etapa": "Google Calendar",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Microsoft To Do",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Gmail",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Segfy CRM",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Portais das seguradoras",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Planilhas operacionais",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Notificacoes via WhatsApp",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    },
+    {
+      "nome_etapa": "Dashboard consolidado",
+      "status": "IGNORADO",
+      "resultado": "Etapa nao executada devido a interrupcao antecipada do ciclo.",
+      "erro": {
+        "mensagem": "",
+        "tipo_excecao": "",
+        "contexto": {}
+      },
+      "inicio": "2026-04-24T12:40:22.127787",
+      "fim": "2026-04-24T12:40:22.127787"
+    }
+  ],
+  "itens_nao_executados": [
+    {
+      "item_id": "Envio de relatorio por e-mail",
+      "motivo": "EXECUTION_REPORT_EMAIL_TO nao configurado.",
+      "acao_recomendada": "Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor."
+    },
+    {
+      "item_id": "Google Calendar",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Microsoft To Do",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Gmail",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Segfy CRM",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Portais das seguradoras",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Planilhas operacionais",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Notificacoes via WhatsApp",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    },
+    {
+      "item_id": "Dashboard consolidado",
+      "motivo": "Fluxo interrompido antes desta etapa.",
+      "acao_recomendada": "Reprocessar o ciclo apos corrigir a falha anterior."
+    }
+  ],
+  "log_de_erros": []
+}

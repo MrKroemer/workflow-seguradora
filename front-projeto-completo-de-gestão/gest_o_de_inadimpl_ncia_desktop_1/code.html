@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gestão de Inadimplência</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between p-4">
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-3 px-2">
+<div class="bg-primary rounded-lg p-2 text-white">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<h1 class="text-sm font-bold leading-none">SeguroPro</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Gestão de Cobrança</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">group_off</span>
+<span class="text-sm font-medium">Inadimplência</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="text-sm font-medium">Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Relatórios</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configurações</span>
+</a>
+</nav>
+</div>
+<div class="flex items-center gap-3 border-t border-slate-100 dark:border-slate-800 pt-4 px-2">
+<div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="Foto de perfil do administrador" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBdo83E4uIoz7-Uo3T3oh-PQeSpSeyEEA5qZta9J1-3U5SZDLba6ve3w_lugB0SOnvediJJRU5C5yry3k4soVZ2zaCFtzld87qdSr3Vr37LlIz7hnimQYIBiEpX_bjCJ0WhzIf4-zAEr22oD5FjdHJXHow7zhvefGhKhq2mUbjQ_Tqmzfhu9KB9XMzrNK_Z13ILwVbCHS5WUA_C-losMFFywJQCVTy2Lx9PG111WMbQ-KbFJpe-yxn0xZSd62PEWd17Euphv7Wypt0')"></div>
+<div class="flex flex-col overflow-hidden">
+<p class="text-sm font-semibold truncate">Ricardo Silva</p>
+<p class="text-xs text-slate-500 truncate">Administrador</p>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-8">
+<header class="mb-8">
+<h1 class="text-3xl font-black tracking-tight mb-2">Painel de Inadimplência</h1>
+<p class="text-slate-500 dark:text-slate-400">Acompanhe e gerencie clientes com pagamentos em atraso e tome ações de cobrança.</p>
+</header>
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-500 dark:text-slate-400 font-medium">Total Inadimplente</span>
+<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">+5.2%</span>
+</div>
+<p class="text-3xl font-bold">R$ 145.200,00</p>
+<div class="mt-4 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 65%"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-500 dark:text-slate-400 font-medium">Clientes em Atraso</span>
+<span class="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-1 rounded-full">-2.1%</span>
+</div>
+<p class="text-3xl font-bold">128</p>
+<p class="text-sm text-slate-400 mt-4">12 novos casos registrados hoje</p>
+</div>
+</div>
+<!-- Filters Area -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 mb-6 flex flex-wrap items-center gap-4">
+<span class="text-sm font-semibold text-slate-500 dark:text-slate-400 ml-2">Filtros:</span>
+<div class="relative group">
+<button class="flex items-center gap-2 px-4 py-2 bg-background-light dark:bg-slate-800 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors">
+                        Período de Atraso
+                        <span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+</div>
+<div class="relative group">
+<button class="flex items-center gap-2 px-4 py-2 bg-background-light dark:bg-slate-800 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors">
+                        Valor da Dívida
+                        <span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+</div>
+<div class="relative group">
+<button class="flex items-center gap-2 px-4 py-2 bg-background-light dark:bg-slate-800 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-colors">
+                        Tipo de Seguro
+                        <span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+</div>
+<div class="ml-auto flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="pl-10 pr-4 py-2 bg-background-light dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64" placeholder="Buscar cliente..." type="text"/>
+</div>
+</div>
+</div>
+<!-- Client List Table -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-800">
+<th class="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400">Cliente</th>
+<th class="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400">Seguro</th>
+<th class="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400">Dias em Atraso</th>
+<th class="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400">Valor Total</th>
+<th class="px-6 py-4 text-sm font-bold text-slate-500 dark:text-slate-400 text-right">Ação</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Client 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0" data-alt="Foto de perfil cliente Marina" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqh7hzPoMqVyqvt6s1wGuI1wH1K8tP2Br0vmGD2ReDK_q0ShUAo_dZGLUeqD-vWtsfAGPphBR2CmXSi-BkmEDB-9QUNAKeks3enEN-KI8p9ovK7wY_HE7OQlWVbUfcx7jnFXGRWOytuyKxLKpHdDZoJYsscnhzcMco3J61WNL0UptiMZIpFSgcFaLNXmvWqxT6wKi1SvbD5YSscqHf_zY6KlxDvvtebBUVNjJspDw4UZ69nfc-_8vkWsAsCyVUpSEsuqCtW9OJqeA')"></div>
+<div>
+<p class="font-semibold text-sm">Marina Albuquerque</p>
+<p class="text-xs text-slate-500">marina.alb@email.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Seguro Auto</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+<span class="text-sm font-medium">45 dias</span>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-sm">R$ 2.450,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">Enviar Cobrança</button>
+</td>
+</tr>
+<!-- Client 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0" data-alt="Foto de perfil cliente João" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD_IZAFeJL6UYMzqQabiRit1IKUjbZLS1RhwdCDcXeYcjhMIbSHGFgJP6q2nMnRkc0st7m_xeb8EJges98r6k4EsqdDabLmsbenOlMSF1uW3v9LRRHqamQ-yoHoF3azfqkpze6MBfX4wznQ-hrWbkGzIE28KlYabo5OchlVLqOJO_mKeAVYyXelkUN3ekbmQEvz7X5s7yH9ztU0QGJAExaWwi4f7y-gAiPJ0h4e6Q-qufMncsIQAC1mwFxZa6xbmUN-VR9DUJDh_eg')"></div>
+<div>
+<p class="font-semibold text-sm">João Pedro Santos</p>
+<p class="text-xs text-slate-500">jp.santos@email.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Seguro Vida</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-sm font-medium">12 dias</span>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-sm">R$ 890,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">Enviar Cobrança</button>
+</td>
+</tr>
+<!-- Client 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0" data-alt="Foto de perfil cliente Carla" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDN9pBgJSLr3cSiZdhW8bxYuj437sXtyET9b2OIeBCGmeMP7BYXC23rswxKVjX2q3ll_fL8X6IVd8jo8v_laIYlnEEldolXNzAvV_xA4vjd_fnSj2oK8g8ySXDEcgOSwlmbDpbQIQHeZtgR1zeeqdDwP39EXMpGQ2KrOZ3aIsxtYVBm8M5N3QPYFX3TIBHN7cR5_RIqeO7zRm1S6FiZR4byPC3BEHk4QKCnvGAMMuTdTw25f_DYSB84KjVmGd3YwvN9Vk0VApftZOM')"></div>
+<div>
+<p class="font-semibold text-sm">Carla Mendes</p>
+<p class="text-xs text-slate-500">carla.m@email.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Seguro Residencial</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+<span class="text-sm font-medium">62 dias</span>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-sm">R$ 1.120,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">Enviar Cobrança</button>
+</td>
+</tr>
+<!-- Client 4 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0" data-alt="Foto de perfil cliente Roberto" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCTdqBf2qiHCQ42u413rUkNYqKzxf07BUODg78S44FL1M1NcgGBJJZBVIKuxiuldsYuC4hAEuNjPalRZ0kslv_pSvMW3Sl_Tx9bRle8Gmbp_Q_oFSo8G2QaMgUxQ8eIS_A6gMA9dWpZE5l_3XdJwUDp3D74_l5Be4D8kGqRyxrIRQs3UD_vFmvOZYlYUqfFjjB6wtFF5uxzKIMB7EpAj9LiESYLN_W3wK3qoxpAtKJuTNztvCGCKaoDhKKct-IlT7fyWeiuWouQZRs')"></div>
+<div>
+<p class="font-semibold text-sm">Roberto Luiz</p>
+<p class="text-xs text-slate-500">roberto.l@email.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Seguro Empresarial</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-sm font-medium">5 dias</span>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-sm">R$ 5.600,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">Enviar Cobrança</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="p-4 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center border-t border-slate-100 dark:border-slate-800">
+<p class="text-xs text-slate-500 font-medium">Mostrando 4 de 128 clientes</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white text-xs font-bold">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 text-xs font-bold hover:bg-slate-50">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

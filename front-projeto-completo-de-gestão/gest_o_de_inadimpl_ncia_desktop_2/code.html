@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SeguroGestão - Gestão de Inadimplência</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="flex min-h-screen">
+<!-- Sidebar Navigation -->
+<aside class="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full">
+<div class="p-6">
+<div class="flex items-center gap-3">
+<div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">security</span>
+</div>
+<div>
+<h1 class="text-lg font-bold leading-none">SeguroGestão</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Portal Corretor</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary/10 text-primary rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1">warning</span>
+<span class="text-sm font-semibold">Gestão de Inadimplência</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Segurados</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Relatórios</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configurações</span>
+</a>
+</nav>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3 p-2">
+<div class="size-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden bg-cover bg-center" data-alt="Profile picture of the insurance broker" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxJZRWdfe88iBUbKTtBTHGxCypuX-0QoBryJL5Wz3H2caiAHq-StYxEYyF9obpQ02_ndyHUS9i-ROC93V83ztOITI0RdoLEzenfYuu5p0NUlmrxo4V4rtEOR_M6TgbHIf4Qh7_625z1FETPdHdtcg_UiDddIryUDUgVAjYBUz2fjpv1FqGlh4ZGR82wrF4Ecg56zVIB4_fTN4nDnN7-2usFkYYteLAlGY-wwC5847C3A98Itf9WK0beg0Us4zUCDmiDIsIqsRUdNw')"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold truncate">Ricardo Silva</p>
+<p class="text-xs text-slate-500 truncate">Sócio Diretor</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-72 flex-1 p-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-3xl font-black tracking-tight mb-2">Gestão de Inadimplência</h2>
+<p class="text-slate-500 dark:text-slate-400">Acompanhe e recupere pagamentos em atraso da sua carteira.</p>
+</div>
+<button class="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined">download</span>
+                    Exportar Relatório
+                </button>
+</div>
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Inadimplência</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-2xl font-black">R$ 45.280,00</h3>
+<span class="text-xs font-bold text-red-500">+5.2%</span>
+</div>
+<div class="mt-4 h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Clientes em Atraso</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-2xl font-black">128</h3>
+<span class="text-xs font-bold text-slate-500">-2.1%</span>
+</div>
+<div class="mt-4 flex -space-x-2">
+<div class="size-6 rounded-full border-2 border-white dark:border-slate-900 bg-cover bg-center" data-alt="Customer avatar headshot" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCnNVAckDZGuZTUaoXZ7Ebx1i2bid6r7B68xtu76chgCpzNYrDGqF9KgB_wWMJLNsCF38ch4uEkTwEVsQIiFLTGym1-ylN6f1NPHkPmrcwkL1pwE34DUs97dKM-EFCaAV5D-9f_q2Iz3kbZmAkztWEq9XoRuUKtnHrqpcZaGHMRNIPKezgyiMFp9dS_mOYsMFcMNHbujKHSZ5PRnRLjjpqW9HWnyMIYA8r0D1RKyZ2-6E2ZwPrgIENf7tImliaBU-ZFt6s8JJK4RfY')"></div>
+<div class="size-6 rounded-full border-2 border-white dark:border-slate-900 bg-cover bg-center" data-alt="Customer avatar headshot" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCDgcbPOaJ0NhfEzAVoMG_eI19Hjwg-ZJh2LZx0E3MhFMCTW4ZXwgHyxC7Z0RZxuuzNOqcf0Ge8WMhBX4VK4cCHEUID5Myf25BQ0KS-zEBKS5UZuGkJJrD_PTg1pKuJKujzqfRqhfbPPK-CfVbA1lr88i7ql8pTK2O4nMtuDAS5tlIOy0RVQ-f1qYOnhuLsAGcsEEC1KgrUzrje9sctQ8hE11qOLVYT9G7ztOZFBMCeQbd3mfftTtQBUmuvGqrxc7vTN2TrHLABu-U')"></div>
+<div class="size-6 rounded-full border-2 border-white dark:border-slate-900 bg-cover bg-center" data-alt="Customer avatar headshot" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQGm9KdL0cM9iERTKDZDT_H-SnXKpBtVYI7SalqIndQyFKO0r5e8pYPvQuHVfS6HyZ5BkW8fx-dkOJlUwsooccM2wO7XZ7KGwUP3cuAJ__qt6W_hbXNDHv0om03yBZk-pReX7CHljlpcuog-q8i-RXOLOFqMVIrC0gAl5eEjdv_IxzACMwQ_EC7bbrtTL2rQd1qmNmSfmdJqClVDWJDNrhz9BDvwaqTVuSOhyHkBIe20XtowjIlZ7g7ZzMwHtYkMUnjGUGlMpsBaY')"></div>
+<div class="size-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[8px] font-bold">+125</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Taxa de Recuperação</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-2xl font-black">64.5%</h3>
+<span class="text-xs font-bold text-green-500">+12%</span>
+</div>
+<div class="mt-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-green-500 text-sm">trending_up</span>
+<span class="text-xs text-slate-500">Melhor que o mês anterior</span>
+</div>
+</div>
+</div>
+<!-- Filters Section -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+<div class="flex flex-wrap items-center gap-4">
+<div class="flex-1 min-w-[200px] relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50" placeholder="Buscar por cliente ou apólice..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400">Filtrar por:</span>
+<button class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-sm font-medium">
+                            Atraso: &gt; 30 dias
+                            <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-sm font-medium">
+                            Valor: &gt; R$ 1.000
+                            <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-sm font-medium">
+                            Seguradora
+                            <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Customer List Table -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<table class="w-full text-left">
+<thead>
+<tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Cliente</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Apólice / Produto</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Vencimento</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Atraso</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Valor</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Ação</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">JS</div>
+<div>
+<p class="text-sm font-bold">João Silva Medeiros</p>
+<p class="text-xs text-slate-500">CPF: ***.452.128-**</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-medium">Seguro Auto Premium</p>
+<p class="text-xs text-slate-500">Porto Seguro</p>
+</td>
+<td class="px-6 py-4 text-sm">12 Out 2023</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold uppercase">45 dias</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">R$ 1.250,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                                    Enviar Cobrança
+                                </button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">MA</div>
+<div>
+<p class="text-sm font-bold">Maria Aparecida Costa</p>
+<p class="text-xs text-slate-500">CPF: ***.882.102-**</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-medium">Seguro Vida Individual</p>
+<p class="text-xs text-slate-500">Liberty Seguros</p>
+</td>
+<td class="px-6 py-4 text-sm">28 Out 2023</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase">29 dias</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">R$ 420,50</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                                    Enviar Cobrança
+                                </button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">RL</div>
+<div>
+<p class="text-sm font-bold">Roberto Lima Santos</p>
+<p class="text-xs text-slate-500">CPF: ***.121.776-**</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-medium">Seguro Residencial</p>
+<p class="text-xs text-slate-500">Allianz</p>
+</td>
+<td class="px-6 py-4 text-sm">05 Nov 2023</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[10px] font-bold uppercase">21 dias</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">R$ 890,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                                    Enviar Cobrança
+                                </button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">AF</div>
+<div>
+<p class="text-sm font-bold">Ana Fernanda Oliveira</p>
+<p class="text-xs text-slate-500">CPF: ***.554.332-**</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-medium">Seguro Empresarial</p>
+<p class="text-xs text-slate-500">Sompo Seguros</p>
+</td>
+<td class="px-6 py-4 text-sm">15 Nov 2023</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[10px] font-bold uppercase">11 dias</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">R$ 4.560,00</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                                    Enviar Cobrança
+                                </button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+<p class="text-xs text-slate-500 font-medium">Mostrando 4 de 128 registros</p>
+<div class="flex gap-2">
+<button class="size-8 rounded flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-900">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="size-8 rounded flex items-center justify-center bg-primary text-white font-bold text-xs">1</button>
+<button class="size-8 rounded flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-900 text-xs">2</button>
+<button class="size-8 rounded flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-900 text-xs">3</button>
+<button class="size-8 rounded flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-900">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

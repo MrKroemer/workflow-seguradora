@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detalhes da Proposta - Broker Manager</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#221610",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header / Navigation -->
+<header class="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<a class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">arrow_back</span>
+</a>
+<div>
+<h1 class="text-lg font-bold leading-tight">Proposta #12345</h1>
+<nav class="flex text-xs text-slate-500 dark:text-slate-400 gap-1 items-center">
+<a class="hover:text-primary" href="#">Início</a>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<a class="hover:text-primary" href="#">Propostas</a>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary font-medium">Detalhes</span>
+</nav>
+</div>
+</div>
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</header>
+<main class="flex-1 pb-24">
+<!-- Status Banner -->
+<div class="bg-primary/10 dark:bg-primary/20 border-b border-primary/20 px-4 py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined">info</span>
+</div>
+<div>
+<p class="text-sm font-medium text-primary">Status da Proposta</p>
+<p class="text-base font-bold text-slate-900 dark:text-white">Pendente de Assinatura</p>
+</div>
+</div>
+<div class="flex size-8 items-center justify-center">
+<div class="size-3 rounded-full bg-primary animate-pulse"></div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="p-4 grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-primary mb-1">edit</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Editar</span>
+</button>
+<button class="flex flex-col items-center justify-center p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-primary mb-1">picture_as_pdf</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">PDF</span>
+</button>
+<button class="flex flex-col items-center justify-center p-3 rounded-xl bg-primary text-white shadow-sm hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined mb-1">chat</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Contato</span>
+</button>
+</div>
+<!-- Section 1: Dados do Segurado -->
+<section class="px-4 py-2">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">person</span>
+<h3 class="font-bold text-base">Dados do Segurado</h3>
+</div>
+<div class="p-4 space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">Nome Completo</p>
+<p class="text-sm font-medium">João da Silva Oliveira</p>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">CPF / CNPJ</p>
+<p class="text-sm font-medium">123.456.789-00</p>
+</div>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">E-mail</p>
+<p class="text-sm font-medium">joao.silva@email.com.br</p>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">Telefone</p>
+<p class="text-sm font-medium">(11) 98765-4321</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Detalhes do Seguro -->
+<section class="px-4 py-2">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shield</span>
+<h3 class="font-bold text-base">Detalhes do Seguro</h3>
+</div>
+<div class="p-4 space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">Ramo / Tipo</p>
+<p class="text-sm font-medium">Seguro Auto</p>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">Seguradora</p>
+<p class="text-sm font-medium">Porto Seguro</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">Apólice / Proposta</p>
+<p class="text-sm font-medium">PRO-889212</p>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-tighter">Valor do Prêmio</p>
+<p class="text-sm font-bold text-primary">R$ 2.450,00</p>
+</div>
+</div>
+<div class="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-4 text-center">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Início de Vigência</p>
+<p class="text-sm font-medium">15/10/2023</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Fim de Vigência</p>
+<p class="text-sm font-medium">15/10/2024</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Timeline/Histórico -->
+<section class="px-4 py-2">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+<h3 class="font-bold text-base">Histórico</h3>
+</div>
+<div class="p-4 space-y-6 relative">
+<!-- Line -->
+<div class="absolute left-6 top-6 bottom-6 w-0.5 bg-slate-100 dark:bg-slate-800"></div>
+<div class="relative flex items-start gap-4 pl-8">
+<div class="absolute left-0 top-1.5 size-4 rounded-full bg-primary ring-4 ring-primary/20 z-10"></div>
+<div>
+<p class="text-sm font-bold">Proposta Aguardando Assinatura</p>
+<p class="text-xs text-slate-500">Hoje às 09:45 • Por Sistema</p>
+</div>
+</div>
+<div class="relative flex items-start gap-4 pl-8">
+<div class="absolute left-0 top-1.5 size-4 rounded-full bg-slate-300 dark:bg-slate-700 z-10"></div>
+<div>
+<p class="text-sm font-medium">Análise de Documentos Concluída</p>
+<p class="text-xs text-slate-500">Ontem às 16:20 • Por Maria Souza</p>
+</div>
+</div>
+<div class="relative flex items-start gap-4 pl-8">
+<div class="absolute left-0 top-1.5 size-4 rounded-full bg-slate-300 dark:bg-slate-700 z-10"></div>
+<div>
+<p class="text-sm font-medium">Proposta Criada</p>
+<p class="text-xs text-slate-500">18 Out 2023 às 11:30 • Por Corretor Admin</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 4: Anexos -->
+<section class="px-4 py-2">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">attach_file</span>
+<h3 class="font-bold text-base">Anexos (3)</h3>
+</div>
+<button class="text-primary text-xs font-bold uppercase tracking-wider">+ Adicionar</button>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">description</span>
+<div>
+<p class="text-xs font-bold truncate max-w-[150px]">CNH_Segurado.pdf</p>
+<p class="text-[10px] text-slate-500">1.2 MB • Enviado em 18/10</p>
+</div>
+</div>
+<button class="p-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">image</span>
+<div>
+<p class="text-xs font-bold truncate max-w-[150px]">Frente_Veiculo.jpg</p>
+<p class="text-[10px] text-slate-500">3.5 MB • Enviado em 18/10</p>
+</div>
+</div>
+<button class="p-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">description</span>
+<div>
+<p class="text-xs font-bold truncate max-w-[150px]">CRLV_2023.pdf</p>
+<p class="text-[10px] text-slate-500">800 KB • Enviado em 18/10</p>
+</div>
+</div>
+<button class="p-1 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Modified from Template) -->
+<footer class="fixed bottom-0 left-0 right-0 z-50">
+<div class="flex gap-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pb-4 pt-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-bold uppercase">Início</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">description</span>
+<p class="text-[10px] font-bold uppercase">Propostas</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">groups</span>
+<p class="text-[10px] font-bold uppercase">Clientes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<p class="text-[10px] font-bold uppercase">Mais</p>
+</a>
+</div>
+</footer>
+</body></html>

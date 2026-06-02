@@ -1,0 +1,27 @@
+{
+  "source_document": "arquivos/Documento sem nome.pdf",
+  "credentials_document": "arquivos/SENHAS.pdf",
+  "portals": [
+    {
+      "priority": 4,
+      "insurer": "Bradesco",
+      "url": "https://wwwn.bradescoseguros.com.br",
+      "env_user": "BRADESCO_PORTAL_USER",
+      "env_password": "BRADESCO_PORTAL_PASSWORD"
+    },
+    {
+      "priority": 5,
+      "insurer": "Allianz",
+      "url": "https://www.allianznet.com.br",
+      "env_user": "ALLIANZ_PORTAL_USER",
+      "env_password": "ALLIANZ_PORTAL_PASSWORD"
+    },
+    {
+      "priority": 6,
+      "insurer": "Suhai",
+      "url": "https://suhaiseguradoracotacao.com.br/login",
+      "env_user": "SUHAI_PORTAL_USER",
+      "env_password": "SUHAI_PORTAL_PASSWORD"
+    }
+  ]
+}

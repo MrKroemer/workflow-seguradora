@@ -1,0 +1,288 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2256 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(RELATORIO DE EXECUCAO - RPA CORRETORA) Tj
+T*
+(========================================================================) Tj
+T*
+(Run ID: RUN-20260429-002) Tj
+T*
+(Versao do bot: 0.1.0) Tj
+T*
+(Inicio do ciclo: 2026-04-29 21:19:36) Tj
+T*
+(Fim do ciclo: 2026-04-29 21:19:39) Tj
+T*
+() Tj
+T*
+(RESUMO EXECUTIVO) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Total previsto: 8) Tj
+T*
+(Total com sucesso: 7) Tj
+T*
+(Falha ou nao executadas: 1) Tj
+T*
+(Status geral: SUCESSO PARCIAL) Tj
+T*
+() Tj
+T*
+(DETALHAMENTO POR ETAPA) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Etapa: Google Calendar) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:36) Tj
+T*
+(Fim: 2026-04-29 21:19:38) Tj
+T*
+(Resultado: 15 compromissos lidos \(15 pendentes\); 13 com cliente identificado.) Tj
+T*
+() Tj
+T*
+(Etapa: Microsoft To Do) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:38) Tj
+T*
+(Fim: 2026-04-29 21:19:39) Tj
+T*
+(Resultado: 0 tarefas abertas lidas \(sincronizacao pendente\).) Tj
+T*
+() Tj
+T*
+(Etapa: Gmail) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:38) Tj
+T*
+(Fim: 2026-04-29 21:19:38) Tj
+T*
+(Resultado: 0 e-mails lidos; 0 classificados como seguradora; 0 entradas e 0 despesas extraidas.) Tj
+T*
+() Tj
+T*
+(Etapa: Segfy CRM) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:39) Tj
+T*
+(Fim: 2026-04-29 21:19:39) Tj
+T*
+(Resultado: 0 registros consultados; 0 baixas registradas; 0 falhas de baixa; 0 documentos importados; 0 apolices sincronizadas; 0 acompanhamentos sincronizados; 0 lancamentos financeiros sincronizados; 0 incidentes registrados; 0 comissoes atualizadas; 0 renovacoes registradas.) Tj
+T*
+() Tj
+T*
+(Etapa: Portais das seguradoras) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:39) Tj
+T*
+(Fim: 2026-04-29 21:19:39) Tj
+T*
+(Resultado: 0 registros de apolices retornados; 0 consultas de sinistro por agenda; 0 falhas de consulta.) Tj
+T*
+() Tj
+T*
+(Etapa: Planilhas operacionais) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:38) Tj
+T*
+(Fim: 2026-04-29 21:19:38) Tj
+T*
+(Resultado: 442 apolices e 175 acompanhamentos lidos; 0 linhas gravadas; 0 divergencias no resumo de gastos.) Tj
+T*
+() Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 3318 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(Etapa: Notificacoes via WhatsApp) Tj
+T*
+(Status: IGNORADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:39) Tj
+T*
+(Fim: 2026-04-29 21:19:39) Tj
+T*
+(Resultado: Notificacoes nao enviadas por modo dry-run.) Tj
+T*
+() Tj
+T*
+(Etapa: Dashboard consolidado) Tj
+T*
+(Status: EXECUTADO) Tj
+T*
+(Inicio: 2026-04-29 21:19:39) Tj
+T*
+(Fim: 2026-04-29 21:19:39) Tj
+T*
+(Resultado: Dashboard publicado em /home/sculpt0r/Documents/projeto_dani/robot/outputs/dashboard_latest.html) Tj
+T*
+() Tj
+T*
+(ITENS NAO EXECUTADOS) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(1. Item: Microsoft To Do - sincronizacao agenda) Tj
+T*
+(   Motivo: Dry-run ativo, criacao/atualizacao/conclusao de tarefas nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para sincronizar o Microsoft To Do.) Tj
+T*
+(2. Item: Segfy - importacao de documentos) Tj
+T*
+(   Motivo: Dry-run ativo, importacao documental foi bloqueada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para importar arquivos no Segfy.) Tj
+T*
+(3. Item: Segfy - sincronizacao de apolices) Tj
+T*
+(   Motivo: Dry-run ativo, sincronizacao de apolices com Segfy foi bloqueada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para sincronizar apolices.) Tj
+T*
+(4. Item: Segfy - sincronizacao de acompanhamentos) Tj
+T*
+(   Motivo: Dry-run ativo, sincronizacao de acompanhamentos com Segfy foi bloqueada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para sincronizar acompanhamentos.) Tj
+T*
+(5. Item: Notificacoes via WhatsApp) Tj
+T*
+(   Motivo: Dry-run ativo, notificacoes externas foram puladas.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para enviar notificacoes.) Tj
+T*
+(6. Item: Segfy pagamento 4rr79pviop2nmmabfnumn0g1h9) Tj
+T*
+(   Motivo: Dry-run ativo, baixa de parcela nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para registrar baixa no Segfy.) Tj
+T*
+(7. Item: Portal sinistro 130h27s1p53c1k9ctktre9844v) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(8. Item: Portal sinistro 6p6gsosecgtk136l6uifna8t5g) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(9. Item: Portal sinistro 06ppi6eboa6ee1auvc6a76u696) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(10. Item: Portal sinistro 7sf35sqmqipgfo91jcc0f4t3m0) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(11. Item: Portal sinistro 451cool5122g2bl69du3psoh85) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(12. Item: Portal sinistro 7eg1utjojkcq38s30mpc5rtd0l) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+T*
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(13. Item: Portal sinistro 10qm4uco5cd1no9b97ies4o0cl) Tj
+T*
+(   Motivo: Dry-run ativo, consulta de sinistro nao executada.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 476 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+40 800 Td
+(   Acao recomendada: Executar sem --dry-run para consultar status no portal.) Tj
+T*
+(14. Item: Envio de relatorio por e-mail) Tj
+T*
+(   Motivo: EXECUTION_REPORT_EMAIL_TO nao configurado.) Tj
+T*
+(   Acao recomendada: Definir EXECUTION_REPORT_EMAIL_TO para envio automatico ao corretor.) Tj
+T*
+() Tj
+T*
+(LOG DE ERROS) Tj
+T*
+(------------------------------------------------------------------------) Tj
+T*
+(Nenhuma excecao capturada no ciclo.) Tj
+ET
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000203 00000 n 
+0000000329 00000 n 
+0000002637 00000 n 
+0000002763 00000 n 
+0000006133 00000 n 
+0000006259 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+6786
+%%EOF
