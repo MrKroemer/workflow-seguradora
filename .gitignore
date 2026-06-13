@@ -6,3 +6,5 @@ __pycache__/
 .venv/
 .env
 PROMPT_RPA_PBSEG_FINAL.md
+/docs/
+.codex

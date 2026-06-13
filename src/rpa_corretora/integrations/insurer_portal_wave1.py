@@ -276,9 +276,17 @@ class BasePortalWebGateway:
                                 parsed_items.append(item)
                         return parsed_items
                     finally:
-                        context.close()
+                        if not getattr(browser, "_rpa_persistent", False):
+                            context.close()
                 finally:
-                    browser.close()
+                    if not getattr(browser, "_rpa_persistent", False):
+                        browser.close()
+                    else:
+                        try:
+                            if 'page' in locals() and page:
+                                page.close()
+                        except Exception:
+                            pass
         except PlaywrightTimeoutError:
             print(f"[{self.insurer_name} Portal] Timeout durante automacao web.")
             return []
@@ -332,9 +340,17 @@ class BasePortalWebGateway:
                         page_text = page.locator("body").inner_text(timeout=self.timeout_seconds * 1000)
                         return parse_claim_status_from_text(page_text)
                     finally:
-                        context.close()
+                        if not getattr(browser, "_rpa_persistent", False):
+                            context.close()
                 finally:
-                    browser.close()
+                    if not getattr(browser, "_rpa_persistent", False):
+                        browser.close()
+                    else:
+                        try:
+                            if 'page' in locals() and page:
+                                page.close()
+                        except Exception:
+                            pass
         except PlaywrightTimeoutError:
             print(f"[{self.insurer_name} Portal] Timeout durante consulta de sinistro.")
             return None
@@ -343,10 +359,71 @@ class BasePortalWebGateway:
             return None
 
     def _launch_browser(self, playwright: Playwright):
+        import subprocess
+        import time
+        import shutil
+        import os
+        from pathlib import Path
+
+        cdp_port = int((os.getenv("PORTAL_CHROME_CDP_PORT") or os.getenv("SEGFY_CHROME_CDP_PORT") or "9223").strip())
+        cdp_url = f"http://localhost:{cdp_port}"
+
+        # 1. Tenta conectar ao Chrome já aberto com CDP
+        if self._cdp_disponivel(cdp_port):
+            b = playwright.chromium.connect_over_cdp(cdp_url, timeout=5000)
+            b._rpa_persistent = True
+            return b
+
+        # 2. Abre Chrome com perfil da Danielly + porta CDP
+        user_data_dir = (os.getenv("SEGFY_CHROME_USER_DATA_DIR") or "").strip()
+        if not user_data_dir:
+            user_data_dir = str(Path(os.getenv("LOCALAPPDATA", "")) / "Google" / "Chrome" / "User Data")
+
+        profile_dir = (os.getenv("SEGFY_CHROME_PROFILE_DIR") or "Default").strip()
+
+        chrome_exe = None
+        for c in [r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                  r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"]:
+            if Path(c).exists():
+                chrome_exe = c
+                break
+
+        if not chrome_exe:
+            # fallback para Chromium bundled do Playwright
+            try:
+                return playwright.chromium.launch(channel="msedge", headless=self.headless)
+            except Exception:
+                return playwright.chromium.launch(headless=self.headless)
+
+        subprocess.Popen([
+            chrome_exe,
+            f"--remote-debugging-port={cdp_port}",
+            f"--user-data-dir={user_data_dir}",
+            f"--profile-directory={profile_dir}",
+            "--restore-last-session",
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        for _ in range(15):
+            time.sleep(1)
+            if self._cdp_disponivel(cdp_port):
+                b = playwright.chromium.connect_over_cdp(cdp_url, timeout=5000)
+                b._rpa_persistent = True
+                return b
+
+        # fallback final
         try:
             return playwright.chromium.launch(channel="msedge", headless=self.headless)
         except Exception:
             return playwright.chromium.launch(headless=self.headless)
+
+    @staticmethod
+    def _cdp_disponivel(port: int) -> bool:
+        try:
+            from urllib.request import urlopen
+            urlopen(f"http://localhost:{port}/json/version", timeout=2)
+            return True
+        except Exception:
+            return False
 
     def _login(self, page: Page) -> None:
         page.goto(self.base_url, wait_until="domcontentloaded")
